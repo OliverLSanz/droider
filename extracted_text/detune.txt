@@ -1,0 +1,66 @@
+# CIRCUIT: detune
+# MANUAL PAGES (physical, 1-based): 198-198
+# TITLE: detune – Detune multiple voices in a most disharmonic way
+
+16.20
+detune – Detune multiple voices in a most disharmonic way
+Sometimes braking the harmony – at least
+for some period of time – can be a way to
+break through monotony. This circuit al-
+lows you to detune up to eight voices in a
+most disharmonic way.
+The application is simple. Before outputting your pitch
+information from your sequencers, quantizers, chord
+generators, arpeggiators and friends, feed them through
+this circuit. Then use the CV input detune to select the
+level of ugly detuning.
+For a ﬁrst test, start with using a pot for the detune value:
+[detune]
+detune = P1.1
+input1 = _PITCH1 # from somewhere
+input2 = _PITCH2 # from somewhere
+input3 = _PITCH3 # from somewhere
+input4 = _PITCH4 # from somewhere
+input5 = _PITCH5 # from somewhere
+output1 = O1
+output2 = O2
+output3 = O3
+output4 = O4
+output5 = O5
+The crux of the matter is that all of the voices are detuned
+in realation to each other. This circuit makes sure that
+each of the eight outputs is detuned in a different way,
+so if you input a chord, it won’t just simply move up and
+down in pitch but gets distorted and disharmonic.
+Hints:
+• Try using a slow and slight bipolar triangle LFO.
+• Try using an envelope with a short attack and a
+longer release to detune at the start of every bar
+and let the voices fade back into tune.
+This detune algorithm is identical with that of the Sinfo-
+nion. Therefore it is a good match for the chaoticdetune
+output of the circuit sinfonionlink (see page 386).
+Input
+Type
+Default
+Description
+input1 ... input8 (i)
+detune (d)
+0.0
+tuningmode (tm)
+0
+While this is 1, the circuit will output the value set by tuningpitch instead of the actual pitch. This is ment to be a
+help for tuning your VCOs.
+tuningpitch (tp)
+
+1V
+Oct
+0V
+This pitch CV will be output while the tuning mode is active.
+Output
+Type
+Description
+output1 ... output8 (o)
+DROID manual for blue-7
+198
+Table of contents at page 2

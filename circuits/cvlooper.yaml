@@ -1,0 +1,185 @@
+name: cvlooper
+title: "cvlooper – Clocked CV looper"
+manual_page: 190
+obsolete: false
+category: utility
+description: |
+  Easy-to-use clocked CV looper that also loops an optional gate signal and
+  supports overlay and overdub.
+
+  The looper records an incoming CV (and optionally a gate) onto a virtual tape
+  loop at one sample per ms. The tape length is 8 seconds. Reducing `tapespeed`
+  increases the effective tape length (e.g. `0.5` → 16 seconds, 2 ms/sample).
+
+  Unlike traditional loopers the circuit is **always recording**. The loop length
+  is specified in clock ticks. When looping is activated the previous N clock
+  ticks of CV history are repeated. The exact moment the loop switch is turned
+  on is quantized to the nearest clock tick for easy in-time playing.
+
+  **Gate behavior.** When `gatein` is patched the CV is recorded to tape only
+  while the gate is high, enabling `overlay` and `overdub` features.
+
+  **Limitations.** The CV range is −1…+1 (−10 V…+10 V). The maximum loop length
+  is 128 clock ticks. For longer loops divide the input clock with `clocktool`.
+  Multiple CVs can be looped in parallel by using multiple `cvlooper` circuits
+  controlled by the same buttons.
+
+inputs:
+  - name: cvin
+    abbr: ci
+    valuetype: cv
+    default: 0.0
+    min: -1
+    max: 1
+    description: |
+      Input CV to be looped. The valid range is −1…+1 (corresponding to
+      −10 V…+10 V). Signals outside this range are clipped.
+
+  - name: gatein
+    abbr: gi
+    valuetype: gate
+    default: 1
+    description: |
+      Optional input gate. If not patched the gate is assumed to be always high
+      and the CV is recorded continuously. Patching a gate enables `overlay` and
+      `overdub` and restricts recording to the high phase of the gate.
+
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      Mandatory input clock. Defines the time base for `length`. The loop switch
+      activation is quantized to the nearest clock tick.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: |
+      A trigger here immediately resets the playback head to the start of the
+      loop (only effective in playback mode).
+
+  - name: length
+    abbr: l
+    valuetype: integer
+    default: 16
+    min: 1
+    max: 128
+    description: |
+      Length of the loop in clock ticks (1–128). To set this via an external CV
+      multiply it by a suitable factor (e.g. `length = I1 * 10` gives 0–10
+      ticks per volt). Changing `length` on the fly is supported.
+
+  - name: tapespeed
+    abbr: s
+    valuetype: cv
+    default: 1.0
+    min: 0
+    description: |
+      Relative tape speed. `1.0` = normal (1 sample/ms, 8 s tape). `0.5` halves
+      the speed doubling the maximum loop time to 16 s while reducing sample
+      rate to 2 ms/sample. When changing `tapespeed` on the fly, change the
+      clock frequency by the same factor to avoid stuttering.
+
+  - name: loopswitch
+    abbr: ls
+    valuetype: gate
+    description: |
+      Controls looping mode. While **off** the looper is in bypass mode: input
+      CV and gate are passed directly to the outputs and the tape is recorded
+      continuously. While **on** the tape plays back and the inputs are ignored.
+      This parameter is mandatory; the looper requires a clock.
+
+  - name: pause
+    abbr: p
+    valuetype: gate
+    default: 0
+    description: |
+      While high the looper pauses playback and holds the current CV value.
+      Only effective in playback mode. Unlike bypass, the original input CV is
+      not routed through.
+
+  - name: overlay
+    abbr: ov
+    valuetype: gate
+    default: 0
+    description: |
+      Overlay mode (requires `gatein`). While looping is active and `overlay`
+      is on, the live input CV and gate override the tape whenever `gatein` is
+      high. The tape content is not modified.
+
+  - name: overdub
+    abbr: od
+    valuetype: gate
+    default: 0
+    description: |
+      Overdub mode (requires `gatein`). While looping is active and `overdub`
+      is on, the live input CV and gate are written to the tape whenever
+      `gatein` is high, replacing the recorded content at those positions.
+
+  - name: bypass
+    abbr: b
+    valuetype: gate
+    default: 0
+    description: |
+      While high, copies input CV and gate directly to the outputs while
+      leaving the tape untouched. Unlike turning off `loopswitch`, the tape
+      content is preserved and looping can resume later.
+
+outputs:
+  - name: cvout
+    abbr: co
+    valuetype: cv
+    description: Output of the bypassed or looped CV.
+
+  - name: gateout
+    abbr: go
+    valuetype: gate
+    description: Output of the bypassed or looped gate.
+
+examples:
+  - title: Simple CV looper (no gate)
+    code: |
+      ```ini
+      [button]
+      button = B1.1
+      led = L1.1
+
+      [cvlooper]
+      cvin = I1
+      clock = I8
+      cvout = O1
+      length = 16
+      loopswitch = L1.1
+      ```
+  - title: CV + gate looper (e.g. ribbon controller)
+    code: |
+      ```ini
+      [button]
+      button = B1.1
+      led = L1.1
+
+      [cvlooper]
+      cvin = I1
+      gatein = I2
+      clock = I8
+      cvout = O1
+      gateout = O2
+      length = 16
+      loopswitch = L1.1
+      ```
+  - title: Long loop (128 ticks) using clock divider
+    code: |
+      ```ini
+      [clocktool]
+      clock = G1
+      divide = 2
+      output = _LOOP_CLOCK
+
+      [cvlooper]
+      clock = _LOOP_CLOCK
+      cvin = I5
+      tapespeed = 0.5
+      cvout = O5
+      length = 128
+      loopswitch = _SOME_BUTTON
+      ```

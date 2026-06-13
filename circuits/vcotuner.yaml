@@ -1,0 +1,217 @@
+name: vcotuner
+title: Measure frequency and tuning of a VCO
+manual_page: 407
+category: utility
+description: |
+  Uses the MASTER18's built-in frequency probe to measure the pitch of basic
+  waveforms (triangle, sine, sawtooth, square) plugged into the I1 input.
+  Measures positive zero-crossings; frequency range is 1 Hz – 20 kHz.
+
+  **Note:** this circuit only exists on the MASTER18; it is not available on
+  the original MASTER module. It does not work well with complex waveforms
+  (FM, wavetable synthesis).
+
+  **Tuner mode.** A built-in comparator checks how far the measured frequency
+  deviates from the nearest semitone (or a specific note set by `tuningnote`).
+  Wire `ledsharp`, `ledintune`, and `ledflat` to LEDs for a simple tuner
+  display. The tolerance window is ±`precision` cents (default ±3 cents).
+
+  **DB8E display.** When a DB8E controller is present it automatically shows a
+  tuner screen (pointer, reference note, deviation in cents, frequency in Hz)
+  as soon as a valid signal is detected on I1. Set `display = 0` to suppress
+  this.
+
+  **Pitch follower.** The `pitch` output provides the measured frequency as a
+  1 V/octave value (A1 = 440 Hz, 0 V = C0 by default). Patch it to a second
+  VCO's V/Oct input to have it track the first.
+
+inputs:
+  - name: tuningnote
+    abbr: tn
+    valuetype: integer
+    default: -1
+    min: -1
+    max: 11
+    description: |
+      Reference note for the tuner. `0` = C, `1` = C#, `2` = D, …, `11` = B.
+      Set to `-1` (default) to tune to the nearest semitone regardless of note
+      name.
+
+  - name: concertpitch
+    abbr: cp
+    valuetype: cv
+    default: 440.0
+    unit: hz
+    description: |
+      Frequency of the concert pitch A1 in Hz. Default is `440.0` (standard
+      concert pitch). Adjust for alternative tuning systems.
+
+  - name: basepitch
+    abbr: b
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: |
+      Reference voltage for the `pitch` output, representing the note C0.
+      Default `0.0` V (0 V = C0). Adjust if your system uses a different
+      convention.
+
+  - name: smooth
+    abbr: sm
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Low-pass smoothing applied to the measured frequency (0.0–1.0). The
+      default `0.5` is subtle. `smooth = 1` applies heavy smoothing; the
+      measurement will need more time to converge. Useful for reducing jitter
+      at the cost of response speed.
+
+  - name: precision
+    abbr: pc
+    valuetype: cv
+    default: 3.0
+    unit: semitone
+    description: |
+      Tolerance window in cents within which the input is considered "in tune".
+      100 cents = 1 semitone; the maximum possible deviation from a semitone is
+      50 cents. The default `3.0` cents is a good balance between usability and
+      accuracy.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    max: 3
+    description: |
+      Selects which DB8E display controller to use (`1` = first, `2` = second,
+      etc.). Set to `0` to suppress the tuner display entirely.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E display. Ignored by the vcotuner
+      display (the manual notes that the tuner screen does not show a header
+      to make better use of screen space).
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Enables overlay of buttons and LEDs with multiple functions. While this
+      input carries a positive gate, the circuit controls its LED outputs
+      (`ledsharp`, `ledintune`, `ledflat`). When not selected those outputs
+      are suppressed so they can be used by another circuit.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Makes `select` match an exact value instead of any positive gate. E.g.
+      `selectat = 0` activates this circuit when `select` is exactly `0`.
+
+outputs:
+  - name: hz
+    abbr: null
+    valuetype: cv
+    description: |
+      Current input frequency in Hz. Outputs `0` when no valid signal is
+      detected.
+
+  - name: ledflat
+    abbr: lf
+    valuetype: fraction
+    description: |
+      Patch to a LED to indicate that the input is flat (too low). Outputs
+      0.2–1.0 when the input is flat; `0` otherwise. Only active while the
+      circuit is selected (if `select` is used).
+
+  - name: ledsharp
+    abbr: ls
+    valuetype: fraction
+    description: |
+      Patch to a LED to indicate that the input is sharp (too high). Outputs
+      0.2–1.0 when the input is sharp; `0` otherwise. Only active while the
+      circuit is selected (if `select` is used).
+
+  - name: ledintune
+    abbr: lt
+    valuetype: gate
+    description: |
+      Outputs `1` when the input is in tune (within ±`precision` cents).
+      Only active while the circuit is selected (if `select` is used).
+
+  - name: intune
+    abbr: it
+    valuetype: gate
+    description: |
+      Outputs `1` when the input is in tune (within ±`precision` cents).
+      Unlike `ledintune`, this output works even when the circuit is not
+      selected, so it can be used to drive other circuits.
+
+  - name: tuning
+    abbr: t
+    valuetype: cv
+    description: |
+      Current tuning deviation of the input, measured in 1 V/octave. Positive
+      = sharp; negative = flat.
+
+  - name: cents
+    abbr: c
+    valuetype: cv
+    description: |
+      Current tuning deviation in cents (100 cents = 1 semitone). Useful for
+      feeding an E4 encoder ring: divide by 50 to map ±50 cents to ±1 for the
+      `override` input.
+
+  - name: pitch
+    abbr: p
+    valuetype: pitch
+    description: |
+      Measured pitch as a 1 V/octave value with `basepitch` applied (0 V = C0
+      by default). Patch to the V/Oct input of a second VCO to have it follow
+      the measured VCO's pitch.
+
+  - name: referencepitch
+    abbr: rp
+    valuetype: pitch
+    description: |
+      Pitch of the reference note the tuner has locked onto — either the
+      nearest semitone or the note selected by `tuningnote` in the nearest
+      octave.
+
+  - name: vcofound
+    abbr: vf
+    valuetype: gate
+    description: |
+      Outputs `1` whenever a valid signal is detected on the tuning input I1.
+
+examples:
+  - title: Three-LED tuner with a P2B8
+    code: |
+      ```ini
+      [p2b8]
+      [vcotuner]
+      ledsharp = L1.1
+      ledintune = L1.3
+      ledflat = L1.5
+      ```
+  - title: Tune to nearest C with 2-cent precision
+    code: |
+      ```ini
+      [vcotuner]
+      ledsharp = L1.1
+      ledintune = L1.3
+      ledflat = L1.5
+      tuningnote = 0
+      precision = 2
+      ```
+  - title: Pitch follower (second VCO tracks first)
+    code: |
+      ```ini
+      [vcotuner]
+      pitch = O1
+      ```

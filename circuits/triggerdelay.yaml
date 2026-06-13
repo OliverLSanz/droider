@@ -1,0 +1,113 @@
+name: triggerdelay
+title: Trigger delay with multi tap and optional clocking
+manual_page: 404
+obsolete: false
+category: utility
+description: |
+  CV-controllable delay line for trigger and gate signals. Listens for triggers
+  at `input` and re-sends them at `output` after the configured delay. Output
+  triggers are always at 10 V (on I1–I8 jacks) or 5 V (on the G8 expander).
+
+  The circuit can hold up to 16 pending triggers simultaneously, so it correctly
+  handles dense rhythmic patterns where a new trigger arrives before the previous
+  delayed trigger has been emitted.
+
+  The original gate length is preserved by default. Patch `gatelength` to
+  override it with a fixed value.
+
+  **Clocked mode.** Patch a steady clock into `clock` to make all timing
+  relative to one clock cycle instead of absolute seconds.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: trigger
+    default: 0
+    description: Patch triggers or gates to be delayed here.
+
+  - name: delay
+    abbr: dl
+    valuetype: cv
+    default: 1.0
+    description: |
+      Amount of time to delay incoming triggers. Without `clock` this is in
+      seconds (e.g. `0.1` = 100 ms). With `clock` patched this is in clock
+      cycles (e.g. `4` = four beats, `0.5` = half a beat). Fractions are
+      allowed.
+
+  - name: gatelength
+    abbr: gl
+    valuetype: cv
+    description: |
+      When patched, overrides the original gate length with this fixed value.
+      Without `clock` the unit is seconds; with `clock` it is in clock cycles.
+      If not patched, the output gate has exactly the same length as the input
+      gate.
+
+  - name: repeats
+    abbr: rp
+    valuetype: integer
+    default: 1
+    min: 1
+    description: |
+      Number of times the delayed trigger is repeated. Each repetition is spaced
+      by the same `delay` value. `1` means the trigger is output once (no extra
+      repeats).
+
+  - name: mute
+    abbr: m
+    valuetype: gate
+    default: 0
+    description: |
+      While high, suppresses any further output gates. The gate currently being
+      output is completed normally before muting takes effect.
+
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      When patched, enables clocked mode. `delay` and `gatelength` are then
+      measured in clock cycles rather than seconds.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: trigger
+    description: |
+      The delayed trigger/gate output. Gate length matches the input unless
+      `gatelength` is set.
+
+  - name: overflow
+    abbr: ov
+    valuetype: gate
+    description: |
+      Outputs a 0.5-second gate whenever the internal trigger buffer (16
+      triggers) overflows. Wire to an LED to detect buffer overflow.
+
+examples:
+  - title: Simple 1-second trigger delay
+    code: |
+      ```ini
+      [triggerdelay]
+      input = G1
+      output = G2
+      ```
+  - title: 100 ms delay with fixed 50 ms gate length
+    code: |
+      ```ini
+      [triggerdelay]
+      input = G1
+      output = G2
+      delay = 0.1
+      gatelength = 0.05
+      ```
+  - title: Clocked mode — delay by 16 clock cycles with half-cycle gate
+    code: |
+      ```ini
+      [triggerdelay]
+      input = G1
+      output = G2
+      clock = G3
+      delay = 16
+      gatelength = 0.5
+      ```

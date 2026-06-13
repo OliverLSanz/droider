@@ -1,0 +1,43 @@
+# CIRCUIT: copy
+# MANUAL PAGES (physical, 1-based): 188-188
+# TITLE: copy – Copy a signal, while applying attenuation and offset
+
+16.15
+copy – Copy a signal, while applying attenuation and offset
+This circuit is a simple utility that copies a
+signal from an input to an output. Since ev-
+ery input generally can be attenuated and
+offset this can be used for scaling and off-
+setting a signal on its path.
+Build a simple precision adder (CV mixer), that adds the
+voltages of I1 and I2:
+[copy]
+input = I1 + I2
+output = O1
+Provide an attenuated signal from I1 into an internal
+patch cable:
+[copy]
+input = I1 * 0.5
+output = _INPUT_CV
+Note: Previous versions of copy had an inverted output.
+This has been removed in blue-3. But the same effect can
+be achieved by substracting a signal from 1. This converts
+0 V into 10 V, 2 V into 8 V, 10 V into 0 V and so on:
+[copy]
+input = 10V - I1
+output = O1
+Input
+Type
+Default
+Description
+input (i)
+0.0
+Connect the signal you want to copy here.
+Output
+Type
+Description
+output (o)
+The resulting signal will be sent here.
+DROID manual for blue-7
+188
+Table of contents at page 2

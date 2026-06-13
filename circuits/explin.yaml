@@ -1,0 +1,68 @@
+name: explin
+title: Exponential to linear converter
+manual_page: 245
+category: utility
+description: |
+  Converts an exponential input curve (such as the decay of an analog envelope)
+  into a linear output curve. Configure `startvalue` to the peak voltage of the
+  signal and `endvalue` to the voltage you consider silence; the circuit maps the
+  exponential segment between those two points onto a straight line.
+
+  The `mix` parameter blends the dry and converted signals. Values above `1.0`
+  over-compensate, bending the output past linearity into what modularists often
+  call a logarithmic curve.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    min: 0
+    description: |
+      Patch an exponential envelope output or similar signal here. Negative
+      values are clamped to 0.0.
+
+  - name: startvalue
+    abbr: sv
+    valuetype: cv
+    default: 1.0
+    description: |
+      The assumed peak (maximum) voltage of the input — the point where the
+      exponential and linear curves coincide.
+
+  - name: endvalue
+    abbr: ev
+    valuetype: cv
+    default: 0.01
+    min: 0.001
+    description: |
+      The input voltage considered "silence" (at which the linear output becomes
+      exactly 0). Must be positive; forced to a minimum of 0.001. Controls the
+      apparent slope of the linearised curve.
+
+  - name: mix
+    abbr: m
+    valuetype: cv
+    default: 1.0
+    min: 0
+    description: |
+      Blend between dry and converted: `0.0` passes the input unchanged; `1.0`
+      outputs the fully linearised curve. Values above `1.0` over-compensate,
+      bending the curve beyond linearity.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: The resulting linearised output signal.
+
+examples:
+  - title: Linearise a decaying envelope (8 V to 0.5 V)
+    code: |
+      ```ini
+      [explin]
+      input = I1
+      output = O2
+      startvalue = 8V
+      endvalue = 0.5V
+      ```

@@ -1,0 +1,237 @@
+name: lfo
+title: Low frequency oscillator (LFO)
+manual_page: 267
+obsolete: false
+category: modulation
+description: |
+  Flexible low frequency oscillator with seven waveforms, phase modulation, sync
+  mechanisms, randomization (*randomize*), waveform *morphing* and other
+  features.
+
+  It is not meant for audio rate: it works up to ~1000–1500 Hz but will sound
+  distorted and full of digital artifacts, especially on waveforms with steep
+  edges (square, ramp, sawtooth).
+
+  **Frequency control.** There are three combinable mechanisms: `hz` (direct
+  frequency in hertz), `rate` (1 V/octave, each volt doubles the frequency) and
+  `taptempo` (follows the speed of an external clock). `hz` cannot be used at the
+  same time as `taptempo`, but both can be combined with `rate`.
+
+  **Hz vs BPM.** To use the LFO as a master clock at 16th notes (4 PPQN),
+  `hz = BPM / 15` (e.g. 120 BPM ⇒ `hz = 8`).
+
+inputs:
+  - name: rate
+    abbr: ra
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: |
+      Frequency control at 1 V/octave. The base frequency of the LFO is 1 Hz.
+      Each volt doubles the frequency: `1V` (`0.1`) → 2 Hz, `2V` (`0.2`) → 4 Hz.
+      Negative voltages reduce it: `-1V` (`-0.1`) → 0.5 Hz.
+
+  - name: taptempo
+    abbr: tt
+    valuetype: clock
+    description: |
+      Reference clock: the LFO runs at the speed of that clock, optionally
+      modified by `rate` and `hz`. It cannot be used at the same time as `hz` as
+      the main source (see the circuit description).
+
+  - name: hz
+    abbr: null
+    valuetype: cv
+    default: 1.0
+    unit: hz
+    min: 0
+    description: |
+      Set the frequency directly in hertz with a number. Ideal for a fixed,
+      discrete frequency. Do not use at the same time as `taptempo`; both can be
+      combined with `rate`.
+
+  - name: level
+    abbr: l
+    valuetype: cv
+    default: 1.0
+    description: |
+      Maximum positive output level. `1.0` gives a swing between 0 V and 10 V (or
+      between -10 V and 10 V if `bipolar` is enabled).
+
+  - name: randomize
+    abbr: r
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Experimental randomization that combines random voltages with the LFO. When
+      you turn this up, each "hill" of the waveform gets a new random attenuation
+      multiplied by the current level, so each cycle has a different level. `0.0`
+      disables the effect; `1.0` is the maximum.
+
+  - name: offset
+    abbr: of
+    valuetype: cv
+    default: 0.0
+    unit: volt
+    description: |
+      Shifts the LFO output by that voltage right before the output (equivalent to
+      adding/mixing a fixed voltage). Handy to keep the modulation within a
+      certain range.
+
+  - name: bipolar
+    abbr: b
+    valuetype: gate
+    default: 0
+    description: |
+      If `on`, the LFO swings from `-level` to `+level`. If `off`, it swings
+      between 0 V and `+level`.
+
+  - name: phase
+    abbr: p
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Shifts the LFO phase. `0.0` leaves it in its normal phase; `0.5` shifts by
+      180°; `1.0` shifts by 360° (same as `0.0`).
+
+  - name: pulsewidth
+    abbr: pw
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Pulse width of the square wave; **only affects the `square` output**. Ranges
+      from `0.0` to `1.0`. A width of exactly `0.0` or `1.0` sticks the output to
+      the lower or upper level respectively.
+
+  - name: skew
+    abbr: sk
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Modifies the symmetry of the triangle wave by shifting its "peak"; **only
+      affects the `triangle` output**. `0.5` is symmetric; smaller values speed up
+      the rise until `0.0` produces an exact ramp (same as `ramp`); `1.0` produces
+      a sawtooth.
+
+  - name: sync
+    abbr: sy
+    valuetype: trigger
+    description: |
+      A positive edge at this input resets the LFO, forcing it to restart the
+      waveform at its "beginning". The `syncphase` input lets you change that
+      behavior.
+
+  - name: syncphase
+    abbr: sp
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Changes the phase at which the waveform restarts when it receives a trigger
+      at `sync`. E.g. `0.5` restarts the waveform right at its middle. A feature
+      impossible on analog LFOs.
+
+  - name: waveform
+    abbr: w
+    valuetype: cv
+    default: 0.0
+    min: 0
+    max: 6
+    description: |
+      Selects the waveform of the common `output` (does not affect the individual
+      outputs). An integer from 0 to 6 picks one of the seven shapes; any
+      intermediate value mixes the two neighbors, allowing smooth *morphing*
+      (e.g. `2.1` = 90% triangle + 10% ramp).
+
+      Codes: `0` square, `1` sawtooth, `2` triangle, `3` ramp, `4` paraboloid,
+      `5` sine, `6` cosine.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: Main LFO output, with the shape selected by `waveform`.
+
+  - name: square
+    abbr: q
+    valuetype: cv
+    description: Square wave, modified by `pulsewidth`.
+
+  - name: sawtooth
+    abbr: st
+    valuetype: cv
+    description: Sawtooth wave (rising ramp).
+
+  - name: triangle
+    abbr: t
+    valuetype: cv
+    description: Triangle wave, modified by `skew`.
+
+  - name: ramp
+    abbr: rp
+    valuetype: cv
+    description: |
+      Falling ramp (a mirrored sawtooth). In bipolar mode it is the negation of
+      `sawtooth`; in unipolar mode it is not (the wave is positive).
+
+  - name: paraboloid
+    abbr: pb
+    valuetype: cv
+    description: |
+      Experimental shape very similar to a sine, derived from a triangle by
+      squaring the distance of each point to `level`.
+
+  - name: sine
+    abbr: si
+    valuetype: cv
+    description: Sine wave.
+
+  - name: cosine
+    abbr: cs
+    valuetype: cv
+    description: |
+      Sine wave shifted by 90°, for quadrature applications without needing two
+      LFOs. 180° and 270° can be obtained by negating `sine` and `cosine` later.
+
+examples:
+  - title: Minimal (triangle at 4 Hz)
+    code: |
+      ```ini
+      [lfo]
+      hz = 4
+      triangle = O1
+      ```
+  - title: Bipolar with level and offset (sine between 2 V and 3.5 V)
+    code: |
+      ```ini
+      [lfo]
+      hz = 5
+      level = 1.5V
+      offset = 2V
+      sine = O4
+      ```
+  - title: Synced to an external clock at half speed
+    code: |
+      ```ini
+      [lfo]
+      taptempo = G1   # steady clock
+      rate = -1V      # half the clock speed
+      sawtooth = O2
+      ```
+  - title: Waveform morphing
+    code: |
+      ```ini
+      [lfo]
+      hz = 4
+      output = O1
+      waveform = 0.5  # square/sawtooth mix
+      ```

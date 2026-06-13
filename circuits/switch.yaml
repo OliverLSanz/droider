@@ -1,0 +1,133 @@
+name: switch
+title: "switch – Addressable/clockable switch"
+manual_page: 394
+obsolete: false
+category: utility
+description: |
+  Versatile switching circuit that can route multiple inputs to one output,
+  one input to multiple outputs, or create an n × m matrix switch.
+
+  The active connection is controlled by triggers (`forward`, `backward`) or by
+  a CV (`offset`). `forward` advances the internal offset by one step; `backward`
+  decrements it. `offset` adds a fixed or variable number of steps on top of the
+  internal offset.
+
+  **Inputs-to-output mode.** Patch multiple `input1`…`inputN` and one `output`.
+  Each `forward` trigger advances to the next input cyclically.
+
+  **Input-to-outputs mode.** Patch one `input` and multiple `output1`…`outputN`.
+  A `forward` trigger moves the active output forward (which appears as moving
+  backward when viewed from the input side).
+
+  **Matrix mode.** Any combination of multiple inputs and outputs creates an
+  n × m switch. `forward` rotates all connections simultaneously.
+
+  Unpatched inputs are treated as 0 V. Unpatched outputs discard their value.
+
+  `offset` accepts a plain number representing step count (not volts). To use
+  a CV jack as address, multiply by a suitable factor (e.g. `offset = I7 * 10`
+  selects one step per volt).
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    array: 16
+    description: |
+      1st to 16th input (`input1`…`input16`; `input` is a synonym for `input1`).
+      Use inputs in order without gaps. Unpatched inputs are treated as 0 V.
+
+  - name: forward
+    abbr: f
+    valuetype: trigger
+    description: |
+      A trigger or gate here advances the internal switch offset by one step,
+      moving every output to the next input (or every input to the previous
+      output).
+
+  - name: backward
+    abbr: b
+    valuetype: trigger
+    description: Like `forward` but steps in the opposite direction.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: |
+      Resets the switch to its initial position: with `offset = 0`, `input1` is
+      connected to `output1`, `input2` to `output2`, etc. Any previous `shuffle`
+      is also undone. If `reset` and `forward`/`backward` arrive within 5 ms,
+      `reset` wins.
+
+  - name: shuffle
+    abbr: s
+    valuetype: trigger
+    description: |
+      A trigger here randomly assigns each output to a unique input (no input is
+      used twice). `offset`, `forward` and `backward` continue to work on the
+      shuffled connections. Multiple shuffles are allowed.
+
+  - name: sort
+    abbr: so
+    valuetype: trigger
+    description: |
+      A trigger here undoes all previous `shuffle` triggers and restores the
+      original ordered connections. The current `offset` is preserved (unlike
+      `reset`, which also clears the offset).
+
+  - name: offset
+    abbr: of
+    valuetype: integer
+    default: 0
+    description: |
+      CV-addressable switching. The value is used as an additional step offset
+      added to the internal offset. For example `offset = 5` is equivalent to
+      triggering `forward` five times after the last `reset`. Note that this
+      parameter works in step units, not volts — to use a CV jack multiply it
+      (e.g. `offset = I7 * 10` gives one step per volt).
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    array: 16
+    description: |
+      1st to 16th output (`output1`…`output16`; `output` is a synonym for
+      `output1`). Use outputs in order without gaps. Inactive outputs are
+      set to 0 V.
+
+examples:
+  - title: "4:1 input selector (cycle with forward trigger)"
+    code: |
+      ```ini
+      [switch]
+      input1 = I1
+      input2 = I2
+      input3 = I3
+      input4 = I4
+      output = O1
+      forward = I8
+      ```
+  - title: "1:4 distributor (one input to four outputs)"
+    code: |
+      ```ini
+      [switch]
+      input = I1
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      output4 = O4
+      forward = I8
+      ```
+  - title: CV-addressable switch (1 V per step)
+    code: |
+      ```ini
+      [switch]
+      input1 = I1
+      input2 = I2
+      input3 = I3
+      input4 = I4
+      output1 = O1
+      offset = I7 * 10
+      ```

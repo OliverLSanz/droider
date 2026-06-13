@@ -1,0 +1,70 @@
+name: crossfader
+title: Morph between 8 inputs
+manual_page: 189
+obsolete: false
+category: utility
+description: |
+  Creates a CV-controlled mix of two to eight inputs. With two inputs this acts
+  like a classical crossfader: at `fade = 0.0` only the first input passes
+  through; at `fade = 1.0` only the second. In the center (`fade = 0.5`) you get
+  an equal blend of both.
+
+  With more than two inputs the range 0.0 … 1.0 maps from the first to the last
+  input. For example, with four inputs: `0.0` = 100% input1, `0.333` = 100%
+  input2, `0.667` = 100% input3, `1.0` = 100% input4.
+
+  Values of `fade` beyond `1.0` wrap from the last input back toward the first,
+  enabling cyclic morphing. Unpatched inputs are treated as 0 V.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    array: 8
+    description: |
+      Input signals to crossfade between. At least `input1` and `input2` should
+      be patched. Unpatched inputs are treated as 0 V.
+
+  - name: fade
+    abbr: f
+    valuetype: cv
+    default: 0.5
+    min: 0
+    description: |
+      Crossfade position. `0.0` outputs 100% of the first input; `1.0` outputs
+      100% of the last patched input. Intermediate values blend adjacent inputs
+      proportionally. Values greater than `1.0` wrap around from the last input
+      back to the first, enabling cyclic morphing.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: The crossfaded mix of the selected inputs.
+
+examples:
+  - title: Simple two-input crossfade
+    code: |
+      ```ini
+      [crossfader]
+      input1 = I1
+      input2 = I2
+      fade = P1.1
+      output = O1
+      ```
+  - title: LFO-driven cyclic morph between four inputs
+    code: |
+      ```ini
+      [lfo]
+      hz = 0.1
+      sawtooth = _FADE
+
+      [crossfader]
+      input1 = I1
+      input2 = I2
+      input3 = I3
+      input4 = I4
+      fade = _FADE * 1.3333
+      output = O1
+      ```

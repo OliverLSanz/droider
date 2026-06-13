@@ -1,0 +1,118 @@
+# CIRCUIT: midithrough
+# MANUAL PAGES (physical, 1-based): 306-307
+# TITLE: midithrough – Forward MIDI events from input to one or more outputs
+
+16.43
+midithrough – Forward MIDI events from input to one or more outputs
+Use this circuit to forward MIDI data from
+input ports to output ports. You can get
+events from one TRS and one USB port and
+forward to multiple TRS and multiple USB
+ports (if you have an X7).
+You specify the source and target of the events with the
+four parameter fromusb, fromtrs, tousb and totrs.
+The number of USB and TRS (3.5 mm tip ring sleeve jack)
+ports depends on you hardware conﬁguration. Here is
+how your ports are numbered:
+MASTER + X7:
+usb = 1
+USB port on the X7
+trs = 1
+TRS port on the X7
+MASTER18:
+usb = 1
+USB port on the MASTER18
+trs = 1
+TRS port MIDI1 on the MASTER18
+trs = 2
+TRS port MIDI2 on the MASTER18
+MASTER18 + X7:
+usb = 1
+USB port on the MASTER18
+usb = 2
+USB port on the X7
+trs = 1
+TRS port MIDI1 on the MASTER18
+trs = 2
+TRS port MIDI2 on the MASTER18
+trs = 3
+TRS port on the X7
+In addition there is port auto detection and broadcast.
+If you specify fromusb = 10 or fromtrs = 10, the ﬁrst
+port that actually sends events is used as input – until the
+data stops for a second or more. If this is the case, auto
+detection is redone and another port might be the lucky
+one.
+Setting tousb = 10 or totrs = 10 forwards the events
+to all ports of the given type.
+Examples
+Forward MIDI events from the ﬁrst USB port to the sec-
+ond TRS port:
+[midithrough]
+fromusb = 1
+totrs = 2
+Forward MIDI events from the ﬁrst active TRS port to the
+ﬁrst TRS output:
+[midithrough]
+fromtrs = 10 # auto detect
+totrs = 1
+Forward MIDI events from the second TRS port to all USB
+and TRS ports:
+[midithrough]
+fromtrs = 1
+totrs = 10 # all TRS ports
+tousb = 10 # all USB ports
+Note: All midiin (see page 289), midiout (see page 297)
+and other midithrough circuits still work. When multi-
+ple circuits send events to the same port, the events are
+merged – as long as the output speed of MID allows for all
+the events.
+By using midiout and midithrough with the same output
+port, you cat thus “splice in” MIDI events to an existing
+stream.
+Notes:
+• As of now, Sysex messages are not forwarded.
+Sorry for that. If that’s becoming important we
+might add this feature.
+• If you forward from USB to TRS make sure that you
+do not send more than 3125 bytes per second. TRS
+cannot output faster. It’s limited by the MIDI stan-
+dard. If you send MIDI data faster, some events will
+get lost.
+DROID manual for blue-7
+306
+Table of contents at page 2
+
+Input
+Type
+Default
+Description
+fromtrs (ft)
+1
+2
+3
+
+Selects a TRS port to use as input (3.5 mm jack). fromtrs = 0 disables TRS, fromtrs = 10 enables auto detection.
+See the manual of midiin for details on port selection.
+fromusb (fu)
+1
+2
+3
+
+Selects a USB port to use as input. fromusb = 0 disables USB, fromusb = 10 enables auto detection. See the manual
+of midiin for details on port selection.
+totrs (tt)
+1
+2
+3
+
+Selects which TRS MIDI port to output to. See the manual of midiout for details on port selection.
+tousb (tu)
+1
+2
+3
+
+Selects which USB MIDI port to output to. See the manual of midiout for details on port selection.
+DROID manual for blue-7
+307
+Table of contents at page 2

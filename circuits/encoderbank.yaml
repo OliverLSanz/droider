@@ -1,0 +1,275 @@
+name: encoderbank
+title: Create bank of up to 8 virtual input knobs from E4 encoders
+manual_page: 208
+obsolete: false
+category: controller
+description: |
+  Manages up to 8 virtual encoder knobs from E4 controllers in a single
+  circuit. It is a multi-encoder companion to the single `encoder` circuit,
+  sharing almost all of its features, except for the `movedup`, `moveddown`,
+  and `valuechanged` triggers, the `override` input, and `sharewithnext`.
+
+  The number of encoders controlled is determined automatically by the highest
+  `outputX`, `ledX`, or `buttonX` index used — no explicit count is needed.
+
+  If a DB8E display controller is present, the circuit updates the display
+  whenever an encoder is turned, showing the current value of that encoder.
+
+inputs:
+  - name: firstencoder
+    abbr: e
+    valuetype: integer
+    default: 1
+    description: |
+      The first encoder to use. Accepts a register name like `E8.2` (encoder 2
+      on controller 8) or a plain integer like `6` (the 6th encoder in the
+      setup). This value is read once at startup; making it dynamic has no effect.
+
+  - name: led
+    abbr: l
+    valuetype: gate
+    array: 8
+    description: |
+      Use the LED rings around the encoders as virtual LEDs (led1 … led8).
+      Similar to the `L` registers of the E4, but honours the `select` input.
+
+  - name: startvalue
+    abbr: sv
+    valuetype: cv
+    default: 0.0
+    description: |
+      Value the encoder gets when the circuit starts for the first time or when
+      a `clear` trigger is received. The range refers to the internal value
+      *before* `outputscale` and `outputoffset` are applied. In normal mode,
+      `0.5` places the encoder exactly at the centre.
+
+  - name: notch
+    abbr: "no"
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Helps dial in the exact centre of the range (0.5 in normal mode, 0.0 in
+      bipolar mode). The value is the fraction of one full 360° rotation during
+      which the centre position is assumed. `0.1` is a good starting point.
+      Has no effect when `mode` selects positive or negative infinity.
+
+  - name: outputscale
+    abbr: os
+    valuetype: cv
+    default: 1.0
+    description: |
+      Multiplies the output value. Saves a `copy` circuit in many situations.
+
+  - name: outputoffset
+    abbr: oo
+    valuetype: cv
+    default: 0.0
+    description: Added to the output after `outputscale` has been applied.
+
+  - name: mode
+    abbr: m
+    valuetype: integer
+    default: 1
+    min: 0
+    max: 6
+    description: |
+      Selects the value range of the encoder:
+      - `0` Off — encoder unused, LEDs off
+      - `1` Normal: 0.0 … 1.0
+      - `2` Bipolar: -1.0 … 1.0
+      - `3` Positive infinity: 0.0 … ∞
+      - `4` Negative infinity: -∞ … 0.0
+      - `5` Bipolar infinity: -∞ … ∞
+      - `6` Circular infinity: 0.0 … 1.0, wraps in both directions
+
+      Ignored when `discrete` is set.
+
+  - name: smooth
+    abbr: sm
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Applies a simulated low-pass filter to the encoder's stepped output. `0.0`
+      disables smoothing; `1.0` is maximum (fast turns are slightly slowed down).
+      `0.5` gives mild slew limiting. Ignored when `discrete` is set.
+
+  - name: discrete
+    abbr: d
+    valuetype: integer
+    default: 0
+    min: 0
+    description: |
+      Set to an integer ≥ 2 to enable discrete (rotary-switch) mode. The value
+      sets the number of positions: `discrete = 4` outputs 0, 1, 2, or 3.
+      `0` disables discrete mode. When active, `notch`, `mode`, and `smooth`
+      are ignored.
+
+  - name: snapto
+    abbr: sn
+    valuetype: cv
+    description: |
+      Defines a position the encoder automatically returns to when not being
+      turned, similar to a pitch bend wheel. Works even when the encoder is not
+      selected. Accepts dynamic CVs (e.g. an LFO output) for creative use.
+
+  - name: snapforce
+    abbr: sf
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Speed or "force" with which the encoder returns to the `snapto` position.
+      `0.0` deactivates the snap-back.
+
+  - name: sensivity
+    abbr: se
+    valuetype: cv
+    default: 1.0
+    description: |
+      Controls how far the knob must be turned to produce a given value change.
+      At `1.0`, one full 360° rotation spans 0.0 … 1.0. `2.0` doubles the
+      speed; `0.5` halves it. In infinity modes, one full turn changes the value
+      by `sensivity`. Note: the parameter name is intentionally misspelled
+      (should be "sensitivity") to preserve compatibility with existing patches.
+
+  - name: autozoom
+    abbr: a
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Fine-adjust when turning slowly, coarse-adjust when turning fast. At
+      `1.0`, very slow turns produce tiny changes while fast turns are greatly
+      accelerated. Use values between 0.0 and 1.0 to set the intensity.
+      Has no effect when `discrete` is used.
+
+  - name: color
+    abbr: co
+    valuetype: cv
+    description: |
+      Color of the pointer LED in the ring. Example values: `0.2` cyan,
+      `0.4` green, `0.6` yellow, `0.73` orange, `0.8` red, `1.0` magenta,
+      `1.1` violet, `1.2` blue.
+
+  - name: negativecolor
+    abbr: nc
+    valuetype: cv
+    description: |
+      When set, defines the LED color used when the current logical value is
+      negative.
+
+  - name: ledfill
+    abbr: lf
+    valuetype: integer
+    default: 1
+    min: 0
+    max: 1
+    description: |
+      Controls the LED ring display style. `0` shows only a single colored dot;
+      `1` additionally illuminates all LEDs between 0 and the current value at
+      half brightness.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    description: |
+      Selects which DB8E display controller shows changes from this circuit.
+      `1` = first DB8E; `2` = second DB8E; `0` suppresses display output.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E display when this circuit is active.
+      If omitted, an automatic title is used (e.g. the internal cable name).
+      Set to `""` or `0` to remove the header and show only the value.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Overlay control: when this input has a positive gate signal, the circuit
+      processes its buttons and LEDs normally. When absent, those are released
+      for other circuits. All other inputs and outputs remain active regardless.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Refines `select`: specifies the exact value of `select` at which this
+      circuit becomes active. E.g. `selectat = 0` activates on `select = 0`.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 7
+    description: |
+      Preset number to save or load (0-based). This circuit has 8 presets
+      (range 0–7). See the preset documentation (page 21) for the full story.
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: A trigger here loads the preset selected by `preset`.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger here saves the current state to the preset selected by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      A trigger here resets the circuit to its default start state. Presets are
+      not affected unless `preset` direct switching is used without triggers.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: A trigger here resets the circuit and all its presets to the default start state.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      Set to `1` to prevent this circuit's state from being saved to or loaded
+      from the SD card.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    array: 8
+    description: |
+      Current virtual value of each encoder (output1 … output8).
+
+  - name: button
+    abbr: b
+    valuetype: gate
+    array: 8
+    description: |
+      State of the push button in each encoder (button1 … button8), but only
+      when the circuit is selected.
+
+examples:
+  - title: Three encoders starting at E2.1 with 2 V output scale
+    code: |
+      ```ini
+      [encoderbank]
+      firstencoder = E2.1
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      outputscale = 2V
+      ```

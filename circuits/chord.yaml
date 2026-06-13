@@ -1,0 +1,272 @@
+name: chord
+title: Chord generator
+manual_page: 169
+obsolete: false
+category: harmony
+description: |
+  Generates pitch CVs for up to four voices of a musical chord. Attach the
+  1 V/octave inputs of up to four synth voices to get musically correct chords.
+
+  **Note selection.** By default all seven notes of the selected scale are
+  active. The `select1`, `select3`, `select5`, `select7`, `select9`, `select11`
+  and `select13` gate inputs select individual scale degrees; `selectfill1`–
+  `selectfill5` add non-scale (chromatic fill) notes. When fewer than four
+  notes are selected, voices are doubled; when more than four are selected only
+  the first four are used.
+
+  **Three- and two-voice modes.** Leave `output4` unpatched for a three-voice
+  mode that uses a simplified but better-adapted spreading algorithm. With only
+  two outputs connected, only the first two select inputs are taken into account.
+
+  **Pitch and spread.** `pitch` sets the minimum pitch for the lowest chord
+  note. `spread` defines the maximum pitch distance (in octaves) between the
+  lowest and highest chord note, relative to `pitch` plus one octave.
+
+  **Triggered mode.** Patching `trigger` freezes all outputs until the next
+  trigger is received (sample-and-hold behavior).
+
+inputs:
+  - name: pitch
+    abbr: p
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: |
+      Sets the minimum pitch of the lowest chord note (1 V/octave). The chord
+      generator places the closest chord tone at or above this value.
+
+  - name: spread
+    abbr: s
+    valuetype: cv
+    default: 0.0
+    unit: octave
+    description: |
+      Controls the maximum pitch distance between the lowest and highest chord
+      note, measured in 1 V/octave. A `spread` of `0` keeps all notes within
+      one octave; `1V` (0.1) allows up to two octaves of spread.
+
+  - name: inversion
+    abbr: iv
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 4
+    description: |
+      Selects the chord inversion. `1` forces the root note (first selected
+      interval) to be the lowest voice, `2` the second selected note, `3` the
+      third, and `4` the fourth. The default `0` picks whichever inversion puts
+      the chord closest to the `pitch` input.
+
+  - name: trigger
+    abbr: t
+    valuetype: trigger
+    description: |
+      Optional sample-and-hold input. Once patched, all outputs are frozen at
+      their current values and only update on the next incoming trigger.
+
+  - name: root
+    abbr: ro
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 11
+    description: |
+      Sets the root note of the scale. `0` = C, `1` = C#, `2` = D … `11` = B.
+      Multiply a 1 V/oct input by 120 to drive this from a sequencer or MIDI
+      keyboard (compatible with the Sinfonion ROOT CV input).
+
+  - name: degree
+    abbr: dg
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 107
+    description: |
+      Selects the musical scale (0–107). The first 12 most common scales:
+      `0` Lydian, `1` Major (Ionian), `2` Mixolydian, `3` Sus (Mixolydian
+      3rd/4th swapped), `4` Altered, `5` Harmonic minor from 5th, `6` Dorian,
+      `7` Natural minor (Aeolian), `8` Harmonic minor, `9` Phrygian, `10`
+      Diminished, `11` Augmented. See the full table of all 108 scales on
+      page 119 of the manual.
+
+  - name: select1
+    abbr: s1
+    valuetype: gate
+    description: |
+      Gate input for selecting the **root** (I) scale degree as an allowed chord
+      tone. When all `select` and `selectfill` inputs are 0, all seven scale
+      notes are automatically enabled.
+
+  - name: select3
+    abbr: s3
+    valuetype: gate
+    description: Gate input for selecting the **3rd** (III) scale degree.
+
+  - name: select5
+    abbr: s5
+    valuetype: gate
+    description: Gate input for selecting the **5th** (V) scale degree.
+
+  - name: select7
+    abbr: s7
+    valuetype: gate
+    description: Gate input for selecting the **7th** (VII) scale degree.
+
+  - name: select9
+    abbr: s9
+    valuetype: gate
+    description: Gate input for selecting the **9th** (II, same as 2nd) scale degree.
+
+  - name: select11
+    abbr: s11
+    valuetype: gate
+    description: Gate input for selecting the **11th** (IV, same as 4th) scale degree.
+
+  - name: select13
+    abbr: s13
+    valuetype: gate
+    description: Gate input for selecting the **13th** (VI, same as 6th) scale degree.
+
+  - name: selectfill1
+    abbr: sf1
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 9th (the 9th not in the current scale).
+
+  - name: selectfill2
+    abbr: sf2
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 3rd (the 3rd not in the current scale).
+
+  - name: selectfill3
+    abbr: sf3
+    valuetype: gate
+    default: 0
+    description: |
+      Selects the alternative 4th or 5th. In most scales this is the diminished
+      5th.
+
+  - name: selectfill4
+    abbr: sf4
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 13th (the 13th not in the current scale).
+
+  - name: selectfill5
+    abbr: sf5
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 7th (the 7th not in the current scale).
+
+  - name: harmonicshift
+    abbr: has
+    valuetype: integer
+    default: 0
+    min: -7
+    max: 7
+    description: |
+      Reduces harmonic complexity by disabling scale or non-scale notes. Applied
+      *after* the `select` inputs. Positive values progressively remove complex
+      extensions (`1` disables fill notes, `2` also disables the 11th, up to `7`
+      which allows only the root). Negative values remove simple chord functions
+      first instead (e.g. `-1` disables the root, `-7` leaves only fill notes).
+      `0` disables the filter (all selected notes are allowed).
+
+  - name: noteshift
+    abbr: nos
+    valuetype: integer
+    default: 0
+    min: -24
+    max: 24
+    description: |
+      Shifts the output note(s) up or down by this number of scale steps. The
+      shifted note remains in the scale. Applied after `selectnoteshift`. Range:
+      −24 … +24.
+
+  - name: selectnoteshift
+    abbr: sns
+    valuetype: integer
+    default: 0
+    min: -24
+    max: 24
+    description: |
+      Shifts the output note by this number of *selected* scale steps (up if
+      positive, down if negative). `noteshift` is applied after this. Range:
+      −24 … +24.
+
+  - name: tuningmode
+    abbr: tm
+    valuetype: gate
+    default: 0
+    description: |
+      While high (`1`), all outputs are set to the value of `tuningpitch`
+      instead of the computed chord pitches. Use this to tune your VCOs.
+
+  - name: tuningpitch
+    abbr: tp
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: |
+      Pitch CV output during tuning mode (`tuningmode = 1`). Defaults to 0 V
+      (middle C in 1 V/oct convention).
+
+  - name: transpose
+    abbr: tr
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: |
+      Value added to all output pitches when not in tuning mode. Use for
+      musical transposition or to add vibrato.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: pitch
+    array: 4
+    description: |
+      Pitch CV outputs for the four chord voices (1 V/octave). `output1` is the
+      lowest voice, `output4` the highest. Leave `output4` unpatched to activate
+      the optimized three-voice mode.
+
+examples:
+  - title: C major 7 chord (four voices, default scale and root)
+    code: |
+      ```ini
+      [chord]
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      output4 = O4
+      ```
+  - title: D natural minor triad (three voices)
+    code: |
+      ```ini
+      [chord]
+      root = 2
+      degree = 7
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      ```
+  - title: Chord following a sequencer pitch with note selection buttons
+    code: |
+      ```ini
+      [chord]
+      pitch = I1
+      root = 2
+      degree = 7
+      select1 = L1.1
+      select3 = L1.2
+      select5 = L1.3
+      select7 = L1.4
+      select9 = L1.5
+      select11 = L1.6
+      select13 = L1.7
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      output4 = O4
+      ```

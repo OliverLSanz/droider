@@ -1,0 +1,75 @@
+# CIRCUIT: queue
+# MANUAL PAGES (physical, 1-based): 372-372
+# TITLE: queue – Clocked CV shift register
+
+16.58
+queue – Clocked CV shift register
+This circuit implements a shift register (a
+queue) with 64 cells. Each cell contains one
+CV value. At each clock impulse the CVs
+each move one cell forwards. The last CV
+is dropped. And the current input value is
+copied to the ﬁrst cell.
+There are eight outputs, which you can place at any of the
+64 cells you like. If you do not specify any placement, the
+outputs are placed at the ﬁrst eight cells – und thus the
+information in the remaining 56 cells is not being used.
+The following example reads CVs from the input I1. O4 al-
+ways shows the CV value that was seen at the input four
+cycles previously:
+[queue]
+input = I1
+clock = I2
+output4 = O4
+The next example places three outputs at the positions 3,
+24 and 64:
+[queue]
+input = I1
+clock = I2
+outputpos1 = 3
+outputpos2 = 24
+outputpos3 = 64
+output1 = O1
+output2 = O2
+output3 = O3
+Please note:
+• Since the DROID is very precise in processing CV
+voltages you can use the queue in order to delay
+melodies from sequencers etc.
+• As
+always
+also
+the
+inputs
+outputpos1
+...
+outputpos8 may be CV controlled and change
+in time.
+Input
+Type
+Default
+Description
+input (i)
+0.0
+This CV will be pushed into the ﬁrst cell of the shift register whenever a clock occurs.
+clock (c)
+Each clock signal at this jack will move the CV content from every cell of the shift register to the next cell. The CV in
+the last cell will be dropped.
+outputpos1 ... outputpos8
+(op)
+1
+2
+3
+
+Speciﬁes the position of each of the eight outputs – i.e. which cell of the shift register it should output. Allowed are
+values from 1 up to 64. These jacks defaults to 1, 2, ... 8, so if you do not wire them the eight outputs reﬂect the ﬁrst
+eight positions of the shift register.
+Output
+Type
+Description
+output1 ... output8 (o)
+Eight outputs for eight different positions of the register. If you do not wire outputpos1 ... outputpos8, these outputs
+show the content of the 1st, 2nd, ... 8th cell.
+DROID manual for blue-7
+372
+Table of contents at page 2

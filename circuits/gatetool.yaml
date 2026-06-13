@@ -1,0 +1,138 @@
+name: gatetool
+title: "Operate on triggers and gates, modify gatelength"
+manual_page: 263
+obsolete: false
+category: utility
+description: |
+  Works with triggers, gates and edge-triggers; converts between them and
+  changes gate length in flexible ways.
+
+  Three input types (usually only one is patched at a time):
+  - `inputgate`: honors the duration of the input gate.
+  - `inputtrigger`: ignores gate length; only the rising edge counts.
+  - `inputedge`: every low→high or high→low transition counts as a trigger.
+
+  For each event the circuit produces three outputs:
+  - `outputgate`: a gate with controllable length.
+  - `outputtrigger`: a 10 ms trigger pulse.
+  - `outputedge`: toggles between 0 and 1 on each event (useful as a
+    divide-by-two or for pinging filters with a zero-length impulse).
+
+  Gate length is set by `gatelength` (in seconds), or relative to a
+  `taptempo` clock (as a fraction of one clock tick). `gatestretch` can
+  extend an input gate's length by a given percentage. `mingatelength`
+  and `maxgatelength` clamp the output gate length.
+
+inputs:
+  - name: inputgate
+    abbr: ig
+    valuetype: gate
+    description: |
+      Input gate. Use this when the duration of the input gate is relevant
+      to the output gate length.
+
+  - name: inputtrigger
+    abbr: it
+    valuetype: trigger
+    description: |
+      Input trigger. Use this when the length of the input gate should be
+      ignored; only the rising edge counts.
+
+  - name: inputedge
+    abbr: ie
+    valuetype: gate
+    description: |
+      Input edge: every low/high or high/low transition counts as a trigger
+      event, regardless of direction.
+
+  - name: gatelength
+    abbr: gl
+    valuetype: cv
+    unit: second
+    min: 0
+    description: |
+      Length of the output gate in seconds. When `taptempo` is patched,
+      the length is interpreted as a fraction of one clock tick instead.
+      When set, overrides the input gate length entirely.
+
+  - name: gatestretch
+    abbr: s
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    description: |
+      Extends the output gate beyond the input gate length by this fraction.
+      E.g. `0.3` makes the output 30% longer than the input. Ignored when
+      `gatelength` is patched.
+
+  - name: mingatelength
+    abbr: m
+    valuetype: cv
+    unit: second
+    default: 0.01
+    min: 0
+    description: |
+      Minimum output gate length in seconds (or clock ticks when `taptempo`
+      is used). Ineffective when `gatelength` is patched.
+
+  - name: maxgatelength
+    abbr: x
+    valuetype: cv
+    unit: second
+    min: 0
+    description: |
+      Maximum output gate length in seconds (or clock ticks when `taptempo`
+      is used). Ineffective when `gatelength` is patched.
+
+  - name: taptempo
+    abbr: tt
+    valuetype: clock
+    description: |
+      Reference clock. When patched, `gatelength`, `mingatelength` and
+      `maxgatelength` are interpreted as fractions of one clock tick
+      rather than seconds.
+
+outputs:
+  - name: outputgate
+    abbr: og
+    valuetype: gate
+    description: Outputs a gate with controllable length for every gate, trigger or edge event.
+
+  - name: outputtrigger
+    abbr: ot
+    valuetype: trigger
+    description: Outputs a 10 ms trigger pulse for every gate, trigger or edge event.
+
+  - name: outputedge
+    abbr: oe
+    valuetype: gate
+    description: |
+      Toggles between 0 and 1 at every gate, trigger or edge event. Two
+      input triggers produce one complete gate cycle (divide-by-two). Also
+      useful for pinging resonant filters with a zero-length impulse.
+
+examples:
+  - title: Fixed 500 ms gate from trigger
+    code: |
+      ```ini
+      [gatetool]
+      inputtrigger = I1
+      outputgate   = O1
+      gatelength   = 0.5
+      ```
+  - title: Clock-relative gate length (30% of one tick)
+    code: |
+      ```ini
+      [gatetool]
+      inputtrigger = I1
+      taptempo     = I2
+      gatelength   = 0.3
+      outputgate   = O1
+      ```
+  - title: Clock divider by 2 using edge output
+    code: |
+      ```ini
+      [gatetool]
+      inputtrigger = I1
+      outputedge   = O1
+      ```

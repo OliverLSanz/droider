@@ -1,0 +1,95 @@
+name: slew
+title: Slew limiter
+manual_page: 388
+obsolete: false
+category: utility
+description: |
+  CV-controllable slew limiter that smooths voltage transitions. Implements three
+  independent algorithms simultaneously, each available at its own output:
+
+  - **Exponential** – the classical analog slew shape. The rate of change is
+    proportional to the distance from the target voltage (fast at first, slower
+    near the target).
+  - **Linear** – limits the maximum voltage change per unit time. At `slew = 0.5`
+    (pot mid position) the maximum rate is 120 V/s.
+  - **S-curve** – accelerates for the first half of the transition then
+    decelerates symmetrically, resembling the motion of a trombone slide.
+
+  All three outputs are active at the same time; patch whichever shape fits your
+  use case. Independent `slewup` and `slewdown` multipliers allow asymmetric
+  response.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    description: The CV you wish to slew-limit. Wire any signal here.
+
+  - name: slew
+    abbr: sw
+    valuetype: cv
+    default: 1.0
+    unit: second
+    description: |
+      Controls the slew rate. `0.0` disables limiting (output follows input
+      immediately). In linear mode, a value of `2.0` means the output needs 2.0
+      seconds to travel 1 V. The other algorithms are tuned to sound similar at
+      the same setting. Negative values are treated as `0.0`.
+
+  - name: slewup
+    abbr: u
+    valuetype: cv
+    default: 1.0
+    description: |
+      Multiplier for upward voltage movement. The effective slew when rising is
+      `slew * slewup`. Useful for independent attack and release shapes.
+
+  - name: slewdown
+    abbr: d
+    valuetype: cv
+    default: 1.0
+    description: |
+      Multiplier for downward voltage movement. The effective slew when falling
+      is `slew * slewdown`.
+
+  - name: gate
+    abbr: g
+    valuetype: gate
+    description: |
+      If patched, slew limiting is only active while this gate is high. While
+      the gate is low the output follows the input immediately (equivalent to
+      `slew = 0`).
+
+outputs:
+  - name: exponential
+    abbr: e
+    valuetype: cv
+    description: |
+      Output with the exponential (classical analog) slew shape applied. The
+      voltage changes quickly at first and progressively slows as it nears the
+      target.
+
+  - name: linear
+    abbr: l
+    valuetype: cv
+    description: |
+      Output with linear slew limiting. The voltage changes at a constant
+      maximum rate until it reaches the target.
+
+  - name: scurve
+    abbr: c
+    valuetype: cv
+    description: |
+      Output with the S-curve slew shape applied. The voltage accelerates during
+      the first half of the transition and decelerates symmetrically in the
+      second half.
+
+examples:
+  - title: Basic slew on I1 to O1, rate controlled by pot P1.1
+    code: |
+      ```ini
+      [slew]
+      input = I1
+      slew = P1.1
+      exponential = O1
+      ```

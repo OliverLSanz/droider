@@ -1,0 +1,160 @@
+# CIRCUIT: firefacecontrol
+# MANUAL PAGES (physical, 1-based): 256-258
+# TITLE: firefacecontrol – Control a RME Fireface interface (experimental)
+
+16.30
+firefacecontrol – Control a RME Fireface interface (experimental)
+This experimental circuit allows you to
+control the most import volumes and
+mixes of an RME Fireface audio interface.
+It’s also a perfect match for the M4 motor
+fader units. You need an X7 in order to use
+this circuit.
+Please note that this circuit is still experimental. Its main
+problem is that the MIDI implementation of the Fireface
+is more designed for user interaction via a Mackie Control
+and not for general automation. This is very sad.
+For example there is a MIDI CC for changing the panning
+of a channel. But instead of simply having the CC going
+from 0 (left) via 64 (mid) to 127 (right), it uses various CC
+values as commands for modiﬁying the existing panning
+by some ﬁxed value to the left or to the right. So without
+knowing the current setting, it’s not possible to send the
+correct CC commands. And for
+there is no way to
+know, since MIDI is a one way communication.
+RME: if you are reading this: please contact me so that we
+can ﬁx this.
+Input
+Type
+Default
+Description
+trs ()
+1
+2
+3
+1
+outputlevel1 ...
+outputlevel16 (ol)
+0
+1
+mainoutput (mo)
+1
+2
+3
+1
+phonesoutput1,
+phonesoutput2 (po)
+1
+2
+3
+outputmix1in1 ...
+outputmix1in16 (o1i)
+0
+1
+outputmix2in1 ...
+outputmix2in16 (o2i)
+0
+1
+outputmix3in1 ...
+outputmix3in16 (o3i)
+0
+1
+outputmix4in1 ...
+outputmix4in16 (o4i)
+0
+1
+outputmix5in1 ...
+outputmix5in16 (o5i)
+0
+1
+outputmix6in1 ...
+outputmix6in16 (o6i)
+0
+1
+outputmix7in1 ...
+outputmix7in16 (o7i)
+0
+1
+DROID manual for blue-7
+256
+Table of contents at page 2
+
+Input
+Type
+Default
+Description
+outputmix8in1 ...
+outputmix8in16 (o8i)
+0
+1
+outputmix9in1 ...
+outputmix9in16 (o9i)
+0
+1
+outputmix10in1 ...
+outputmix10in16 (o10i)
+0
+1
+outputmix11in1 ...
+outputmix11in16 (o11i)
+0
+1
+outputmix12in1 ...
+outputmix12in16 (o12i)
+0
+1
+outputmix13in1 ...
+outputmix13in16 (o13i)
+0
+1
+outputmix14in1 ...
+outputmix14in16 (o14i)
+0
+1
+outputmix15in1 ...
+outputmix15in16 (o15i)
+0
+1
+outputmix16in1 ...
+outputmix16in16 (o16i)
+0
+1
+postfader1 ...
+postfader16 (pf)
+pan1 ... pan16 (p)
+0
+1
+unmute1 ... unmute16 (u)
+0
+1
+update (ud)
+select (s)
+1
+2
+3
+
+The select input allows you to overlay buttons and LEDs with multiple functions. If you use this input, the circuit will
+process the buttons and LEDs just as if select has a positive gate signal (usually you will select this to 1). Otherwise
+it won’t touch them so they can be used by another circuit. Note: even if the circuit is currently not selected, it will
+nevertheless work and process all its other inputs and its outputs (those that do not deal with buttons or LEDs) in a
+normal way.
+DROID manual for blue-7
+257
+Table of contents at page 2
+
+Input
+Type
+Default
+Description
+selectat (sa)
+1
+2
+3
+
+This input makes the select input more ﬂexible. Here you specify at which value select should select this circuit.
+E.g. if selectat is 0, the circuit will be active if select is exactly 0 instead of a positive gate signal. In some cases this
+is more conventient.
+DROID manual for blue-7
+258
+Table of contents at page 2

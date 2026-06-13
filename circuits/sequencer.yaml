@@ -1,0 +1,203 @@
+name: sequencer
+title: Simple eight step sequencer
+manual_page: 382
+category: sequencer
+description: |
+  A simple step sequencer inspired by the Metropolis by Intellijel. Each
+  instance handles up to 8 steps with independent pitch, gate, CV, slew, and
+  repeat counts per step.
+
+  **Chaining.** Set `chaintonext = 1` on a sequencer and place another
+  `[sequencer]` immediately after it to extend the sequence. Only the first
+  instance in the chain needs `clock`, `reset`, and output jacks; subsequent
+  ones supply only their step data (`pitch`, `gate`, `slew`, `cv`, `repeat`).
+
+  **Output pitch scaling.** Set `outputscaling = 1/120` to specify pitches
+  directly in semitones (e.g. `pitch1 = 12` = one octave). Add `transpose` to
+  shift the entire sequence.
+
+  **Gate behaviour.** Unpatched `gate` inputs are treated as on (`1`). When
+  a step has `gate = 0`, no gate is output and the pitch holds its previous
+  value. `gatelength` controls the duty cycle of the output gate; when
+  unpatched the input clock pulse is passed through unchanged.
+
+inputs:
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: Each rising edge advances the sequence by one step.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: A trigger here resets the sequence back to the first step.
+
+  - name: stages
+    abbr: sg
+    valuetype: integer
+    description: |
+      Number of steps to use from the `pitch`, `gate`, `slew`, `cv`, and
+      `repeat` inputs. If set higher than the number of patched inputs, all
+      patched inputs are used. If omitted, all patched inputs are used
+      automatically.
+
+  - name: steps
+    abbr: s
+    valuetype: integer
+    default: 0
+    description: |
+      Forces the sequencer to restart after this many clock cycles (counting
+      all repeats). If `0` or omitted, the sequencer plays all active stages
+      with their repeats before restarting.
+
+  - name: transpose
+    abbr: tr
+    valuetype: cv
+    default: 0.0
+    description: |
+      Voltage added to the pitch output after `outputscaling`. Use to
+      transpose the entire sequence without editing individual step pitches.
+
+  - name: outputscaling
+    abbr: os
+    valuetype: cv
+    default: 1.0
+    description: |
+      Multiplier applied to the pitch output. Set to `1/120` to enter step
+      pitches in semitones (e.g. `pitch1 = 12` = 1 V = one octave).
+
+  - name: gatelength
+    abbr: gl
+    valuetype: fraction
+    min: 0
+    max: 1
+    description: |
+      Duty cycle of the output gate, as a ratio of the clock period (0.0–1.0).
+      When unpatched the input clock pulse is passed through 1:1. Setting
+      `gatelength = 1.0` merges adjacent gates (no low gap between steps).
+
+  - name: pitch
+    abbr: p
+    valuetype: cv
+    default: 0.0
+    array: 8
+    description: |
+      Step pitches 1–8. Accept fixed numbers, pots, or CV. The number of
+      patched inputs implicitly defines the sequence length unless overridden
+      by `stages`. Scale with `outputscaling` to use semitone values.
+
+  - name: cv
+    abbr: null
+    valuetype: cv
+    default: 0.0
+    array: 8
+    description: |
+      Optional per-step CV 1–8. Use for a secondary CV lane (e.g. a filter
+      modulation or a second pitch). Output appears on `cvoutput`.
+
+  - name: gate
+    abbr: g
+    valuetype: gate
+    default: 1
+    array: 8
+    description: |
+      Per-step gate enables 1–8. `1` (on) = gate output is produced for this
+      step; `0` (off) = no gate and the pitch output holds its previous value.
+      Unpatched gate inputs are treated as on.
+
+  - name: slew
+    abbr: sw
+    valuetype: cv
+    default: 0.0
+    array: 8
+    description: |
+      Per-step slew amount 1–8. `0.0` disables slew for that step; higher
+      values create slower portamento slides. Each step has its own slew rate.
+
+  - name: repeat
+    abbr: rp
+    valuetype: integer
+    default: 1
+    array: 8
+    description: |
+      Number of times each step repeats before the sequence advances 1–8.
+      Must be a positive integer (`1`, `2`, …). Zero repeats are not currently
+      allowed.
+
+  - name: chaintonext
+    abbr: cn
+    valuetype: gate
+    description: |
+      When set to `1`, the following `[sequencer]` circuit's step inputs
+      (`pitch`, `gate`, `slew`, `cv`, `repeat`) are appended to this one,
+      forming a longer sequence. All but the last sequencer in the chain must
+      have this set to `1`. This input is dynamic and can be toggled at runtime.
+
+outputs:
+  - name: pitchoutput
+    abbr: po
+    valuetype: pitch
+    description: The current step's pitch output (unquantized).
+
+  - name: cvoutput
+    abbr: co
+    valuetype: cv
+    description: The current step's CV output, corresponding to the `cv` inputs.
+
+  - name: gateoutput
+    abbr: go
+    valuetype: gate
+    description: The gate output for the current step.
+
+examples:
+  - title: Four-step CV sequencer
+    code: |
+      ```ini
+      [sequencer]
+      clock = I1
+      pitchoutput = O1
+      pitch1 = 1V
+      pitch2 = 3.5V
+      pitch3 = 8V
+      pitch4 = -2V
+      ```
+  - title: Eight semitone pitches with outputscaling
+    code: |
+      ```ini
+      [sequencer]
+      clock = I1
+      pitchoutput = O1
+      outputscaling = 1/120
+      pitch1 = 0
+      pitch2 = 12
+      pitch3 = 10
+      pitch4 = 7
+      pitch5 = 5
+      pitch6 = 3
+      pitch7 = 5
+      pitch8 = 7
+      ```
+  - title: 12-step sequence via chaining two sequencers
+    code: |
+      ```ini
+      [sequencer]
+      clock = _CLOCK
+      reset = B1.1
+      pitchoutput = O1
+      gateoutput = O2
+      outputscaling = 1/120
+      pitch1 = 1
+      pitch2 = 8
+      pitch3 = 13
+      pitch4 = 25
+      pitch5 = 4
+      pitch6 = 11
+      pitch7 = 7
+      pitch8 = 21
+      chaintonext = 1
+      [sequencer]
+      pitch1 = 2
+      pitch2 = 9
+      pitch3 = 14
+      pitch4 = 26
+      ```

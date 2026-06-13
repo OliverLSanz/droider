@@ -1,0 +1,297 @@
+name: fadermatrix
+title: Matrix of up to 4x4 virtual motor faders
+manual_page: 250
+obsolete: false
+category: controller
+description: |
+  Controls a 4×4 matrix of parameters using four M4 motor faders, with the
+  ability to select any row or any column via the `rowcolumn` input. This lets
+  you use the same four faders to edit either one row at a time (e.g. all ADSR
+  parameters of one voice) or one column at a time (e.g. the same parameter
+  across all voices), without switching patches.
+
+  **Row/column selection.** `rowcolumn` values 0–3 select rows 1–4 (editing
+  all four parameters of that row); values 4–7 select columns 1–4 (editing the
+  same parameter across all four rows). A `buttongroup` with eight buttons is a
+  natural match since it outputs 0–7 directly.
+
+  **Notches.** Each column can have artificial notches via `notches1`–`notches4`.
+  Notches also quantize the output to discrete values (e.g. four notches give
+  outputs 0, 1, 2, 3).
+
+  **Smaller matrices.** Create a 3×3 (or 2×2) matrix by simply not patching
+  the unused outputs. Rows and columns must always be equal in count.
+
+  **Larger matrices.** Four `fadermatrix` circuits can form an 8×8 matrix
+  using the `select` input to activate exactly two circuits at a time.
+
+  **Display.** If a DB8E display controller is connected, the matrix updates
+  the display whenever a fader moves. The title is derived from the target
+  cable name; use `header` to override.
+
+  State is saved to the SD card across power cycles unless `dontsave = 1`.
+  Up to 6 presets are available.
+
+inputs:
+  - name: firstfader
+    abbr: f
+    valuetype: integer
+    default: 1
+    min: 1
+    description: Index of the first M4 fader used by this matrix (1-based).
+
+  - name: rowcolumn
+    abbr: rc
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 7
+    description: |
+      Selects which row or column the four faders currently control:
+      - `0` — row 1: `output11`–`output14`
+      - `1` — row 2: `output21`–`output24`
+      - `2` — row 3: `output31`–`output34`
+      - `3` — row 4: `output41`–`output44`
+      - `4` — column 1: `output11`, `output21`, `output31`, `output41`
+      - `5` — column 2: `output12`, `output22`, `output32`, `output42`
+      - `6` — column 3: `output13`, `output23`, `output33`, `output43`
+      - `7` — column 4: `output14`, `output24`, `output34`, `output44`
+
+  - name: notches
+    abbr: n
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 201
+    array: 4
+    description: |
+      Number of artificial notches for each column (1–4). `0` disables notches.
+      Special values: `1` = pitch-bend wheel, `2` = binary switch,
+      `3` = four-position switch, `8` = eight notches, `25` = 25 notches.
+      Notches also quantize the output; e.g. four notches → output is 0/1/2/3.
+      Force feedback is disabled above 25 notches. Maximum is 201.
+
+  - name: startvalue
+    abbr: sv
+    valuetype: cv
+    array: 4
+    description: |
+      Initial value for each column (1–4) when the circuit starts with no saved
+      state or when `dontsave = 1`. Also loaded when a trigger arrives at
+      `clear`.
+
+  - name: ledvalue1
+    abbr: l1
+    valuetype: cv
+    array: 4
+    description: |
+      Controls the LEDs below the faders for `output11`–`output14`. Only
+      affects the LED when the corresponding output is currently selected,
+      unlike wiring a direction register (e.g. `L1.1`) directly.
+
+  - name: ledvalue2
+    abbr: l2
+    valuetype: cv
+    array: 4
+    description: |
+      Controls the LEDs below the faders for `output21`–`output24`. Only
+      affects the LED when the corresponding output is currently selected.
+
+  - name: ledvalue3
+    abbr: l3
+    valuetype: cv
+    array: 4
+    description: |
+      Controls the LEDs below the faders for `output31`–`output34`. Only
+      affects the LED when the corresponding output is currently selected.
+
+  - name: ledvalue4
+    abbr: l4
+    valuetype: cv
+    array: 4
+    description: |
+      Controls the LEDs below the faders for `output41`–`output44`. Only
+      affects the LED when the corresponding output is currently selected.
+
+  - name: ledcolor
+    abbr: lc
+    valuetype: cv
+    array: 4
+    description: |
+      Sets the LED color for each column (1–4) when `ledvalueXY` inputs are
+      used. Works the same as the R registers for the LEDs on the master module.
+      All rows in a column share the same color.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    description: |
+      Selects which DB8E display controller shows fader movements. `1` = first
+      DB8E (default), `2` = second. Set to `0` to suppress display output.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E display. If omitted, the target cable
+      name is used as the title. Set to `""` or `0` to remove the header.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Allows overlaying buttons and LEDs with multiple circuits. When `select`
+      is positive, this circuit processes its button/LED inputs. Otherwise it
+      ignores them so another circuit can use them. All other inputs and outputs
+      continue to operate regardless.
+
+  - name: selectat
+    abbr: sa
+    valuetype: cv
+    description: |
+      Refines `select`: specifies the exact value at which `select` activates
+      this circuit. E.g. `selectat = 0` activates when `select` is exactly `0`.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 5
+    description: |
+      Preset slot number to save or load (0–5; this circuit has 6 presets).
+      The first preset is `0`.
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: A trigger here loads the preset selected by `preset`.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger here saves the current state into the preset selected by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      A trigger here resets the circuit to its default start state (loading
+      `startvalue` inputs if set). Presets are not affected unless `preset`
+      direct-switching is used without triggers.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: |
+      A trigger here resets the circuit and all its presets to the default
+      start state.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      When `1`, the circuit state is not saved to or loaded from the SD card
+      on startup.
+
+outputs:
+  - name: output1
+    abbr: o1
+    valuetype: cv
+    array: 4
+    description: CV outputs for row 1 (`output11`–`output14`).
+
+  - name: output2
+    abbr: o2
+    valuetype: cv
+    array: 4
+    description: CV outputs for row 2 (`output21`–`output24`).
+
+  - name: output3
+    abbr: o3
+    valuetype: cv
+    array: 4
+    description: CV outputs for row 3 (`output31`–`output34`).
+
+  - name: output4
+    abbr: o4
+    valuetype: cv
+    array: 4
+    description: CV outputs for row 4 (`output41`–`output44`).
+
+  - name: button1
+    abbr: b1
+    valuetype: gate
+    array: 4
+    description: |
+      State of the touch button below each fader in row 1 (`button11`–`button14`).
+      Only active when the corresponding output is currently selected.
+
+  - name: button2
+    abbr: b2
+    valuetype: gate
+    array: 4
+    description: |
+      State of the touch button below each fader in row 2 (`button21`–`button24`).
+      Only active when the corresponding output is currently selected.
+
+  - name: button3
+    abbr: b3
+    valuetype: gate
+    array: 4
+    description: |
+      State of the touch button below each fader in row 3 (`button31`–`button34`).
+      Only active when the corresponding output is currently selected.
+
+  - name: button4
+    abbr: b4
+    valuetype: gate
+    array: 4
+    description: |
+      State of the touch button below each fader in row 4 (`button41`–`button44`).
+      Only active when the corresponding output is currently selected.
+
+examples:
+  - title: 4x4 ADSR matrix with eight-button row/column selector
+    code: |
+      ```ini
+      [p2b8]
+      [m4]
+      [buttongroup]
+      button1 = B1.1
+      button2 = B1.3
+      button3 = B1.5
+      button4 = B1.7
+      button5 = B1.2
+      button6 = B1.4
+      button7 = B1.6
+      button8 = B1.8
+      led1 = L1.1
+      led2 = L1.3
+      led3 = L1.5
+      led4 = L1.7
+      led5 = L1.2
+      led6 = L1.4
+      led7 = L1.6
+      led8 = L1.8
+      output = _ROWCOLUMN
+      [fadermatrix]
+      rowcolumn = _ROWCOLUMN
+      output11 = _ATTACK_1
+      output12 = _DECAY_1
+      output13 = _SUSTAIN_1
+      output14 = _RELEASE_1
+      output21 = _ATTACK_2
+      output22 = _DECAY_2
+      output23 = _SUSTAIN_2
+      output24 = _RELEASE_2
+      output31 = _ATTACK_3
+      output32 = _DECAY_3
+      output33 = _SUSTAIN_3
+      output34 = _RELEASE_3
+      output41 = _ATTACK_4
+      output42 = _DECAY_4
+      output43 = _SUSTAIN_4
+      output44 = _RELEASE_4
+      ```

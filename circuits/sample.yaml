@@ -1,0 +1,71 @@
+name: sample
+title: Sample & Hold Circuit
+manual_page: 380
+obsolete: false
+category: utility
+description: |
+  Simple sample & hold circuit. Each time a positive trigger arrives at
+  `sample`, the current value of `input` is captured and held at `output`.
+
+  Alternatively, `gate` puts the circuit into continuous bypass (tracking the
+  input) while high, and freezes the output when the gate goes low.
+
+  The `timewindow` parameter compensates for sequencer pitch-CV slew by
+  allowing the input a short settling period after the trigger fires before
+  the value is frozen.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    description: Input signal to be sampled.
+
+  - name: sample
+    abbr: sm
+    valuetype: trigger
+    description: |
+      A positive trigger here reads the current value from `input` and stores
+      it as the new output value.
+
+  - name: gate
+    abbr: g
+    valuetype: gate
+    description: |
+      Alternative sampling mode: while this gate is high the circuit
+      continuously tracks `input` (bypass mode). When the gate goes low the
+      output freezes at the last value seen just before the gate fell.
+
+  - name: timewindow
+    abbr: tw
+    valuetype: cv
+    default: 0.0
+    unit: second
+    description: |
+      Introduces a short settling window (in seconds) after a `sample` trigger
+      during which the circuit keeps tracking the input before freezing it.
+      For example `0.005` (5 ms) compensates for sequencer pitch-CV slew so
+      the new pitch is fully settled before being captured.
+
+  - name: bypass
+    abbr: b
+    valuetype: gate
+    description: |
+      While this gate is high, the circuit is bypassed and `input` is copied
+      directly to `output`.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: The most recently sampled value is sent here.
+
+examples:
+  - title: Basic sample & hold triggered by a gate input
+    code: |
+      ```ini
+      [sample]
+      input = I1
+      sample = I2
+      output = O1
+      ```

@@ -1,0 +1,245 @@
+name: nudge
+title: "nudge – Modify a value in steps using two buttons"
+manual_page: 352
+obsolete: false
+category: utility
+description: |
+  Modify a value up and down in fixed steps using two buttons. The value can be
+  persistent and survives a power cycle.
+
+  Pressing both buttons simultaneously resets the value to `startvalue`.
+
+  **LED behavior.** When the value is below the center point `ledup` dims and
+  `leddown` brightens gradually (fully bright at `minimum`). When above center
+  the opposite applies. Both LEDs are fully bright when the value is exactly at
+  the midpoint between `minimum` and `maximum`.
+
+  **Display.** If a DB8E display controller is present the circuit automatically
+  shows the current output value whenever it changes.
+
+inputs:
+  - name: buttonup
+    abbr: u
+    valuetype: trigger
+    description: Button for nudging the value up by one step.
+
+  - name: buttondown
+    abbr: d
+    valuetype: trigger
+    description: Button for nudging the value down by one step.
+
+  - name: amount
+    abbr: am
+    valuetype: cv
+    default: 0.1
+    min: 0
+    description: |
+      Amount to modify the value by on each press. Must be greater than 0.
+      For example `1V` (= `0.1`) steps by one volt; `1V / 1200` steps by one
+      cent (useful for fine-tuning an oscillator).
+
+  - name: startvalue
+    abbr: sv
+    valuetype: cv
+    default: 0.0
+    description: |
+      The value this circuit starts with and is reset to when the `clear` input
+      fires or when both buttons are pressed simultaneously.
+
+  - name: minimum
+    abbr: m
+    valuetype: cv
+    description: |
+      Minimum possible value. If not patched the value can decrease without
+      limit. Required when `wrap = 1`.
+
+  - name: maximum
+    abbr: x
+    valuetype: cv
+    description: |
+      Maximum possible value. If not patched the value can increase without
+      limit. Required when `wrap = 1`.
+
+  - name: wrap
+    abbr: w
+    valuetype: gate
+    default: 0
+    description: |
+      Set to `1` to wrap the value around when it reaches `minimum` or
+      `maximum`. Both `minimum` and `maximum` must be set for wrap to work.
+      With `minimum = 3`, `maximum = 7` and `amount = 1` the sequence cycles
+      3 → 4 → 5 → 6 → 7 → 3 → …
+
+  - name: offset
+    abbr: of
+    valuetype: cv
+    default: 0.0
+    description: |
+      Added to the internal value before sending it to `output`. Useful to
+      shift the nudged range by an external CV (e.g. a V/Oct sequencer pitch
+      output) to transpose the result up or down.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    description: |
+      Selects which DB8E display shows the nudge value. `1` = first DB8E
+      (default), `2` = second DB8E. Set to `0` to suppress display output from
+      this circuit entirely.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E display when this circuit is active.
+      If omitted, an automatic title is used (e.g. the name of the internal
+      patch cable connected to `output`). Set to `""` or `0` to remove the
+      header and show only the value.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Allows sharing buttons and LEDs across multiple circuits. When this input
+      carries a positive gate (typically `1`) the circuit processes its buttons
+      and LEDs normally; otherwise it leaves them untouched so another circuit
+      can use them. All non-button/LED processing continues regardless.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Makes `select` more flexible: specifies the exact value of `select` at
+      which this circuit becomes active. For example `selectat = 0` activates
+      the circuit when `select` is exactly `0` instead of any positive value.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 15
+    description: |
+      Preset number to save or load. The first preset is `0`. This circuit
+      supports 16 presets (0–15).
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: A trigger here loads the preset selected by `preset`.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger here saves the current state to the preset selected by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      A trigger here resets the circuit to its default start state (`startvalue`).
+      Presets are not affected unless direct preset switching is used without
+      triggers.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: |
+      A trigger here resets the circuit to its default start state and clears
+      all of its presets.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      Set to `1` to prevent the circuit's state from being saved to or loaded
+      from the SD card on startup.
+
+outputs:
+  - name: ledup
+    abbr: lu
+    valuetype: cv
+    description: |
+      Connect to the LED in the "nudge up" button. Brightness indicates how far
+      the value is above the center point; fully bright at `maximum`.
+
+  - name: leddown
+    abbr: ld
+    valuetype: cv
+    description: |
+      Connect to the LED in the "nudge down" button. Brightness indicates how
+      far the value is below the center point; fully bright at `minimum`.
+
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: Current value plus `offset`.
+
+  - name: changed
+    abbr: c
+    valuetype: trigger
+    description: |
+      Emits a trigger whenever the value is nudged up, nudged down, or reset by
+      pressing both buttons. No trigger is emitted if the value was already at
+      its limit or already at `startvalue` on a reset.
+
+examples:
+  - title: Simple CV source (-2 V to +2 V in 1 V steps)
+    code: |
+      ```ini
+      [nudge]
+      minimum = -2V
+      maximum = 2V
+      amount = 1V
+      buttonup = B1.1
+      buttondown = B1.3
+      ledup = L1.1
+      leddown = L1.3
+      output = O1
+      ```
+  - title: Octave switch (nudge + external V/Oct source on offset)
+    code: |
+      ```ini
+      [nudge]
+      minimum = -2V
+      maximum = 2V
+      amount = 1V
+      buttonup = B1.1
+      buttondown = B1.3
+      ledup = L1.1
+      leddown = L1.3
+      output = O1
+      offset = I1
+      ```
+  - title: Fine-tune oscillator in cents (1/1200 oct per step)
+    code: |
+      ```ini
+      [nudge]
+      amount = 1V / 1200
+      buttonup = B1.1
+      buttondown = B1.3
+      ledup = L1.1
+      leddown = L1.3
+      output = O1
+      offset = I1
+      ```
+  - title: Euclidean beat selector with wrap (3 to 7 beats)
+    code: |
+      ```ini
+      [nudge]
+      amount = 1
+      buttonup = B1.1
+      ledup = L1.1
+      minimum = 3
+      maximum = 7
+      wrap = 1
+      output = _BEATS
+
+      [euklid]
+      clock = G1
+      length = 16
+      beats = _BEATS
+      output = G3
+      ```

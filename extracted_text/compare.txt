@@ -1,0 +1,150 @@
+# CIRCUIT: compare
+# MANUAL PAGES (physical, 1-based): 181-182
+# TITLE: compare – Compare two values
+
+16.13
+compare – Compare two values
+This simple utility circuit allows you to
+make a decision by comparing an input
+value (at input) against a reference value
+(at compare) and output one of three val-
+ues depending on whether the input is less
+than, greater than or equal to the reference.
+The following simple example checks if the pot P1.1 is
+left of the center (a value less than 0.5). If that is so, it
+outputs 1, otherwise 0.
+[compare]
+input = P1.1
+compare = 0.5
+ifless = 1
+output = O1
+You can change the default output value of 0 with the in-
+put else. That speciﬁes what happens if the condition
+is not met. The following example outputs -1, if P1.1 is
+greater or equal to 0.5.
+[compare]
+input = P1.1
+compare = 0.5
+ifless = 1
+else = -1
+output = O1
+Equality, analog unprecision
+You can also check if two values are equal. This is done
+with ifequal. Check this out:
+[compare]
+input = B1.1
+compare = 1
+ifequal = 4
+else = 8
+output = O1
+Now while you hold the button B1.1 this circuit will out-
+put the value 4 and otherwise 8.
+Note: equality can be tricky when it comes to values from
+analog things like inputs or potentiometers. They always
+undergo tiny random ﬂuctiations. So the following ex-
+ample, that should compare the current voltages of two
+inputs, will never really work:
+[compare]
+input = I1
+compare = I2
+ifequal = 1 # will never happen!
+output = O1 # This won't work!
+If you try this out, you will probably never get both in-
+puts equal. Even a single electron too much could the-
+oretically make the difference. So in order to make such
+comparisons possible, there is a way to allow for a slight
+unprecision when doing the comparison. This is set with
+the precision parameter:
+[compare]
+input = I1
+compare = I2
+precision = 0.1
+ifequal = 1
+output = O1
+Now the inputs I1 and I2 are being treated as equal as
+long as their difference is 0.1 (1 V) at most.
+Makeing a three-way switch
+It is possible to check all three relations at once. Make
+sure that you apply a precision if you deal with analog
+values:
+[compare]
+input = I1
+compare = I2
+precision = 0.1
+ifless = 0
+ifequal = 1
+ifgreater = 2
+output = O1
+Now you get 0, 1 or 2, depending on wether I1 is less,
+equal or greater than I2.
+Note: Better do not use just ifless and ifgreater with-
+out using ifequal or else. This lets the equality unde-
+ﬁned and will output 0 if for any chance the two input
+values are equal. Better use ifless / ifgreater in com-
+bination with else if you are not interested in the exact
+equality.
+Omitted inputs
+It is allowed to omit any of the inputs ifless, ifequal,
+ifgreater or else. Any of these is treated as 0 with one
+exception: If you omit all four, ifequal defaults to 1.
+This make a super basic compare circuit just check if two
+values are equal:
+DROID manual for blue-7
+181
+Table of contents at page 2
+
+input = B1.1
+compare = 0
+output = O1
+This will output 1 if button B1.1 as the value 0 (is not
+pressed).
+Dynamic output values
+As often, instead of using ﬁxed values for ifless,
+ifequal, ifgreater and else you can use dynamic val-
+ues from somewhere else, of course. The following ex-
+ample will output a sine wave at O1 if the pot is left of the
+center or else a square wave:
+[lfo]
+hz = 2
+sine = _SINE
+square = _SQUARE
+[compare]
+input = P1.1
+compare = 0.5
+ifless = _SINE
+else = _SQUARE
+output = O1
+Input
+Type
+Default
+Description
+input (i)
+0.0
+A value to compare.
+compare (c)
+0.0
+A reference value to compare the input with.
+ifgreater (g)
+
+Value to be output if input is greater than compare. If you patch nothing here, the value of the input else will be used.
+ifless (l)
+
+Value to be output if input is less than compare. If you patch nothing here, the value of the input else will be used.
+ifequal (q)
+
+Value to be output if input is equal to compare within the precision deﬁned by precision. If you patch nothing here,
+the value of the input else will be used.
+else (e)
+0.0
+Speciﬁes the output value in case non of the stated conditions are met.
+precision (pc)
+0.0
+An optional precision to be used by ifequal
+Output
+Type
+Description
+output (o)
+Here one of ifgreater, ifless or ifequal is output.
+DROID manual for blue-7
+182
+Table of contents at page 2

@@ -1,0 +1,479 @@
+name: midiout
+title: CV to MIDI converter
+manual_page: 297
+category: midi
+description: |
+  Converts CV/gate signals into MIDI events and sends them to an external synth
+  or software via the X7 expander (TRS 3.5 mm jack and/or USB-C port).
+
+  Supports up to eight simultaneous notes (polyphony), velocity, aftertouch,
+  pitch bend, pitch tracking, CC outputs, note gates, program change, MIDI
+  clock, transport (start/stop), and sustain/pedal controllers.
+
+  This is the only DROID circuit with no outputs — all output is done via MIDI.
+
+  **Pitch stabilization.** Many sequencers need a few milliseconds for the
+  pitch CV to stabilize after the gate goes high. `midiout` automatically delays
+  the "note on" until the pitch is stable (`pitchstabilization`). A fixed delay
+  can also be set with `triggerdelay`.
+
+inputs:
+  - name: channel
+    abbr: ch
+    valuetype: integer
+    default: 1
+    min: 1
+    max: 16
+    description: |
+      MIDI channel to send events on. Default is channel 1. There are 16
+      channels; make sure the receiving device listens to this (or all) channels.
+
+  - name: usb
+    abbr: null
+    valuetype: gate
+    description: |
+      Set `usb = 1` to send MIDI output to the USB-C port of the X7. Can be
+      combined with `trs = 1` to send to both outputs simultaneously. If neither
+      `usb` nor `trs` is set, TRS is used by default.
+
+  - name: trs
+    abbr: null
+    valuetype: gate
+    description: |
+      Controls whether MIDI data is sent via the TRS output of the X7. TRS is
+      the default output; set `trs = 1` together with `usb = 1` to send to both
+      outputs at the same time.
+
+  - name: pitch
+    abbr: p
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    array: 8
+    description: |
+      Pitch of the notes to play at 1 V/octave. Range: `-2V` (MIDI note 0,
+      C-2) to approximately `8.6V` (MIDI note 127, G9). Up to eight `pitch`
+      inputs can be used for polyphony; `pitch1` may be abbreviated as `pitch`.
+
+  - name: gate
+    abbr: g
+    valuetype: gate
+    array: 8
+    description: |
+      Gate inputs for up to eight voices. A positive edge triggers a "note on"
+      at the corresponding `pitch`; a negative edge sends "note off". Up to
+      eight `gate` inputs can be used for polyphony.
+
+  - name: velocity
+    abbr: v
+    valuetype: fraction
+    default: 1.0
+    min: 0
+    max: 1
+    array: 8
+    description: |
+      Velocity for each of the up to eight notes. The value is sampled at the
+      positive edge of the corresponding `gate`. Range: `0.0` to `1.0` (mapped
+      to MIDI 0–127). A value of `0.0` is equivalent to "note off".
+
+  - name: noteoffvelocity
+    abbr: nv
+    valuetype: fraction
+    min: 0
+    max: 1
+    array: 8
+    description: |
+      Velocity sent with "note off" events for up to eight voices. MIDI allows
+      a separate release velocity. If not patched, the note-on velocity is
+      reused. This parameter is rarely needed.
+
+  - name: pressure
+    abbr: pr
+    valuetype: fraction
+    min: 0
+    max: 1
+    array: 8
+    description: |
+      Sends polyphonic key pressure events (MIDI "polyphonic key pressure", not
+      a CC) for each individual note. Continuously monitored — can change while
+      a note is already playing. If not patched, no pressure events are sent.
+
+  - name: channelpressure
+    abbr: cp
+    valuetype: fraction
+    min: 0
+    max: 1
+    description: |
+      Sends MIDI channel pressure (global aftertouch) whenever this CV changes.
+      Corresponds to keyboards with a single global pressure sensor. If not
+      patched, no channel pressure events are sent.
+
+  - name: pitchstabilization
+    abbr: ps
+    valuetype: gate
+    default: 1
+    description: |
+      Enables automatic pitch stabilization. When on (default), `midiout`
+      watches the pitch input after a gate and delays "note on" until the pitch
+      stops moving. Disable with `pitchstabilization = 0` if your pitch never
+      stabilizes (e.g. random or continuously evolving CV).
+
+  - name: triggerdelay
+    abbr: td
+    valuetype: cv
+    default: 0.0
+    min: 0
+    description: |
+      Introduces a fixed delay (in **milliseconds**) between the positive gate
+      edge and the "note on" event. Useful when a sequencer needs time to settle
+      after the gate. Automatically disables pitch stabilization unless
+      `pitchstabilization = 1` is set explicitly; when both are active,
+      `triggerdelay` acts as a minimum delay.
+
+  - name: lowestnote
+    abbr: ln
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 127
+    description: |
+      Lower bound for notes being played (MIDI note number 0–127). Notes below
+      this value are ignored. Useful for keyboard splits. Note gates are not
+      affected by this bound.
+
+  - name: highestnote
+    abbr: hn
+    valuetype: integer
+    default: 127
+    min: 0
+    max: 127
+    description: |
+      Upper bound for notes being played (MIDI note number 0–127). Notes above
+      this value are ignored. Combine with `lowestnote` for keyboard splits.
+      Note gates are not affected by this bound.
+
+  - name: notegate
+    abbr: ng
+    valuetype: trigger
+    array: 16
+    description: |
+      Up to 16 direct note triggers. A trigger or gate to `notegate1` plays
+      the note defined by `note1`. Convenient for drum sounds triggered directly
+      from modular triggers or for using DROID controllers as MIDI controllers.
+
+  - name: note
+    abbr: n
+    valuetype: integer
+    min: 0
+    max: 127
+    array: 16
+    description: |
+      MIDI note numbers (0–127) for the corresponding `notegate` inputs.
+      MIDI note 0 is usually C-2, note 24 is C0. Per default notes are set to
+      0, 1, 2 … 15.
+
+  - name: notegatevelocity
+    abbr: ngv
+    valuetype: fraction
+    default: 1.0
+    min: 0
+    max: 1
+    array: 16
+    description: |
+      Velocities for the note gate inputs (`notegate1`…`notegate16`). The same
+      velocity is used for both note-on and note-off events. If not patched,
+      maximum velocity is used.
+
+  - name: modwheel
+    abbr: w
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Sets the modulation wheel value (MIDI CC#1). Any change sends a new CC
+      event. Range: `0.0` to `1.0` (mapped to MIDI 0–127).
+
+  - name: volume
+    abbr: vo
+    valuetype: fraction
+    default: 1.0
+    min: 0
+    max: 1
+    description: |
+      Sets the volume of the target device via MIDI CC#7 (MSB) and CC#39 (LSB)
+      for 14-bit resolution (16384 levels). Range: `0.0` (silent) to `1.0`
+      (full volume, default).
+
+  - name: pitchbend
+    abbr: pb
+    valuetype: bipolar
+    default: 0.0
+    description: |
+      Bends the pitch of all currently played notes. Range: `-1.0` to `+1.0`,
+      covering the full pitch bend range of the target device (typically ±2
+      semitones). This input does not follow a 1 V/octave scale.
+
+  - name: pitchtracking
+    abbr: pt
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 2
+    description: |
+      Advanced monophonic pitch tracking. Continuously monitors `pitch1` while
+      a note is playing and converts pitch changes into MIDI pitch bend events.
+      Only works in monophonic mode (single active note).
+
+      - `0` — off (default)
+      - `1` — use MIDI pitch bend only; clips at the bend range
+      - `2` — play a new note when the change exceeds the bend range
+
+      When used together with `pitchbend`, both alterations add up.
+
+  - name: pitchbendrange
+    abbr: pbr
+    valuetype: cv
+    unit: octave
+    description: |
+      Tells the circuit the pitch bend range configured on the target device,
+      on a 1 V/octave scale (e.g. `1V` for 1 octave). Used by `pitchtracking`
+      to correctly translate pitch changes into bend values. Has no effect on
+      the `pitchbend` input itself.
+
+  - name: ccnumber
+    abbr: cn
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 127
+    array: 8
+    description: |
+      Specifies up to eight CC numbers to be continuously updated via the
+      corresponding `cc1`–`cc8` inputs. Value must be an integer from 0 to 127.
+
+  - name: cc
+    abbr: null
+    valuetype: fraction
+    min: 0
+    max: 1
+    array: 8
+    description: |
+      Current values for the CCs defined by `ccnumber1`–`ccnumber8`. Range:
+      `0.0` to `1.0` (mapped to MIDI 0–127). A new CC event is sent whenever
+      the value changes (subject to `updaterate`). If not patched, no CC events
+      are sent.
+
+  - name: cctrigger
+    abbr: ct
+    valuetype: trigger
+    array: 8
+    description: |
+      Alternative CC update method. When patched, CC events for the
+      corresponding `cc` input are sent only when a trigger arrives here —
+      not automatically on value change. Useful for CC-as-message devices.
+
+  - name: updateccs
+    abbr: uc
+    valuetype: trigger
+    description: |
+      A trigger here forces an immediate update for all active CC inputs. Useful
+      after a receiving device power-cycles and loses its CC state.
+
+  - name: delayinitialccs
+    abbr: dc
+    valuetype: cv
+    default: 1.0
+    min: 0
+    unit: second
+    description: |
+      Delay in seconds before the first CC updates are sent after the DROID
+      starts. Prevents initial CC events from being lost while the X7 or the
+      USB host is still initializing.
+
+  - name: bank
+    abbr: ba
+    valuetype: integer
+    min: 1
+    max: 16384
+    description: |
+      Selects the current bank for program change. Uses MIDI CCs #0 (MSB) and
+      #32 (LSB) to address up to 16384 banks. Many devices only use the MSB
+      (CC#0); for those, multiply the bank number by 128 (bank 2 → `bank = 256`).
+
+  - name: program
+    abbr: pm
+    valuetype: integer
+    min: 1
+    max: 128
+    description: |
+      Selects the current program (patch/preset). Range: 1–128. A program
+      change message is sent when the value changes or when `programchange`
+      is triggered.
+
+  - name: programchange
+    abbr: pc
+    valuetype: trigger
+    description: |
+      A trigger here sends a MIDI Program Change message even if `bank` and
+      `program` have not changed.
+
+  - name: start
+    abbr: st
+    valuetype: trigger
+    description: |
+      A trigger here emits the MIDI START message. Do not use together with
+      `running`. START/STOP messages are not channel-bound.
+
+  - name: stop
+    abbr: sp
+    valuetype: trigger
+    description: |
+      A trigger here emits the MIDI STOP message. Do not use together with
+      `running`. START/STOP messages are not channel-bound.
+
+  - name: running
+    abbr: ru
+    valuetype: gate
+    description: |
+      Alternative to `start` and `stop`. When this gate goes high a START
+      message is sent; when it goes low a STOP message is sent.
+      START/STOP messages are not channel-bound.
+
+  - name: systemreset
+    abbr: sr
+    valuetype: trigger
+    description: A trigger here sends the MIDI real-time RESET message to bring the device to its start state.
+
+  - name: allnotesoff
+    abbr: ao
+    valuetype: trigger
+    description: A trigger here sends MIDI CC#123 "ALL NOTES OFF", releasing all currently held notes.
+
+  - name: allsoundoff
+    abbr: aso
+    valuetype: trigger
+    description: A trigger here sends MIDI CC#120 "ALL SOUND OFF", silencing the device as quickly as possible.
+
+  - name: damper
+    abbr: dp
+    valuetype: gate
+    default: 0
+    description: |
+      Simulates a hold/damper pedal (MIDI CC#64). When the gate goes high,
+      value 127 is sent; when it goes low, value 0. While held, the device
+      should sustain notes and ignore "note off" for those notes until released.
+
+  - name: portamento
+    abbr: po
+    valuetype: gate
+    default: 0
+    description: Controls the portamento (glide) pedal. The receiver activates glide while this gate is high.
+
+  - name: sostenuto
+    abbr: su
+    valuetype: gate
+    default: 0
+    description: |
+      Enables the sostenuto pedal. Similar to the damper pedal but only sustains
+      notes that were already held when the pedal went down.
+
+  - name: soft
+    abbr: so
+    valuetype: gate
+    default: 0
+    description: Controls the soft pedal. The receiving synth plays notes softer while this gate is high.
+
+  - name: legato
+    abbr: lg
+    valuetype: gate
+    default: 0
+    description: Controls the legato pedal, which ties subsequent notes together.
+
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      Feed a modular master clock here (16th-note pulses) to generate a MIDI
+      beat clock. The MIDI clock (24 PPQN) is derived by multiplying the input
+      by 6. For dynamic tempos, use `midiclock` instead for better tracking.
+
+  - name: midiclock
+    abbr: mc
+    valuetype: clock
+    description: |
+      Alternative to `clock`: directly supply a MIDI clock at 24 PPQN. Do not
+      use both `clock` and `midiclock` at the same time.
+
+  - name: activesensing
+    abbr: as
+    valuetype: gate
+    default: 1
+    description: |
+      Enables or disables MIDI active sensing. When on (default), a keep-alive
+      message is sent every 300 ms so the receiver can detect a broken
+      connection. If multiple `midiout` circuits share the same port, enable
+      active sensing on only one to avoid duplicate events.
+
+  - name: updaterate
+    abbr: ur
+    valuetype: cv
+    default: 50.0
+    min: 0
+    unit: hz
+    description: |
+      Maximum rate (in updates per second) for continuous controllers such as
+      CCs, volume, pitch bend, and channel pressure. The limit prevents flooding
+      the MIDI interface. Default is 50 updates/second. Zero or negative stops
+      all updates.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Allows overlaying buttons and LEDs with multiple functions. When this
+      input carries a positive gate signal the circuit processes buttons/LEDs
+      normally. Otherwise it leaves them untouched so another circuit can use
+      them. Other inputs and outputs continue to work regardless.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Makes `select` more flexible. Specifies the exact value at which `select`
+      activates this circuit. E.g. `selectat = 0` means the circuit is active
+      when `select` is exactly 0 instead of a positive gate.
+
+outputs: []
+
+examples:
+  - title: Basic CV/gate to MIDI (channel 1)
+    code: |
+      ```ini
+      [midiout]
+      pitch = I1
+      gate = I2
+      ```
+  - title: Randomized velocity
+    code: |
+      ```ini
+      [random]
+      minimum = 0.5
+      maximum = 1.0
+      output = _VEL
+
+      [midiout]
+      pitch = I1
+      gate = I2
+      velocity = _VEL
+      ```
+  - title: MIDI clock at 120 BPM
+    code: |
+      ```ini
+      [lfo]
+      hz = 8
+      square = _CLOCK
+
+      [midiout]
+      clock = _CLOCK
+      ```

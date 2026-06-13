@@ -1,0 +1,70 @@
+name: multicompare
+title: Compare an input with up to sixteen possible values
+manual_page: 347
+category: utility
+description: |
+  Compares an `input` value with up to 16 reference values (`compare1`…`compare16`).
+  When a match is found, the corresponding `ifequal` value is sent to the output. If
+  no match is found, the `else` value is output instead.
+
+  Similar to `switch`, but reference values do not need to be contiguous integers —
+  they can be arbitrary values (e.g. 5, 7, 98). This makes it useful for sparse or
+  non-sequential routing logic.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    description: The value to compare against the `compare` reference values.
+
+  - name: compare
+    abbr: c
+    valuetype: cv
+    array: 16
+    description: |
+      Reference values to compare `input` against (`compare1`…`compare16`). When
+      `input` matches a `compareN` value, the corresponding `ifequalN` is routed to
+      the output.
+
+  - name: ifequal
+    abbr: "if"
+    valuetype: cv
+    array: 16
+    description: |
+      Output value used when the corresponding `compareN` value matches `input`.
+      `ifequal1` pairs with `compare1`, `ifequal2` with `compare2`, and so on.
+
+  - name: else
+    abbr: e
+    valuetype: cv
+    default: 0.0
+    description: Output value used when none of the `compare` values match `input`.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: The value of the matching `ifequal` input, or `else` if no match was found.
+
+examples:
+  - title: Route one of three LFO waveforms based on a switch value
+    code: |
+      ```ini
+      [lfo]
+      sawtooth = _SAWTOOTH
+      triangle = _TRIANGLE
+      square   = _SQUARE
+      sine     = _SINE
+
+      [multicompare]
+      input    = _WAVEFORMSWITCH
+      compare1 = 5
+      ifequal1 = _SAWTOOTH
+      compare2 = 7
+      ifequal2 = _TRIANGLE
+      compare3 = 98
+      ifequal3 = _SQUARE
+      else     = _SINE
+      output   = O1
+      ```

@@ -1,0 +1,333 @@
+name: arpeggio
+title: Arpeggiator – pattern based melody generator
+manual_page: 140
+obsolete: false
+category: sequencer
+description: |
+  Creates melodic patterns from simple rules: a clock steps through scale
+  notes selected by pitch range, movement pattern, direction and interval
+  selection. The result lies between a sequencer (manually composed) and a
+  random generator (fully chaotic) — melodies are constructed algorithmically
+  from musical constraints and repeat predictably.
+
+  **Root and scale.** `root` selects the tonic (0 = C … 11 = B) and `degree`
+  selects one of 108 scales (0 = Lydian major, 7 = natural minor, etc.). The
+  arpeggiator shares these with `chord` and `minifonion`.
+
+  **Range.** `pitch` is the lowest allowed pitch; `range` is the voltage span
+  upward (in octaves). Default is 0 V to 2 V (two octaves). Specifying a root
+  of D does *not* automatically start the arpeggio at D — adjust `pitch` for
+  that.
+
+  **Interval selection.** Seven `select` inputs choose which scale degrees are
+  active (select1 = root, select3 = 3rd … select13 = 6th). Five `selectfill`
+  inputs add chromatic notes outside the scale. When all `select` and
+  `selectfill` inputs are 0, all seven scale degrees are active automatically.
+
+inputs:
+  - name: pitch
+    abbr: p
+    valuetype: pitch
+    default: 0
+    unit: octave
+    description: |
+      Base pitch of the arpeggio. The first note played is the nearest allowed
+      note at or above this pitch. Default 0 V = C.
+
+  - name: range
+    abbr: ra
+    valuetype: cv
+    default: "2V"
+    unit: octave
+    max: 0.8
+    description: |
+      Voltage span from the lowest to the highest allowed note. `1V` (= 0.1)
+      equals one octave; default `2V` equals two octaves. `0` collapses the
+      range to a single note. Maximum is 0.8 (8 octaves).
+
+  - name: clock
+    abbr: c
+    valuetype: trigger
+    description: |
+      Each trigger here advances the arpeggio by one step and updates the
+      pitch output. Without a clock the arpeggio stays on the same note
+      indefinitely. Any rhythmic trigger pattern works — it does not need to
+      be a steady clock.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: Resets the arpeggio to the first step of the current pattern.
+
+  - name: pattern
+    abbr: pt
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 6
+    description: |
+      Movement pattern through the allowed notes:
+      - `0` – step forward (→)
+      - `1` – two steps forward, one back (→→←)
+      - `2` – double step forward, one back (⇒←)
+      - `3` – double forward, double back, single forward (⇒⇐→)
+      - `4` – double forward, single forward, double back, single forward (⇒→⇐→)
+      - `5` – random single step forward or backward
+      - `6` – random jump to any allowed note
+
+  - name: direction
+    abbr: d
+    valuetype: gate
+    default: 0
+    description: |
+      General direction. `0` = upward (low to high); `1` = downward (pattern
+      reversed, starting from the highest allowed note).
+
+  - name: pingpong
+    abbr: pp
+    valuetype: gate
+    default: 0
+    description: |
+      If `1`, the pattern reverses direction when it reaches the end of the
+      range instead of restarting from the beginning (triangle vs. sawtooth
+      behaviour).
+
+  - name: butterfly
+    abbr: by
+    valuetype: gate
+    default: 0
+    description: |
+      If `1`, every second note in the allowed range is mirrored. For example
+      notes 1–10 become 1, 10, 2, 9, 3, 8, 4, 7, 5, 6.
+
+  - name: drop
+    abbr: dr
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 3
+    description: |
+      Skips notes from the selected scale notes:
+      - `0` – no skipping
+      - `1` – skip every second note
+      - `2` – skip every third note
+      - `3` – skip the 2nd and 3rd note of each group of three
+
+  - name: octaves
+    abbr: oc
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 2
+    description: |
+      When non-zero, each note is followed by the same note one octave away
+      (beyond the defined range):
+      - `0` – no additional octave note
+      - `1` – followed by the same note one octave up
+      - `2` – followed by the same note one octave down
+
+  - name: startnote
+    abbr: sn
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 7
+    description: |
+      Forces the pattern to begin at a specific scale note: 1 = root, 2 = 2nd
+      … 7 = 7th. `0` disables this. `startnote` controls where the *pattern*
+      starts, not the lowest pitch — use `pitch` to control the lowest pitch.
+      With `pingpong = 1`, `startnote` only applies after an external `reset`.
+
+  - name: autoreset
+    abbr: ar
+    valuetype: integer
+    default: 0
+    min: 0
+    description: |
+      When non-zero, forces the arpeggio to restart after this many clock
+      ticks regardless of the natural pattern length. A trigger to `reset`
+      also resets the internal counter to 0.
+
+  - name: root
+    abbr: ro
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 12
+    description: |
+      Root note of the scale. 0 = C, 1 = C♯, 2 = D, … 11 = B, 12 = C.
+      Multiplying a 1V/Oct pitch by 120 lets a sequencer or MIDI keyboard
+      drive this input (compatible with the Sinfonion ROOT CV).
+
+  - name: degree
+    abbr: dg
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 107
+    description: |
+      Musical scale (0–107). Important values: 0 = Lydian major, 1 = Ionian
+      (major), 2 = Mixolydian, 6 = Dorian, 7 = natural minor, 8 = harmonic
+      minor, 10 = diminished, 11 = whole-tone. See page 119 for all 108 scales.
+
+  - name: select1
+    abbr: s1
+    valuetype: gate
+    description: |
+      Enables the **root** (1st) scale degree. When all `select` and
+      `selectfill` inputs are 0, all seven scale degrees are active
+      automatically.
+
+  - name: select3
+    abbr: s3
+    valuetype: gate
+    description: Enables the **3rd** scale degree.
+
+  - name: select5
+    abbr: s5
+    valuetype: gate
+    description: Enables the **5th** scale degree.
+
+  - name: select7
+    abbr: s7
+    valuetype: gate
+    description: Enables the **7th** scale degree.
+
+  - name: select9
+    abbr: s9
+    valuetype: gate
+    description: Enables the **9th** (= 2nd) scale degree.
+
+  - name: select11
+    abbr: s11
+    valuetype: gate
+    description: Enables the **11th** (= 4th) scale degree.
+
+  - name: select13
+    abbr: s13
+    valuetype: gate
+    description: Enables the **13th** (= 6th) scale degree.
+
+  - name: selectfill1
+    abbr: sf1
+    valuetype: gate
+    default: 0
+    description: Enables the alternative 9th (the 9th not in the current scale).
+
+  - name: selectfill2
+    abbr: sf2
+    valuetype: gate
+    default: 0
+    description: Enables the alternative 3rd (the 3rd not in the current scale).
+
+  - name: selectfill3
+    abbr: sf3
+    valuetype: gate
+    default: 0
+    description: Enables the alternative 4th or 5th (usually the diminished 5th).
+
+  - name: selectfill4
+    abbr: sf4
+    valuetype: gate
+    default: 0
+    description: Enables the alternative 13th (the 13th not in the current scale).
+
+  - name: selectfill5
+    abbr: sf5
+    valuetype: gate
+    default: 0
+    description: Enables the alternative 7th (the 7th not in the current scale).
+
+  - name: harmonicshift
+    abbr: has
+    valuetype: integer
+    default: 0
+    min: -7
+    max: 7
+    description: |
+      Applied after `select` inputs to reduce harmonic complexity further.
+      Positive values progressively disable fill notes, then upper extensions
+      (11th, 13th, 9th, 7th, 3rd, 5th). Negative values remove root and
+      simple functions first. `0` = no filtering.
+
+  - name: noteshift
+    abbr: nos
+    valuetype: integer
+    default: 0
+    min: -24
+    max: 24
+    description: |
+      Shifts the output note by this many scale steps up (positive) or down
+      (negative). The shifted note still belongs to the scale. Applied after
+      `selectnoteshift`. Range: –24 to +24.
+
+  - name: selectnoteshift
+    abbr: sns
+    valuetype: integer
+    default: 0
+    min: -24
+    max: 24
+    description: |
+      Shifts the output note by this many **selected** scale steps up or down.
+      Applied before `noteshift`. Range: –24 to +24.
+
+  - name: tuningmode
+    abbr: tm
+    valuetype: gate
+    default: 0
+    description: |
+      While `1`, outputs `tuningpitch` instead of the arpeggio pitch. Intended
+      to assist VCO tuning.
+
+  - name: tuningpitch
+    abbr: tp
+    valuetype: pitch
+    default: 0
+    unit: octave
+    description: Pitch CV output while `tuningmode` is active. Default 0 V.
+
+  - name: transpose
+    abbr: tr
+    valuetype: pitch
+    default: 0
+    unit: octave
+    description: |
+      Added to the output pitch when not in tuning mode. Use for musical
+      transposition or to patch in a vibrato signal.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: pitch
+    description: Pitch CV (1 V/oct) for the current arpeggio note.
+
+examples:
+  - title: Minimal (C Lydian major, two octaves)
+    code: |
+      ```ini
+      [arpeggio]
+      clock = I1
+      output = O1
+      ```
+  - title: D natural minor, one octave starting at D
+    code: |
+      ```ini
+      [arpeggio]
+      clock = I1
+      output = O1
+      root = 2
+      degree = 7
+      pitch = 2/120
+      range = 1V
+      ```
+  - title: C major triad ping-pong over two octaves
+    code: |
+      ```ini
+      [arpeggio]
+      clock = I1
+      output = O1
+      select1 = 1
+      select3 = 1
+      select5 = 1
+      pingpong = 1
+      ```

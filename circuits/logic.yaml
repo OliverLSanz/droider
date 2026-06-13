@@ -1,0 +1,127 @@
+name: logic
+title: Logic operations utility
+manual_page: 273
+obsolete: false
+category: logic
+description: |
+  Utility circuit for logic operations on gate signals. Computes AND, OR, XOR,
+  NAND, NOR, and logical negation across up to 8 inputs.
+
+  The `threshold` input defines the voltage considered "high" (default `0.1`
+  = 1 V). The output values for high and low states are configurable via
+  `highvalue` and `lowvalue`, allowing the circuit to drive non-gate targets.
+
+  **Note:** many simple gate combinations can be done without this circuit.
+  AND is equivalent to multiplying two gates (`A * B`); OR is equivalent to
+  adding them, since the output is clamped to 10 V.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: gate
+    array: 8
+    description: |
+      Up to 8 gate inputs (input1 … input8). A signal at or above `threshold`
+      is treated as high (logic 1). Can also accept CV signals when `threshold`
+      is modulated for creative pattern generation.
+
+  - name: threshold
+    abbr: th
+    valuetype: cv
+    default: 0.1
+    description: |
+      Signals at or above this value are considered high. The default `0.1`
+      corresponds to 1 V. Modulating `threshold` with a CV or LFO while the
+      inputs are also CVs creates interesting variations.
+
+  - name: lowvalue
+    abbr: l
+    valuetype: cv
+    default: 0.0
+    description: Output value sent for logic low (false / off).
+
+  - name: highvalue
+    abbr: h
+    valuetype: cv
+    default: 1.0
+    description: Output value sent for logic high (true / on).
+
+  - name: countvalue
+    abbr: cv
+    valuetype: cv
+    default: 0.1
+    description: |
+      Scale factor applied to the `count` and `countlow` outputs. Those
+      outputs are multiplied by this value.
+
+outputs:
+  - name: and
+    abbr: a
+    valuetype: gate
+    description: |
+      Logic AND: outputs `highvalue` if **all** patched inputs are high
+      (at or above `threshold`), otherwise `lowvalue`.
+
+  - name: or
+    abbr: o
+    valuetype: gate
+    description: |
+      Logic OR: outputs `highvalue` if **at least one** input is high.
+
+  - name: xor
+    abbr: x
+    valuetype: gate
+    description: |
+      Exclusive OR: outputs `highvalue` if the **number of high inputs is odd**.
+      Any change in one input will also change this output.
+
+  - name: nand
+    abbr: na
+    valuetype: gate
+    description: Like AND but the result is negated.
+
+  - name: nor
+    abbr: "no"
+    valuetype: gate
+    description: Like OR but the result is negated.
+
+  - name: negated
+    abbr: "n"
+    valuetype: gate
+    description: |
+      Logical negation of `input1` (which may be abbreviated as `input`).
+      Inputs input2 … input8 are ignored. When only `input1` is used, this
+      output is equivalent to `nand` and `nor`.
+
+  - name: count
+    abbr: c
+    valuetype: cv
+    description: |
+      Number of inputs that are currently high, optionally multiplied by
+      `countvalue`.
+
+  - name: countlow
+    abbr: cl
+    valuetype: cv
+    description: |
+      Number of inputs that are currently low, optionally multiplied by
+      `countvalue`.
+
+examples:
+  - title: AND gate across three inputs
+    code: |
+      ```ini
+      [logic]
+      input1 = I1
+      input2 = I2
+      input3 = I3
+      and = O1
+      ```
+  - title: Logic negate with custom threshold
+    code: |
+      ```ini
+      [logic]
+      input = I1
+      negated = O1
+      threshold = 5V
+      ```

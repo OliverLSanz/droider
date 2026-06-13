@@ -1,0 +1,198 @@
+name: matrixmixer
+title: Matrix mixer for CVs
+manual_page: 279
+obsolete: false
+category: utility
+description: |
+  4×4 matrix mixer with four CV inputs and four outputs, operated by push buttons.
+  Each of the 16 matrix nodes has a toggle button for routing one specific input
+  to one specific output. Mixing is at unity gain: each output sums all enabled
+  inputs (or takes the maximum if `mixmax = 1`).
+
+  By default the diagonal is pre-active, so `input1 → output1`, `input2 → output2`,
+  etc. Smaller matrices (e.g. 3×2) work by simply leaving unused inputs, outputs
+  and buttons unpatched. The state of the 16 buttons is saved in the DROID's
+  internal flash memory.
+
+  Use `auxin1`–`auxin4` to cascade two matrix mixers into an 8×4 configuration:
+  feed the four outputs of the first mixer into the `auxin` jacks of the second.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    array: 4
+    description: The up to four CV inputs to mix.
+
+  - name: auxin
+    abbr: a
+    valuetype: cv
+    array: 4
+    description: |
+      Auxiliary CV inputs mixed directly into `output1`–`output4`. Used to
+      cascade two matrix mixers for more than four inputs.
+
+  - name: mixmax
+    abbr: m
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      `0.0` = normal summing mix; `1.0` = each output is the maximum of its
+      enabled inputs (useful for combining envelopes without distortion).
+      Intermediate values blend between the two behaviours.
+
+  - name: startvalue
+    abbr: sv
+    valuetype: integer
+    default: 1
+    min: 0
+    max: 2
+    description: |
+      Initial state of the matrix, also applied when `clear` fires.
+      `0` — all buttons cleared; `1` — diagonal active (`inputN → outputN`);
+      `2` — all buttons set.
+
+  - name: button1
+    abbr: b1
+    valuetype: trigger
+    array: 4
+    description: |
+      Toggle buttons `button11`–`button14`: each one routes `input1` to the
+      corresponding output (1–4).
+
+  - name: button2
+    abbr: b2
+    valuetype: trigger
+    array: 4
+    description: |
+      Toggle buttons `button21`–`button24`: each one routes `input2` to the
+      corresponding output (1–4).
+
+  - name: button3
+    abbr: b3
+    valuetype: trigger
+    array: 4
+    description: |
+      Toggle buttons `button31`–`button34`: each one routes `input3` to the
+      corresponding output (1–4).
+
+  - name: button4
+    abbr: b4
+    valuetype: trigger
+    array: 4
+    description: |
+      Toggle buttons `button41`–`button44`: each one routes `input4` to the
+      corresponding output (1–4).
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Allows sharing buttons and LEDs across multiple circuits. When this input
+      has a positive gate (or equals `selectat`), the circuit processes its buttons
+      and LEDs; otherwise it ignores them but continues working normally.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Specifies the exact value that `select` must equal to activate this circuit.
+      E.g. `selectat = 0` makes the circuit active when `select` is exactly 0
+      instead of the default positive-gate behaviour.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 15
+    description: Preset number to save or load (0–15; the first preset is 0).
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: A trigger here loads the preset specified by `preset`.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger here saves the current state to the preset specified by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      A trigger here restores the start state (as defined by `startvalue`).
+      Presets are not affected unless direct preset switching is used without triggers.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: A trigger here restores the start state in the circuit and in all its presets.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      Set to `1` to prevent the circuit state from being saved to or loaded from
+      the SD card at startup.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    array: 4
+    description: The four mixer outputs (`output1`–`output4`).
+
+  - name: led1
+    abbr: l1
+    valuetype: gate
+    array: 4
+    description: |
+      LEDs for `button11`–`button14`. Each LED is on when the corresponding
+      matrix node (input1 → that output) is active.
+
+  - name: led2
+    abbr: l2
+    valuetype: gate
+    array: 4
+    description: LEDs for `button21`–`button24` (input2 routing).
+
+  - name: led3
+    abbr: l3
+    valuetype: gate
+    array: 4
+    description: LEDs for `button31`–`button34` (input3 routing).
+
+  - name: led4
+    abbr: l4
+    valuetype: gate
+    array: 4
+    description: LEDs for `button41`–`button44` (input4 routing).
+
+examples:
+  - title: 3×2 matrix mixer
+    code: |
+      ```ini
+      [matrixmixer]
+      input1 = I1
+      input2 = I2
+      input3 = I3
+      output1 = O1
+      output2 = O2
+      button11 = B1.1
+      button12 = B1.2
+      button21 = B2.1
+      button22 = B1.3
+      button31 = B1.4
+      button32 = B2.3
+      led11 = L1.1
+      led12 = L1.2
+      led21 = L2.1
+      led22 = L1.3
+      led31 = L1.4
+      led32 = L2.3
+      ```

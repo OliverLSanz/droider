@@ -1,0 +1,100 @@
+name: sinfonionlink
+title: sinfonionlink – Sync harmonic state from Sinfonion
+manual_page: 386
+obsolete: false
+category: utility
+description: |
+  Receives the harmonic state broadcast from an ACL Sinfonion via the
+  MASTER18's I1 input (Harmonic Sync cable) and exposes it as individual
+  outputs: root note, scale/degree, transposition, chaotic detune, harmonic
+  shift, clock, and song-position triggers.
+
+  **Setup:**
+  1. On the Sinfonion, set Out 1 to *Sync Master*.
+  2. Connect the Sinfonion's OUT 1 to the MASTER18's I1 jack with a mono cable.
+  3. Add a `sinfonionlink` circuit and use its outputs in other circuits.
+
+  > Only available on the MASTER18; the standard MASTER does not support this
+  > circuit. The MASTER18 can receive the sync but cannot act as sync master.
+  > Use a passive mult to distribute the Harmonic Sync signal to multiple
+  > MASTER18s or Sinfonions.
+
+inputs: []
+
+outputs:
+  - name: root
+    abbr: ro
+    valuetype: integer
+    description: |
+      The current root note as an integer: C = 0, C♯ = 1, D = 2, … B = 11.
+
+  - name: degree
+    abbr: dg
+    valuetype: integer
+    description: |
+      The current scale (the Sinfonion calls it "degree") as an integer. See
+      page 119 of the manual for the full list of available scales.
+
+  - name: transpose
+    abbr: tr
+    valuetype: pitch
+    unit: octave
+    description: |
+      The current global transposition of the Sinfonion in 1 V/octave. Add this
+      directly to any pitch CV in your patch.
+
+  - name: chaoticdetune
+    abbr: ch
+    valuetype: cv
+    description: |
+      The current chaotic detune value. Feed this into the `detune` input of a
+      `detune` circuit (see page 198).
+
+  - name: harmonicshift
+    abbr: has
+    valuetype: integer
+    description: |
+      Harmonic shift value as an integer between -7 and 7. Feed directly into
+      the `harmonicshift` input of `minifonion`, `chord`, `arpeggio`, or
+      `motoquencer`. See the `minifonion` chapter for a full explanation.
+
+  - name: linkstate
+    abbr: ls
+    valuetype: gate
+    description: Outputs `1` when the Sinfonion link is active, `0` otherwise.
+
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: A copy of the Sinfonion's clock signal.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: |
+      Trigger output at the start of every song (when the Sinfonion returns to
+      bar 1 in Song mode).
+
+  - name: step
+    abbr: s
+    valuetype: trigger
+    description: Trigger output for every step of a song.
+
+  - name: beat
+    abbr: b
+    valuetype: trigger
+    description: Trigger output for every beat (subdivision of a step).
+
+examples:
+  - title: Adding a quantizer slaved to a Sinfonion
+    code: |
+      ```ini
+      [sinfonionlink]
+      root = _ROOT
+      degree = _DEGREE
+      [minifonion]
+      input = I1
+      output = O2
+      root = _ROOT
+      degree = _DEGREE
+      ```

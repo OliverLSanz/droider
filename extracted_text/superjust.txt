@@ -1,0 +1,191 @@
+# CIRCUIT: superjust
+# MANUAL PAGES (physical, 1-based): 392-393
+# TITLE: superjust – Perfect intonation of up to eight voices
+
+16.67
+superjust – Perfect intonation of up to eight voices
+This circuit automatically creates a per-
+fect pure intonation for up to eight input
+pitches.
+Introduction
+This means that all pitches are in just inter-
+vals, whichcorrespondtosmallwholenumberratiossuch
+as 3
+2 or 5
+4. Assuming that you have perfectly tuned and
+calibrated VCOs, If these pitches are used to play a chord,
+there will be no or just minimal audible beatings and the
+chord will sound very pure.
+In normal equal temperament intonation all intervals are
+a multiple of
+12√
+2 and thus there is no pure interval at all,
+with the exception of the octave. So all chords will sound
+impure.
+The problem about pure or just intonation is, that you
+need to decide for just one scale, e.g. C major, and then
+tune all 12 notes in a way that chords from that scale
+sound good. But as soon as you change the scale, the in-
+tervals will sound ugly.
+What makes the superjust unique is that fact, that it au-
+tomatically creates a pure intonation in a dynamic way. It
+constantly “listens” to the notes that are currently being
+played and creates a perfect intonation just for those, not
+for a scale or so. As soon as at least one note changes, all
+notes are retuned in order to ﬁnd a new perfect tuning.
+This is a bit like a well-trained string ensemble or choir,
+where each musician listens and adjusts his or her pitch
+in relation to all others.
+Usage
+The nice thing is: you don’t need any conﬁguration. You
+need not specify any information about the root note,
+the scale or anything else. Neither need the inputs be
+quantized so some scale or tuned to 440 Hz. The circuit
+will simply analyse all input pitches, apply its algorithm
+(patent pending) and then just slightly raises or lowers
+each note so that at the end each pair of frequencies have
+a rational oscillation ratio with small numerator and de-
+nominator. This is done in a way that the average pitch
+does not change. Just pipe your pitches through that cir-
+cuit and you are done. And if you want to use a quantizer,
+use superjust after quantization.
+Here an example for three voices:
+[superjust]
+input1 = I1
+input2 = I2
+input3 = I3
+output1 = O1
+output2 = O2
+output3 = O3
+Tuning
+Of course, an exact tuning of your VCOs is crucial, since
+the pitch differences between a normal tempered into-
+nation and a perfect intonation are quite small. The cir-
+cuit helps you in the process of tuning with the inputs
+tuningmode, which you can map to a toggle button:
+[button]
+button = B1.1
+led = L1.1
+[superjust]
+input1 = I1
+input2 = I2
+input3 = I3
+output1 = O1
+output2 = O2
+output3 = O3
+tuningmode = L1.1
+Now when the button B1.1 is active, all outputs will out-
+put zero volts. Tuning with 0 V is not optimal in some
+cases. You should tune your VCOs always roughly in the
+average pitch you play them. So you can set the tuning
+voltage with the parameter tuningpitch. Here it is set
+to 2 V (2 octaves higher then 0 V):
+[button]
+button = B1.1
+led = L1.1
+[superjust]
+input1 = I1
+input2 = I2
+input3 = I3
+output1 = O1
+output2 = O2
+output3 = O3
+tuningmode = L1.1
+tuningpitch = 2V
+Sometimes it is desirable to change the tuning pitch to
+other octaves on the ﬂy. This example uses pot P1.1 for
+going through several octaves, and uses a quantizer for
+creating steps of 1 V each:
+DROID manual for blue-7
+392
+Table of contents at page 2
+
+[button]
+button = B1.1
+led = L1.1
+[quantizer]
+input = P1.1
+steps = 1 # 1 step per octave
+output = _TUNINGPITCH
+[superjust]
+input1 = I1
+input2 = I2
+input3 = I3
+output1 = O1
+output2 = O2
+output3 = O3
+tuningmode = L1.1
+tuningpitch = _TUNINGPITCH
+Perfect VCO calibration
+If you really want to eliminate all beatings in your chords
+while using analog VCOs, you probably need something
+to correct tracking deviations.
+Here I strongly recom-
+mend using the circuit calibrator (see page 164). Here
+is an example with three voices, where buttons of a P2B8
+are used for ﬁne tuning the VCO tracking in each octave:
+[superjust]
+input1 = I1
+input2 = I2
+input3 = I3
+output1 = _O1
+output2 = _O2
+output3 = _O3
+[calibrator]
+input = _O1
+output = O1
+nudgeup = B1.1
+nudgedown = B1.3
+[calibrator]
+input = _O2
+output = O2
+nudgeup = B1.2
+nudgedown = B1.4
+[calibrator]
+input = _O3
+output = O3
+nudgeup = B1.5
+nudgedown = B1.7
+The number of pitch inputs and pitch outputs you patch
+should be identical.
+Input
+Type
+Default
+Description
+input1 ... input8 (i)
+
+1V
+Oct
+
+1st ... 8th pitch input
+tuningmode (tm)
+0
+While this is 1, all outputs output the value set by tuningpitch. This is for tuning all outputs. Since perfect tuning is
+crucial for perfect intonation, this is quite useful.
+tuningpitch (tp)
+
+1V
+Oct
+0V
+This pitch CV will be output while the tuning mode is active.
+bypass (b)
+0
+While this is 1, all inputs are passed through to the outputs without changes.
+transpose (tr)
+
+1V
+Oct
+0V
+This value is being added to all outputs, but not in tuning or bypass mode. It can e.g. be used for making a vibrato on
+a chord.
+Output
+Type
+Description
+output1 ... output8 (o)
+
+1V
+Oct
+1st ... 8th pitch output
+DROID manual for blue-7
+393
+Table of contents at page 2

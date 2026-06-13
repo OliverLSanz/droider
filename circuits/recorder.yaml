@@ -1,0 +1,339 @@
+name: recorder
+title: Record and playback CVs and gates
+manual_page: 374
+obsolete: false
+category: utility
+description: |
+  Records and plays back one continuous CV, up to eight gate tracks, and one
+  discrete integer (0–255) to a virtual tape stored in RAM and optionally on
+  the SD card. All three tracks are recorded in parallel.
+
+  **Tape resolution.** The CV track uses 16-bit resolution (~1 mV per step;
+  one volt = 3200 steps) and linear interpolation. The valid CV range is
+  −1…+1 (−10 V…+10 V); values outside are clipped. Gate tracks are binary
+  (values below 1 V → 0, all others → 1). The integer track records each
+  change as a new sample without interpolation.
+
+  The tape holds 256 samples. The minimum recordable length is 5.12 s
+  (256 × 20 ms); smooth or stepped CVs allow much longer recordings.
+
+  **Modes.** The circuit is either idle/stopped, recording, or playing back.
+  Control via `recordbutton` / `playbutton` / `stopbutton` triggers, or use
+  the `mode` input as an alternative. The `pause` input halts the tape without
+  leaving the current mode.
+
+  **Triggered mode.** Patching `sample` records one sample per trigger edge,
+  allowing step-by-step recording of sequencer output (up to 256 steps). Use
+  `timewindow` to compensate for pitch CVs that settle late after the gate.
+
+  **Scrubbing.** Set `scrub = 1` to manually select any tape position via
+  `scrubposition` (0 = start, 1 = end), bypassing play/record/stop state.
+
+  **Trimming.** `trimstart` and `trimend` (both 0–1) restrict the playback
+  region without modifying the tape content.
+
+  **Save / Load.** Triggers on `save` / `load` write or read `tapeXXXX.bin`
+  on the SD card. Files are shared between `recorder` and `delay` circuits.
+
+  > **Note:** This circuit is experimental. Its behaviour or file format may
+  > change in a future firmware version.
+
+inputs:
+  - name: playbutton
+    abbr: pb
+    valuetype: trigger
+    description: A trigger here starts or restarts the playback.
+
+  - name: recordbutton
+    abbr: rb
+    valuetype: trigger
+    description: A trigger here starts or stops the recording.
+
+  - name: stopbutton
+    abbr: sb
+    valuetype: trigger
+    description: A trigger here stops any ongoing playback or recording.
+
+  - name: loop
+    abbr: lo
+    valuetype: gate
+    default: 0
+    description: |
+      Set to `1` to enable loop mode. In loop mode, playback restarts
+      immediately when it reaches the end of the recording.
+
+  - name: pause
+    abbr: p
+    valuetype: gate
+    default: 0
+    description: |
+      While `1`, the tape stops moving (playback or recording is halted).
+      Set back to `0` to resume from where it paused.
+
+  - name: mode
+    abbr: m
+    valuetype: integer
+    min: 0
+    max: 2
+    description: |
+      Alternative to the three button inputs. When `mode` is patched, the
+      button inputs and LED outputs are ignored. Values:
+      - `0` — idle / stopped
+      - `1` — playback
+      - `2` — recording
+
+      Because mode is driven externally, the circuit cannot auto-switch it.
+      For example, when `mode = 1` and playback finishes, it stays in playback
+      and keeps outputting the last sample.
+
+  - name: playbackspeed
+    abbr: ps
+    valuetype: cv
+    default: 1.0
+    description: |
+      Speed of the tape during playback. `1` = normal, `0.5` = half speed,
+      `2` = double speed. Negative values play the tape backwards (playback
+      then starts from the end). `0` stops the tape.
+
+  - name: scrub
+    abbr: sc
+    valuetype: gate
+    default: 0
+    description: |
+      Set to `1` to enable scrubbing mode. The output reflects the tape
+      position set by `scrubposition`, ignoring play/record/stop state. While
+      scrubbing, `playled` is `1` and the other LED outputs are `0`.
+
+  - name: scrubposition
+    abbr: sp
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Position on the tape to read when `scrub` is enabled. `0.0` = start of
+      recording, `1.0` = end of recording.
+
+  - name: trimstart
+    abbr: ts
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Omits a portion at the beginning of the recording during playback and
+      scrubbing. `0.1` skips the first 10%. The recording itself is unchanged.
+
+  - name: trimend
+    abbr: te
+    valuetype: fraction
+    default: 1.0
+    min: 0
+    max: 1
+    description: |
+      Limits the playback/scrubbing region at the recording's end. `0.8` skips
+      the last 20% (not 80%!). The recording itself is unchanged.
+
+  - name: cvin
+    abbr: ci
+    valuetype: cv
+    default: 0.0
+    description: |
+      Continuous CV to record (range −1…+1, i.e. −10 V…+10 V). Values outside
+      this range are clipped. In idle and bypass mode, this input is passed
+      directly to `cvout`.
+
+  - name: numberin
+    abbr: ni
+    valuetype: integer
+    min: 0
+    max: 255
+    description: |
+      Discrete integer (0–255) to record. No interpolation is done; a new tape
+      sample is created each time the value changes.
+
+  - name: gatein
+    abbr: gi
+    valuetype: gate
+    array: 8
+    description: |
+      Gate input tracks to record (up to 8). Values below 1 V are recorded as
+      `0`; all other values are recorded as `1`.
+
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      When patched, all time-based inputs (e.g. `timewindow`) are measured in
+      clock ticks instead of seconds.
+
+  - name: sample
+    abbr: sm
+    valuetype: trigger
+    description: |
+      Patching this enables "triggered mode": a new CV sample is written only
+      on each positive edge of this signal. Ideal for stepped CVs from a
+      sequencer (up to 256 notes). Gate length is not recorded in this mode.
+      To record gate edges, use a `gatetool` to generate triggers on both edges
+      and feed the result here.
+
+  - name: timewindow
+    abbr: tw
+    valuetype: cv
+    default: 0.0
+    unit: second
+    description: |
+      In triggered mode, extends the sampling window after the `sample` trigger
+      fires, giving the input CV time to settle before it is frozen on the tape.
+      For example `0.005` (5 ms) compensates a 5 ms slew ramp from a hardware
+      sequencer.
+
+  - name: bypass
+    abbr: b
+    valuetype: gate
+    default: 0
+    description: |
+      When `1`, copies all input signals directly to the outputs regardless of
+      the current recording/playback state.
+
+  - name: save
+    abbr: sv
+    valuetype: trigger
+    description: |
+      Send a trigger here to save the current tape contents to the SD card as
+      `tapeXXXX.bin`, where XXXX is the value of `filenumber`.
+
+  - name: load
+    abbr: ld
+    valuetype: trigger
+    description: |
+      Send a trigger here to load a previously saved tape file from the SD
+      card. Use `filenumber` to specify which file to load.
+
+  - name: filenumber
+    abbr: f
+    valuetype: integer
+    default: 1
+    min: 0
+    max: 9999
+    description: |
+      Number used in the filename `tapeXXXX.bin` when saving or loading
+      (0–9999). Files are shared between all `recorder` and `delay` circuits.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    description: |
+      Selects which DB8E display controller shows this circuit's state. `1` =
+      first DB8E (default), `2` = second DB8E. Set to `0` to suppress display
+      output entirely.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E display when this circuit is active.
+      If omitted, an automatic title is used (e.g. the name of the output
+      cable). Set to `""` or `0` to remove the header entirely.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Allows overlaying buttons and LEDs across multiple circuits. When
+      `select` is positive, this circuit processes its button and LED inputs
+      normally. Otherwise it ignores them so another circuit can use them.
+      All non-button/LED inputs and outputs continue operating regardless.
+
+  - name: selectat
+    abbr: sa
+    valuetype: cv
+    description: |
+      Refines the `select` input by specifying the exact value at which
+      `select` activates this circuit. E.g. `selectat = 0` activates when
+      `select` is exactly `0`.
+
+outputs:
+  - name: recordled
+    abbr: rl
+    valuetype: gate
+    description: Is `1` during recording.
+
+  - name: playled
+    abbr: pl
+    valuetype: gate
+    description: Is `1` during playback or scrubbing.
+
+  - name: stopled
+    abbr: sl
+    valuetype: gate
+    description: Is `1` when idle (no playback, recording, or scrubbing).
+
+  - name: cvout
+    abbr: co
+    valuetype: cv
+    description: |
+      Continuous CV output. During playback, outputs the recorded CV. During
+      idle/bypass, passes `cvin` through directly.
+
+  - name: numberout
+    abbr: "no"
+    valuetype: integer
+    description: Output of the discrete integer track.
+
+  - name: gateout
+    abbr: go
+    valuetype: gate
+    array: 8
+    description: Gate track outputs (1–8).
+
+  - name: overflow
+    abbr: ov
+    valuetype: gate
+    description: |
+      Goes to `1` for 0.5 seconds when the internal tape memory was exceeded
+      and data was lost. Wire to an LED to monitor memory status.
+
+examples:
+  - title: Basic CV recording with three buttons
+    code: |
+      ```ini
+      [p2b8]
+      [recorder]
+      cvin = I1
+      cvout = O1
+      recordbutton = B1.1
+      playbutton = B1.2
+      stopbutton = B1.3
+      recordled = L1.1
+      playled = L1.2
+      stopled = L1.3
+      ```
+  - title: Record four gate tracks
+    code: |
+      ```ini
+      [recorder]
+      gatein1 = I1
+      gatein2 = I2
+      gatein3 = I3
+      gatein4 = I4
+      gateout1 = O1
+      gateout2 = O2
+      gateout3 = O3
+      gateout4 = O4
+      recordbutton = B1.1
+      playbutton = B1.2
+      stopbutton = B1.3
+      ```
+  - title: Variable-speed playback mapped to a pot (-5x to +5x)
+    code: |
+      ```ini
+      [recorder]
+      cvin = I1
+      cvout = O1
+      playbackspeed = P1.1 * 10 - 5
+      recordbutton = B1.1
+      playbutton = B1.2
+      stopbutton = B1.3
+      ```

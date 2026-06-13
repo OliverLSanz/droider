@@ -1,0 +1,54 @@
+name: select
+title: Copy a signal if selected
+manual_page: 381
+category: utility
+description: |
+  Copies a signal to the output only when the circuit is active (selected via
+  `select`). When not selected, the output is left untouched, allowing other
+  circuits to drive the same target register without interference.
+
+  This is particularly useful for LEDs and buttons shared across multiple
+  "pages": only the active page writes to the destination, while inactive pages
+  leave it alone instead of overwriting it with 0.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    description: Connect the signal you want to copy.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      When this input carries a positive gate signal the circuit is active and
+      copies `input` to `output`. Otherwise the output is not driven, letting
+      other circuits control the same target.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Makes `select` more flexible. Specifies the exact value at which `select`
+      activates this circuit. For example, if `selectat = 0`, the circuit is
+      active when `select` is exactly 0 instead of a positive gate.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: The `input` signal is copied here only when the circuit is selected.
+
+examples:
+  - title: Flash an LED only when this page is selected
+    code: |
+      ```ini
+      [lfo]
+      output = _FLASH
+
+      [select]
+      select = _SELECT
+      input = _FLASH
+      output = L1.1
+      ```

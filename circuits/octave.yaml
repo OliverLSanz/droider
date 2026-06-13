@@ -1,0 +1,97 @@
+name: octave
+title: Multi-VCO octave animator
+manual_page: 355
+category: utility
+description: |
+  Controls the pitches of three oscillators by octaving (and optionally adding
+  perfect fifths), plus a linear frequency detune to create a fat,
+  pitch-independent beating effect.
+
+  Patch the 1 V/octave inputs of three VCOs to `output1`, `output2`, and
+  `output3`. Feed your sequencer or quantizer pitch CV into `input`. Adjust
+  `spread` to increase octave separation between the VCOs, and `detune` for
+  classic detuning. Because `spread` is CV-controllable, a random or sequenced
+  signal can animate the octave spreading over time.
+
+  Note: `output1` is always a direct copy of `input` (VCO 1 is never detuned
+  or shifted), so you can omit it and patch VCO 1 directly to the pitch source
+  to save an output jack.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: pitch
+    default: "0V"
+    description: |
+      Shared pitch CV (1 V/octave) distributed to all three VCOs.
+
+  - name: spread
+    abbr: s
+    valuetype: fraction
+    default: 0
+    description: |
+      Amount of octave spread between `output1` and `output3`. At `0` all
+      three VCOs receive the same pitch. At `1.0` the spread is four octaves:
+      VCO 2 is two octaves above VCO 1 and VCO 3 is four octaves above VCO 1.
+      When `fifths` is enabled, intermediate positions produce perfect-fifth
+      steps.
+
+  - name: detune
+    abbr: d
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Amount of linear (frequency-based) detune applied to VCO 2 (upward)
+      and VCO 3 (downward). Unlike 1 V/octave detune, the absolute frequency
+      offset is constant across all pitches, producing pitch-independent
+      beating. At `0 V` input and `detune = 1.0` the shift is approximately
+      four semitones; at `1 V` input it is two semitones; at `2 V` one
+      semitone, etc.
+
+  - name: fifths
+    abbr: f
+    valuetype: gate
+    default: 0
+    description: |
+      When `on` (1), perfect fifths are included as intermediate steps while
+      `spread` moves between octave positions. Leave at `off` (0, default) for
+      octave-only spreading.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: pitch
+    array: 3
+    description: |
+      Pitch outputs (1 V/octave) for the three VCOs. `output1` is an exact
+      copy of `input`; `output2` and `output3` are shifted and detuned
+      according to `spread` and `detune`.
+
+examples:
+  - title: Three-VCO octave spreading controlled by two pots
+    code: |
+      ```ini
+      [octave]
+      input = I1
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      spread = P1.1
+      detune = P1.2
+      ```
+  - title: Animated random octave spreading
+    code: |
+      ```ini
+      [random]
+      trigger = I1
+      output = _RANDOM
+
+      [octave]
+      input = I1
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      spread = _RANDOM * P1.1
+      ```

@@ -1,0 +1,57 @@
+name: switchedpot
+title: Overlay pot with multiple functions (OBSOLETE)
+manual_page: 396
+obsolete: true
+category: controller
+description: |
+  **Obsolete** — superseded by `pot` (see page 362), which provides all
+  `switchedpot` functionality and more. `switchedpot` will be removed in a future
+  firmware version.
+
+  Allows one physical potentiometer to control up to eight independent virtual
+  pots. The `switch1`–`switch8` inputs select which virtual pot(s) are active;
+  turning the physical pot changes all active virtual pots simultaneously.
+
+  Virtual pot values start at `0.5` (center) and are saved in the module's
+  internal flash memory so they survive power cycles.
+
+  **Pickup behaviour**: when switching to a virtual pot whose saved value differs
+  from the physical pot position, the virtual pot tracks the physical one with a
+  proportional speed so that both reach their respective extremes at the same time.
+  This allows fine adjustments without large jumps and supports having multiple
+  virtual pots selected simultaneously.
+
+inputs:
+  - name: pot
+    abbr: p
+    valuetype: fraction
+    min: 0
+    max: 1
+    description: |
+      The physical potentiometer to overlay. Wire to `P1.1`, `P1.2`, etc.
+      The raw pot range is 0.0 (fully CCW) to 1.0 (fully CW).
+
+  - name: bipolar
+    abbr: b
+    valuetype: gate
+    description: |
+      When set to `1`, maps the pot range 0…1 to −1…+1 (bipolar mode). This is
+      done by multiplying the output by 2.0 and subtracting 1.0.
+
+  - name: switch
+    abbr: s
+    valuetype: gate
+    array: 8
+    description: |
+      Select which virtual pot(s) are active. Set to `1` (or `on`) to enable the
+      corresponding virtual pot. Multiple switches can be active simultaneously,
+      causing the physical pot to change all selected virtual pots at once.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: fraction
+    array: 8
+    description: |
+      Current value of each virtual pot, in the range 0.0–1.0 (or −1.0–1.0 when
+      `bipolar = 1`). All values start at `0.5` and are saved across power cycles.

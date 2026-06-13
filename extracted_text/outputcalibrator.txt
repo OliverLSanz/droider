@@ -1,0 +1,117 @@
+# CIRCUIT: outputcalibrator
+# MANUAL PAGES (physical, 1-based): 358-359
+# TITLE: outputcalibrator – Tune the calibration of your CV outputs
+
+16.54
+outputcalibrator – Tune the calibration of your CV outputs
+This circuit can be used for tuning the out-
+put precision of the CV outputs of your
+master. It’s main purpose is to provide a
+calibration procedure for the MASTER18.
+The eight CV outputs of the master need
+to be exactly calibrated so that if you write e.g. 5 V in
+your
+patch, the output actually outputs 5.000 V
+and not something else. This is due to the slight produc-
+tion tolerances in electronic parts. For the MASTER there
+is semi-automatic calibration procedure available in the
+maintainance menu.
+The MASTER18 does not have CV inputs, however, so
+the calibration of the CV outputs has to be done manu-
+ally with a precise voltmeter. Since the MASTER18 does
+not have a maintainance menu either (it does not have
+LEDs on the front panel), this circuit has been introduced
+to give you access to the calibration settings.
+You can use this circuit with the MASTER, as well. One
+use case would be to adapt an output to some non-
+standard tracking which is not 1V/Octave. This is a bad
+idea however, since this permanently destroys your cor-
+rect calibration. Better is to use the circuit calibrator
+(see page 164) or apply some simple math at the outputs,
+if that is sufﬁcient.
+In the example patches of you ﬁrmware packager youﬁnd
+an example patch that uses an E4 controller for the cali-
+bration procedure.
+Display
+On a MASTER18, if you have attached and conﬁgured a
+DB8E controller (see page 80), its display shows the cur-
+rent calibration status as soon as you nudge a calibration
+value up or down, change the calibration channel or ref-
+erence point or do some other operation that changes the
+state. Here is an example display:
+The two rows of boxes indicate, where the calibration val-
+ues of the individual outputs and reference voltages dif-
+fer from the default calibration. One box is marked with
+a dot – the output and voltage that you have currently se-
+lected.
+The number in the bottom shows the deviation of the
+selected calibration point from its default and the word
+“CHANGED” indicates that your current calibration is not
+yet saved to the ﬂash.
+Input
+Type
+Default
+Description
+output (o)
+1
+2
+3
+1
+Select the output to calibrate. This is a number from 1 to 8.
+referencepoint (r)
+1
+2
+3
+0
+For each output, two voltages need to be adjusted: 0 V and 5 V. Select either 0 for 0 V or 1 for 5 V.
+nudgeup (nu)
+Increase the currently selected output voltage by one minimal step, to match the reference voltage.
+nudgedown (nd)
+Decrease the currently selected output voltage by one minimal step, to match the reference voltage.
+save (sv)
+A trigger here saves the changed calibration values to the internal ﬂash of the master and the the SD card.
+cancel (c)
+A trigger here restores the previous calibration values from the internal ﬂash.
+loaddefaults (ld)
+A trigger here loads the default calibration values, which are not very precise, but a good starting point if you got totally
+lost.
+DROID manual for blue-7
+358
+Table of contents at page 2
+
+Input
+Type
+Default
+Description
+display (dy)
+1
+2
+3
+1
+This parameter selects the number of the DB8E display controller, where any change of this circuit’s state will show up.
+Per default, the ﬁrst DB8E available is used. Set this to 2 if you have a second DB8E and want to use that. Note: any
+other controller is not being counted here, it’s really just the number of the DB8E as counted from the master module.
+Set this to 0 to suppress any display output from this circuit.
+header (hr)
+”TEXT”
+
+This text is displayed at the top of the DB8E display whenever this circuit shows up in the display. If you omit this, an
+automatic title is used. For example if the output of this circuit is fed into an internal patch cable, the name of this
+cable is displayed.
+Setting header = "" or header = 0 removes the header and just displays the actual value.
+Output
+Type
+Description
+dirty (d)
+Outputs 1 if the current calibration has been changed and needs to be saved.
+calibration (cl)
+Shows the difference between the current calibration of the selected output and reference voltage and its default cal-
+ibration value.
+uncalibrated (u)
+0
+1
+Shows you the percentage of uncalibrated outputs. If all eight outputs are calibrated (differ from the default calibration
+value) this outputs 0.
+DROID manual for blue-7
+359
+Table of contents at page 2

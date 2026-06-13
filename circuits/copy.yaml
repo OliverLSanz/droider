@@ -1,0 +1,50 @@
+name: copy
+title: Copy a signal, while applying attenuation and offset
+manual_page: 188
+obsolete: false
+category: utility
+description: |
+  Simple utility that copies a signal from an input to an output. Since every
+  input supports attenuation and offset (see §6 of `reference.md`), `copy` is
+  useful for scaling and offsetting a signal along its path, or as a precision
+  mixer by summing registers with `+`.
+
+  > Note: older versions of `copy` had an `inverted` output, removed in blue-3.
+  > The same effect is achieved by subtracting the signal from 1 (e.g.
+  > `input = 10V - I1` turns 0 V into 10 V, 2 V into 8 V, etc.).
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    description: Connect here the signal you want to copy.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: The resulting signal is sent here.
+
+examples:
+  - title: Precision mixer (sums I1 + I2)
+    code: |
+      ```ini
+      [copy]
+      input = I1 + I2
+      output = O1
+      ```
+  - title: Attenuated signal into an internal cable
+    code: |
+      ```ini
+      [copy]
+      input = I1 * 0.5
+      output = _INPUT_CV
+      ```
+  - title: Inversion by subtracting from 1
+    code: |
+      ```ini
+      [copy]
+      input = 10V - I1
+      output = O1
+      ```

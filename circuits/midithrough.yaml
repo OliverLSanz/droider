@@ -1,0 +1,83 @@
+name: midithrough
+title: Forward MIDI events from input to one or more outputs
+manual_page: 306
+obsolete: false
+category: midi
+description: |
+  Forwards MIDI data from one TRS or USB input port to one or more TRS or USB
+  output ports. Multiple `midithrough` circuits can co-exist alongside `midiin`
+  and `midiout` circuits; events sent to the same port are merged.
+
+  **Port numbering** (depends on hardware configuration):
+
+  | Hardware | USB ports | TRS ports |
+  |---|---|---|
+  | MASTER + X7 | usb=1 (X7) | trs=1 (X7) |
+  | MASTER18 | usb=1 (MASTER18) | trs=1 (MIDI1), trs=2 (MIDI2) |
+  | MASTER18 + X7 | usb=1 (MASTER18), usb=2 (X7) | trs=1 (MIDI1), trs=2 (MIDI2), trs=3 (X7) |
+
+  **Auto-detection.** Set `fromusb = 10` or `fromtrs = 10` to automatically use
+  the first port that sends events. Auto-detection is redone if the input is
+  silent for one second.
+
+  **Broadcast.** Set `tousb = 10` or `totrs = 10` to forward events to all
+  ports of that type.
+
+  > **Note:** Sysex messages are not forwarded. When forwarding from USB to TRS,
+  > keep throughput below 3125 bytes/s (the MIDI standard TRS limit).
+
+inputs:
+  - name: fromtrs
+    abbr: ft
+    valuetype: integer
+    description: |
+      Selects a TRS port (3.5 mm jack) as the MIDI input source. `0` disables
+      TRS input; `10` enables automatic port detection. See the `midiin` circuit
+      for full port selection details.
+
+  - name: fromusb
+    abbr: fu
+    valuetype: integer
+    description: |
+      Selects a USB port as the MIDI input source. `0` disables USB input; `10`
+      enables automatic port detection.
+
+  - name: totrs
+    abbr: tt
+    valuetype: integer
+    description: |
+      Selects which TRS MIDI port receives the forwarded events. `10` broadcasts
+      to all TRS ports. See the `midiout` circuit for full port selection details.
+
+  - name: tousb
+    abbr: tu
+    valuetype: integer
+    description: |
+      Selects which USB MIDI port receives the forwarded events. `10` broadcasts
+      to all USB ports.
+
+outputs: []
+
+examples:
+  - title: Forward from first USB port to second TRS port
+    code: |
+      ```ini
+      [midithrough]
+      fromusb = 1
+      totrs = 2
+      ```
+  - title: Auto-detect active TRS input, forward to first TRS output
+    code: |
+      ```ini
+      [midithrough]
+      fromtrs = 10
+      totrs = 1
+      ```
+  - title: Broadcast from second TRS to all USB and TRS ports
+    code: |
+      ```ini
+      [midithrough]
+      fromtrs = 1
+      totrs = 10
+      tousb = 10
+      ```

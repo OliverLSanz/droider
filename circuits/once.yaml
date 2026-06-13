@@ -1,0 +1,46 @@
+name: once
+title: Output one trigger after the Droid has started
+manual_page: 357
+obsolete: false
+category: utility
+description: |
+  Outputs exactly one trigger after the DROID module has started. An optional
+  delay can be configured before the trigger fires.
+
+  Useful for initializing state on boot, sending a MIDI message at startup, or
+  any task that must execute exactly once per power-up or patch load.
+
+inputs:
+  - name: delay
+    abbr: dl
+    valuetype: cv
+    default: 0.01
+    unit: second
+    description: |
+      Delay in seconds after the DROID's start before the trigger fires. The
+      default is 10 ms (not zero), which gives attached controllers time to
+      send at least one update so real pot values are available to circuits.
+
+  - name: onlycoldstart
+    abbr: c
+    valuetype: gate
+    default: 0
+    description: |
+      If set to `1`, the trigger fires only after a **cold start** (power-up).
+      A warm start (loading a new patch by pressing the button) will not
+      produce a trigger.
+
+outputs:
+  - name: trigger
+    abbr: t
+    valuetype: trigger
+    description: The single startup trigger is output here, after `delay` seconds.
+
+examples:
+  - title: Trigger 200 ms after boot
+    code: |
+      ```ini
+      [once]
+      delay = 0.2
+      trigger = _DO_ONCE
+      ```

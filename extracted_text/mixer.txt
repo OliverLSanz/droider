@@ -1,0 +1,54 @@
+# CIRCUIT: mixer
+# MANUAL PAGES (physical, 1-based): 314-314
+# TITLE: mixer – CV mixer
+
+16.45
+mixer – CV mixer
+The main task of this circuit is simply
+adding up to eight inputs.
+Furthermore
+it can do simple operations like minimum,
+maximum and average. Please note that
+since every input can always be offset and
+attenuated, it’s like a mixer with a CV controlled level and
+CV controlled offset per input channel.
+Minimal example, mixing together two inputs:
+[mixer]
+input1 = I1
+input2 = I2
+output = O1
+Since every input can add an offset, mixing four inputs
+can be done with two lines if you like:
+[mixer]
+input1 = I1 + I2
+input2 = I3 + I4
+output = O1
+Please note that an unpatched input is (sometimes) not
+the same as an input where 0.0 is being sent. The dif-
+ference arises if you use minimum, maximum and average,
+since these just consider the patched inputs.
+If eight inputs are not enough then you can simply create
+a mesh by mixing together the outputs of several submix-
+ers.
+Input
+Type
+Default
+Description
+input1 ... input8 (i)
+0.0
+1st ... 8th mixing input
+Output
+Type
+Description
+output (o)
+Sum of all patched inputs
+maximum (x)
+Maximum of all patched inputs of this circuit. This can e.g. be used for mixing together the envelopes from several
+sequencer tracks without making them “louder” or distorting them when two sequencers play a note at the same time.
+minimum (m)
+Minimum of all patched inputs of this circuit.
+average (a)
+Average of all patched inputs of this circuit.
+DROID manual for blue-7
+314
+Table of contents at page 2

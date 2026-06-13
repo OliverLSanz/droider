@@ -1,0 +1,68 @@
+name: fold
+title: CV folder – keep (pitch) CV within certain bounds
+manual_page: 260
+obsolete: false
+category: utility
+description: |
+  Keeps an incoming CV within defined bounds by folding — adding or subtracting
+  `foldby` repeatedly until the value falls within the allowed range. Unlike a
+  clamp/limiter, `fold` preserves the note value modulo `foldby`.
+
+  The primary application is constraining a pitch CV to a given register: when a
+  note drifts outside the window, it is octaved up or down until it lands inside.
+
+  If neither `minimum` nor `maximum` is patched, no folding occurs and the input
+  passes through unchanged.
+
+  **Anomaly 1:** if the window between `minimum` and `maximum` is narrower than
+  one `foldby` step, a single fold may overshoot the opposite bound.
+  **Anomaly 2:** if `minimum` > `maximum`, folding up takes precedence over
+  folding down.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    description: Input CV to be folded.
+
+  - name: foldby
+    abbr: f
+    valuetype: cv
+    default: 0.1
+    min: 0
+    unit: volt
+    description: |
+      Step size added or subtracted from `input` each time it falls outside the
+      allowed range. Must be positive; a value of zero or less disables folding.
+      For pitch applications use `1V` (= `0.1`) to fold by octaves.
+
+  - name: minimum
+    abbr: m
+    valuetype: cv
+    description: |
+      Lower bound of the allowed range. If unpatched, no lower bound is applied.
+
+  - name: maximum
+    abbr: x
+    valuetype: cv
+    description: |
+      Upper bound of the allowed range. If unpatched, no upper bound is applied.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: Folded output voltage.
+
+examples:
+  - title: Keep a pitch CV within a two-octave window
+    code: |
+      ```ini
+      [fold]
+      input = I1
+      output = O1
+      foldby = 1V
+      minimum = 1.2V
+      maximum = 2.5V
+      ```

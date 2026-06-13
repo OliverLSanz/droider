@@ -1,0 +1,55 @@
+name: unusedfaders
+title: Declare unused motor faders
+manual_page: 406
+category: utility
+description: |
+  Disables motor faders that are not actively used in a given context. The declared
+  faders move to the bottom position and stay there, preventing them from retaining
+  stale positions or LED states when not covered by an active `select`.
+
+  Useful when some faders are not assigned in a particular page or menu: add an
+  `unusedfaders` circuit for those faders and ensure it is selected while the others
+  are active.
+
+  Uses less memory than an equivalent `faderbank` circuit.
+
+inputs:
+  - name: firstfader
+    abbr: f
+    valuetype: integer
+    default: 1
+    min: 1
+    description: The number of the first unused motor fader to disable.
+
+  - name: numfaders
+    abbr: n
+    valuetype: integer
+    default: 1
+    min: 1
+    description: The number of consecutive unused faders starting from `firstfader`.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Activates this circuit when a positive gate is present (or when `select` matches
+      `selectat`). While selected, the declared faders are moved to the bottom and their
+      LEDs cleared. The standard `select`/`selectat` overlay mechanism applies.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Makes `select` more flexible by specifying the exact value at which this circuit
+      becomes active. E.g. `selectat = 0` activates the circuit when `select` is
+      exactly 0.
+
+examples:
+  - title: Disable faders 6, 7, 8 while a menu is active
+    code: |
+      ```ini
+      [unusedfaders]
+      select     = _MENU_ACTIVE
+      firstfader = 6
+      numfaders  = 3
+      ```

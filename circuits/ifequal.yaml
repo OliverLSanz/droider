@@ -1,0 +1,58 @@
+name: ifequal
+title: Check if two values are equal
+manual_page: 266
+category: logic
+description: |
+  A simplified version of `compare` that uses less memory and CPU. Checks if
+  two values are exactly equal and outputs one of two specified values accordingly.
+
+  **Caveats:**
+  - Comparing values read from analog inputs will likely fail due to jitter/noise.
+  - Floating-point values like `0.3` may fail due to internal rounding errors.
+  - In those cases use `compare` instead, which allows a tolerance range.
+
+  The main purpose of this circuit is to save RAM and CPU when the full feature
+  set of `compare` is not needed.
+
+inputs:
+  - name: input1
+    abbr: i1
+    valuetype: cv
+    default: 0.0
+    description: First value to compare.
+
+  - name: input2
+    abbr: i2
+    valuetype: cv
+    default: 1.0
+    description: Second value to compare.
+
+  - name: ifequal
+    abbr: q
+    valuetype: cv
+    default: 1.0
+    description: Value to output when `input1` is exactly equal to `input2`.
+
+  - name: else
+    abbr: e
+    valuetype: cv
+    default: 0.0
+    description: Value to output when `input1` is not equal to `input2`.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: Outputs `ifequal` when inputs match, otherwise `else`.
+
+examples:
+  - title: Route different gate source depending on track selection
+    code: |
+      ```ini
+      [ifequal]
+      input1 = _TRACK
+      input2 = 2
+      ifequal = _TRACK2_GATES
+      else = 0
+      output = O1
+      ```

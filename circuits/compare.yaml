@@ -1,0 +1,112 @@
+name: compare
+title: "compare – Compare two values"
+manual_page: 181
+obsolete: false
+category: logic
+description: |
+  Compares an input value against a reference and outputs one of three configurable
+  values depending on whether the input is less than, greater than, or equal to the
+  reference.
+
+  Use `precision` to allow a tolerance band around equality — essential when comparing
+  analog signals that fluctuate slightly.
+
+  If all four output-value inputs (`ifless`, `ifequal`, `ifgreater`, `else`) are omitted,
+  `ifequal` defaults to 1, making the circuit a simple equality checker.
+
+  Any of `ifless`, `ifequal`, `ifgreater`, or `else` can accept dynamic values from
+  other cables, not just fixed numbers.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    description: The value to compare.
+
+  - name: compare
+    abbr: c
+    valuetype: cv
+    default: 0.0
+    description: The reference value to compare `input` against.
+
+  - name: ifgreater
+    abbr: g
+    valuetype: cv
+    description: |
+      Output value when `input` is greater than `compare`. Falls back to `else` if
+      not patched.
+
+  - name: ifless
+    abbr: l
+    valuetype: cv
+    description: |
+      Output value when `input` is less than `compare`. Falls back to `else` if
+      not patched.
+
+  - name: ifequal
+    abbr: q
+    valuetype: cv
+    description: |
+      Output value when `input` equals `compare` within the tolerance of `precision`.
+      Falls back to `else` if not patched. Defaults to 1 if all four output-value
+      inputs are omitted.
+
+  - name: else
+    abbr: e
+    valuetype: cv
+    default: 0.0
+    description: Output value when none of the stated conditions are met.
+
+  - name: precision
+    abbr: pc
+    valuetype: cv
+    default: 0.0
+    description: |
+      Tolerance for the equality test: `input` and `compare` are treated as equal when
+      their absolute difference is at most this value. Essential when comparing analog
+      signals from inputs or potentiometers.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: Outputs the value of `ifgreater`, `ifless`, or `ifequal` based on the comparison result.
+
+examples:
+  - title: Output 1 if pot is left of center, else 0
+    code: |
+      ```ini
+      [compare]
+      input = P1.1
+      compare = 0.5
+      ifless = 1
+      output = O1
+      ```
+  - title: Three-way switch with precision
+    code: |
+      ```ini
+      [compare]
+      input = I1
+      compare = I2
+      precision = 0.1
+      ifless = 0
+      ifequal = 1
+      ifgreater = 2
+      output = O1
+      ```
+  - title: Route sine or square wave based on pot position
+    code: |
+      ```ini
+      [lfo]
+      hz = 2
+      sine = _SINE
+      square = _SQUARE
+
+      [compare]
+      input = P1.1
+      compare = 0.5
+      ifless = _SINE
+      else = _SQUARE
+      output = O1
+      ```

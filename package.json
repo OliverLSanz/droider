@@ -1,0 +1,129 @@
+{
+  "name": "droid-patch-language",
+  "displayName": "DROID Patch Language",
+  "description": "Editing support for DROID text patches (.ini): error detection, autocompletion and hover.",
+  "version": "0.0.1",
+  "publisher": "oliverlsanz",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "activationEvents": [
+    "onLanguage:droid"
+  ],
+  "main": "./out/extension.js",
+  "bin": {
+    "droid-lint": "./out/cli.js"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "droid.writeAndEject",
+        "title": "Write Patch to DROID Card and Eject",
+        "category": "DROID"
+      },
+      {
+        "command": "droid.showHardwareView",
+        "title": "Show Hardware View",
+        "category": "DROID",
+        "icon": "$(circuit-board)"
+      },
+      {
+        "command": "droid.showCircuitGraph",
+        "title": "Show Circuit Graph",
+        "category": "DROID",
+        "icon": "$(type-hierarchy)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "droid.showHardwareView",
+          "when": "resourceLangId == droid",
+          "group": "navigation"
+        },
+        {
+          "command": "droid.showCircuitGraph",
+          "when": "resourceLangId == droid",
+          "group": "navigation"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "droid",
+        "aliases": [
+          "DROID Patch"
+        ],
+        "extensions": [
+          ".ini"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "droid",
+        "scopeName": "source.droid",
+        "path": "./syntaxes/droid.tmLanguage.json"
+      }
+    ],
+    "semanticTokenTypes": [
+      {
+        "id": "droidInput",
+        "description": "Input parameter of a DROID circuit"
+      },
+      {
+        "id": "droidOutput",
+        "description": "Output parameter of a DROID circuit"
+      },
+      {
+        "id": "droidUnverified",
+        "description": "Content of an unknown circuit (unverified)"
+      },
+      {
+        "id": "droidRegister",
+        "description": "Physical or controller register (I1, O8, P3.2...)"
+      },
+      {
+        "id": "droidBoolean",
+        "description": "Gate value on/off"
+      }
+    ],
+    "configurationDefaults": {
+      "editor.semanticHighlighting.enabled": true,
+      "editor.semanticTokenColorCustomizations": {
+        "enabled": true,
+        "rules": {
+          "droidInput": "#4FC1FF",
+          "droidOutput": "#C586C0",
+          "droidUnverified": "#808080",
+          "droidRegister": "#4EC9B0",
+          "droidBoolean": "#569CD6"
+        }
+      },
+      "[droid]": {
+        "editor.quickSuggestions": { "other": "on", "comments": "off", "strings": "off" },
+        "editor.suggestOnTriggerCharacters": true,
+        "editor.formatOnType": true
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "tsc -p ./ && node out/cli.js"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^18.19.0",
+    "@types/vscode": "^1.75.0",
+    "typescript": "^5.4.0"
+  }
+}

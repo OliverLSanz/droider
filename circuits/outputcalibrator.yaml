@@ -1,0 +1,119 @@
+name: outputcalibrator
+title: Tune the calibration of your CV outputs
+manual_page: 358
+obsolete: false
+category: utility
+description: |
+  Provides manual access to the output voltage calibration of the MASTER or
+  MASTER18. The eight CV outputs of the master need to be precisely calibrated
+  so that a patch value such as `5V` produces exactly 5.000 V at the jack.
+
+  The primary use case is the MASTER18, which lacks a maintenance menu and LEDs
+  on its front panel. A DB8E display controller (if attached) shows the current
+  calibration status whenever any parameter changes.
+
+  Each output has two reference points that can be adjusted: 0 V and 5 V.
+  Use `nudgeup` and `nudgedown` to fine-tune the selected point one step at a
+  time, then `save` to persist the result to flash and SD card.
+
+  > **Warning:** using this on a MASTER to implement non-standard (non-1V/oct)
+  > tracking permanently overwrites the factory calibration. Prefer the
+  > `calibrator` circuit (page 164) or output math for that use case.
+
+inputs:
+  - name: output
+    abbr: o
+    valuetype: integer
+    default: 1
+    min: 1
+    max: 8
+    description: |
+      Selects which CV output channel to calibrate (1–8).
+
+  - name: referencepoint
+    abbr: r
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 1
+    description: |
+      Selects which reference voltage to adjust for the chosen output. `0` = 0 V
+      reference, `1` = 5 V reference.
+
+  - name: nudgeup
+    abbr: nu
+    valuetype: trigger
+    description: |
+      A trigger here increases the selected output calibration value by one
+      minimal step, moving the physical output voltage upward toward the
+      reference.
+
+  - name: nudgedown
+    abbr: nd
+    valuetype: trigger
+    description: |
+      A trigger here decreases the selected output calibration value by one
+      minimal step.
+
+  - name: save
+    abbr: sv
+    valuetype: trigger
+    description: |
+      A trigger saves the current calibration values to the master's internal
+      flash memory and to the SD card.
+
+  - name: cancel
+    abbr: c
+    valuetype: trigger
+    description: |
+      A trigger restores the calibration values previously stored in internal
+      flash, discarding any unsaved changes.
+
+  - name: loaddefaults
+    abbr: ld
+    valuetype: trigger
+    description: |
+      A trigger loads the factory default calibration values. These are not very
+      precise but serve as a safe starting point if the calibration has been
+      badly corrupted.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    description: |
+      Selects which DB8E display controller shows calibration status (counted
+      from the master, DB8E units only). `1` = first DB8E (default), `2` =
+      second DB8E. Set to `0` to suppress all display output from this circuit.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text displayed at the top of the DB8E display when this circuit is active.
+      If omitted, an automatic title is used (e.g. the name of the internal
+      cable connected to the output). Set to `""` or `0` to remove the header
+      entirely.
+
+outputs:
+  - name: dirty
+    abbr: d
+    valuetype: gate
+    description: |
+      Outputs `1` when the calibration has been changed and not yet saved to
+      flash.
+
+  - name: calibration
+    abbr: cl
+    valuetype: cv
+    description: |
+      Shows the deviation of the currently selected output/reference calibration
+      point from its factory default value.
+
+  - name: uncalibrated
+    abbr: u
+    valuetype: fraction
+    description: |
+      Indicates the percentage of outputs that are still at the factory default
+      calibration (i.e. have not been individually adjusted). Outputs `0` when
+      all eight outputs have been calibrated.

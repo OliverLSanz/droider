@@ -1,0 +1,102 @@
+name: euklid
+title: Euclidean rhythm generator
+manual_page: 243
+category: sequencer
+description: |
+  Generates trigger patterns according to Euclidean rhythm theory. A pattern is
+  defined by three numbers: the total number of steps (`length`), the number of
+  active beats (`beats`), and an `offset` that shifts the pattern forward.
+
+  The beats are distributed as evenly as possible across the steps, always landing
+  precisely on clock pulses. The output gate length and voltage are copied directly
+  from the input clock.
+
+  `offbeats` provides the complementary pattern: exactly one of `output` or
+  `offbeats` fires on each clock tick.
+
+inputs:
+  - name: clock
+    abbr: c
+    valuetype: gate
+    description: |
+      Input clock. Classified as a gate input because the gate length is preserved
+      and forwarded to `output` and `offbeats`. The clock does not need to be
+      steady.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: A trigger here resets the pattern to the first step.
+
+  - name: outputsignal
+    abbr: os
+    valuetype: cv
+    description: |
+      When patched, this signal is sent to `output` on active steps instead of
+      the original clock. Setting `outputsignal = 1` makes `output` stay high
+      for the full active step duration, turning euklid into a modulation CV
+      source rather than a trigger generator.
+
+  - name: length
+    abbr: l
+    valuetype: integer
+    default: 16
+    min: 1
+    max: 64
+    description: |
+      Total number of steps in the pattern. Must be a positive integer; values
+      ≤ 0 are treated as 1. Maximum accepted value is 64. Use multiplication
+      when CV-controlling this parameter.
+
+  - name: beats
+    abbr: b
+    valuetype: integer
+    default: 5
+    description: |
+      Number of active beats distributed among the `length` steps. If greater
+      than `length`, it is capped to `length`.
+
+  - name: offset
+    abbr: of
+    valuetype: integer
+    default: 0
+    description: |
+      Rotates or shifts the pattern by the given number of steps. Can be
+      positive or negative.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: gate
+    description: |
+      Active beats of the current pattern. Gate length and voltage are taken
+      directly from the input clock.
+
+  - name: offbeats
+    abbr: ob
+    valuetype: gate
+    description: |
+      Complementary pattern: fires on every clock tick where `output` does not.
+      Exactly one of `output` or `offbeats` is active on each clock pulse.
+
+examples:
+  - title: Fixed Euclidean pattern (16 steps, 5 beats)
+    code: |
+      ```ini
+      [euklid]
+      clock = G1
+      reset = G2
+      length = 16
+      beats = 5
+      offset = 0
+      output = G3
+      ```
+  - title: CV-controlled beats via pot
+    code: |
+      ```ini
+      [euklid]
+      clock = G1
+      reset = G2
+      beats = P1.1 * 15 + 1
+      output = G3
+      ```

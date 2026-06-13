@@ -1,0 +1,61 @@
+# CIRCUIT: unusedfaders
+# MANUAL PAGES (physical, 1-based): 406-406
+# TITLE: unusedfaders – Declare unused motor faders
+
+16.74
+unusedfaders – Declare unused motor faders
+The circuit disables motor faders that are
+not used in certain situations. Those faders
+move to the bottom and stay there. Oth-
+erwise faders, that are currently not se-
+lected, would keep their old position and
+LED state. This can be confusing to the user.
+Usage: If you have a situation where not all of the faders
+are selected with an active select, add a unusedfaders
+circuit for the ununsed faders and make sure that they are
+selected.
+Thefollowing example disables the faders 6, 7 and 8 while
+_MENU_ACTIVE is 1:
+[unusedfaders]
+select = _MENU_ACTIVE
+firstfader = 6
+numfaders = 3
+Note: You could do the same with faderbank, but that
+circuit needs more memory.
+Input
+Type
+Default
+Description
+firstfader (f)
+1
+2
+3
+1
+The number of the ﬁrst unused motor fader motor.
+numfaders (n)
+1
+2
+3
+1
+The number of unused faders
+select (s)
+1
+2
+3
+
+The select input allows you to overlay buttons and LEDs with multiple functions. If you use this input, the circuit will
+process the buttons and LEDs just as if select has a positive gate signal (usually you will select this to 1). Otherwise
+it won’t touch them so they can be used by another circuit. Note: even if the circuit is currently not selected, it will
+nevertheless work and process all its other inputs and its outputs (those that do not deal with buttons or LEDs) in a
+normal way.
+selectat (sa)
+1
+2
+3
+
+This input makes the select input more ﬂexible. Here you specify at which value select should select this circuit.
+E.g. if selectat is 0, the circuit will be active if select is exactly 0 instead of a positive gate signal. In some cases this
+is more conventient.
+DROID manual for blue-7
+406
+Table of contents at page 2

@@ -1,0 +1,273 @@
+name: pot
+title: pot – Helper circuit for pots
+manual_page: 362
+obsolete: false
+category: utility
+description: |
+  Helper circuit for physical potentiometers that adds virtual pot support, a
+  simulated center notch, slope control, and hemisphere splitting. It replaces
+  the older `notchedpot` and `switchedpot` circuits.
+
+  **Virtual pots** are activated automatically when using `select`, `preset`, or
+  `clear`. In virtual mode the last value is saved to the SD card and an LED
+  gauge is shown on the MASTER. The "pickup" algorithm ensures smooth transition
+  when switching between virtual pots: both the physical and virtual pot converge
+  to the same endpoint at the same time, avoiding jumps.
+
+  **UI slowdown:** `pot`, `button`, and similar circuits run at 12.5% of normal
+  speed to save CPU time for timing-critical circuits. Disable with
+  `[droid] uislowdown = 0` if needed.
+
+  **Display:** if a DB8E controller is present, the current `output` value is
+  shown automatically on any change. Use `display = 0` to suppress this.
+
+inputs:
+  - name: pot
+    abbr: p
+    valuetype: fraction
+    default: 0.0
+    description: Wire your physical pot here, e.g. `P1.1`.
+
+  - name: outputscale
+    abbr: os
+    valuetype: cv
+    default: 1.0
+    description: |
+      The final output is multiplied by this value. Convenient for scaling the
+      pot range up or down. Note: also moves the notching point (e.g.
+      `outputscale = 2` places the notch at output value `1.0`).
+
+  - name: outputoffset
+    abbr: oo
+    valuetype: cv
+    default: 0.0
+    description: |
+      Added to the scaled output before sending it to `output`. Only affects the
+      normal `output` jack, not the special outputs (`lefthalf`, `bipolar`, etc.).
+
+  - name: notch
+    abbr: "no"
+    valuetype: fraction
+    default: 0.0
+    max: 0.5
+    description: |
+      Creates an artificial center notch of this fractional size. A value of
+      `0.1` (10%) is recommended — easy to hit reliably without losing much
+      resolution. Values above `0.5` are clamped. Not available in discrete mode.
+
+  - name: discrete
+    abbr: d
+    valuetype: integer
+    min: 1
+    max: 16
+    description: |
+      When set to 1 or higher, the pot selects discrete integer output values
+      from `0` to `discrete – 1`. For example `discrete = 5` outputs one of
+      `0, 1, 2, 3, 4`. Maximum is 16. `notch` and `slope` are ignored in
+      discrete mode; `outputscale` and `outputoffset` still apply. In discrete
+      mode `startvalue` is also interpreted as a discrete index.
+
+  - name: slope
+    abbr: sl
+    valuetype: cv
+    default: 1.0
+    min: 0.001
+    description: |
+      Changes the resolution curve of the pot. Values greater than `1.0` zoom
+      into small values near `0.0`; values below `1.0` (e.g. `0.5`, `0.3`) zoom
+      into values near `1.0`. Implemented as `x^slope`. The minimum enforced
+      value is `0.001`. Not available in discrete mode.
+
+  - name: ledgauge
+    abbr: g
+    valuetype: cv
+    description: |
+      Controls the 16-LED gauge on the MASTER that displays the current virtual
+      pot value. Set to a color value to enable and choose the color (e.g. `0.4`
+      = green, `0.8` = red; colors repeat every `1.2`). Set to `off` to disable.
+      Automatically activated when `select` is used. Has no effect with a DB8E
+      controller or on a MASTER18 without a B32.
+
+  - name: startvalue
+    abbr: sv
+    valuetype: fraction
+    default: 0.5
+    description: |
+      The value the virtual pot is set to when `clear` receives a trigger. This
+      is the raw value before `outputscale` and `outputoffset` are applied. In
+      discrete mode, interpreted as a discrete index.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    max: 3
+    description: |
+      Selects which DB8E display controller shows value changes from this circuit.
+      `1` (default) uses the first DB8E; `2` or `3` targets a second or third
+      unit. Set to `0` to suppress all display output from this circuit (useful
+      when the pot drives an automated value that would thrash the display).
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E display when this circuit is active. If
+      omitted, an automatic title is used (e.g. the name of the internal cable
+      connected to `output`). Set to `""` or `0` to remove the header entirely.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Enables overlay / virtual-pot mode. When `select` has a positive gate
+      signal this circuit is the active layer. When not selected the circuit
+      still computes all outputs but does not display the LED gauge. Turning the
+      physical pot while selected adjusts the virtual value via the pickup
+      algorithm.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Makes `select` match a specific value instead of any positive gate. E.g.
+      `selectat = 0` activates this circuit when `select` is exactly `0`.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 15
+    description: |
+      Preset number to load or save (first preset = `0`). Changing this number
+      immediately switches the active preset. This circuit supports up to 16
+      presets.
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: A trigger here loads the preset selected by `preset`.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger here saves the current pot value to the preset selected by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      A trigger here resets the virtual pot to `startvalue` and activates
+      virtual mode. Presets are not affected unless using direct preset switching
+      (via `preset` without trigger inputs).
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: |
+      A trigger here resets the virtual pot and all its presets to the default
+      start state.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      Set to `1` to prevent the virtual pot state from being saved to or loaded
+      from the SD card on power-up.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: |
+      The pot output after applying `notch`, `slope`, `discrete`, `outputscale`,
+      and `outputoffset`.
+
+  - name: bipolar
+    abbr: b
+    valuetype: bipolar
+    description: |
+      Bipolar output ranging from `-1.0` to `+1.0` (or `-outputscale` to
+      `+outputscale`), with `0.0` at center position.
+
+  - name: absbipolar
+    abbr: ab
+    valuetype: fraction
+    description: |
+      Absolute value of `bipolar`: the pot sweeps `1 → 0 → 1` from left edge
+      through center to right edge (when `outputscale` is not used).
+
+  - name: lefthalf
+    abbr: l
+    valuetype: fraction
+    description: |
+      Left-hemisphere split. Goes from `outputscale` down to `0.0` while the
+      pot is in the left half; stays at `0.0` at center and throughout the right
+      half.
+
+  - name: righthalf
+    abbr: r
+    valuetype: fraction
+    description: |
+      Right-hemisphere split. Stays at `0.0` in the left half; rises from `0.0`
+      to `outputscale` as the pot moves from center to full right.
+
+  - name: lefthalfinv
+    abbr: li
+    valuetype: fraction
+    description: |
+      Outputs `1.0 – lefthalf`: value range `0.0 → 1.0 → 1.0` as the pot moves
+      left → center → right (then scaled by `outputscale`).
+
+  - name: righthalfinv
+    abbr: ri
+    valuetype: fraction
+    description: |
+      Outputs `1.0 – righthalf`: value range `1.0 → 1.0 → 0.0` as the pot moves
+      left → center → right (then scaled by `outputscale`).
+
+  - name: onchange
+    abbr: c
+    valuetype: trigger
+    description: Emits a trigger whenever the pot is turned in either direction.
+
+examples:
+  - title: Bipolar pot output (-10 V to +10 V)
+    code: |
+      ```ini
+      [pot]
+      pot = P1.1
+      bipolar = O1
+      ```
+  - title: Center notch at 10% for an algoquencer activity
+    code: |
+      ```ini
+      [pot]
+      pot = P1.1
+      notch = 10%
+      output = _ACTIVITY
+      [algoquencer]
+      activity = _ACTIVITY
+      ```
+  - title: Sharing one pot for four envelope release times
+    code: |
+      ```ini
+      [pot]
+      pot = P1.1
+      select = L1.1
+      output = _RELEASE1
+      [pot]
+      pot = P1.1
+      select = L1.2
+      output = _RELEASE2
+      [pot]
+      pot = P1.1
+      select = L1.3
+      output = _RELEASE3
+      [pot]
+      pot = P1.1
+      select = L1.4
+      output = _RELEASE4
+      ```

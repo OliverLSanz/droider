@@ -1,0 +1,169 @@
+name: notebuttons
+title: Note Selection Buttons
+manual_page: 349
+obsolete: false
+category: controller
+description: |
+  Combines 12 buttons into a note selector for notes C, C#, D, D#, and so on.
+  Similar to `buttongroup` but simpler; supports exactly 12 buttons.
+
+  The output is either a number from 0 to 11 (via `output`) or a 1 V/octave
+  semitone voltage (via `semitone`), ideal for sending to external sequencers
+  or quantizers.
+
+  If a DB8E display controller is present, the currently selected note is
+  automatically shown on the display. The display title is derived from the
+  target of `output` or `semitone`, or set manually via `header`.
+
+inputs:
+  - name: button
+    abbr: b
+    valuetype: gate
+    array: 12
+    description: Wire 12 buttons to these 12 inputs.
+
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      When patched, all button presses are quantized to the next incoming
+      clock pulse, making it easier to switch notes exactly in time.
+
+  - name: startnote
+    abbr: sn
+    valuetype: integer
+    min: 0
+    max: 11
+    description: |
+      The note selected at startup or after a `clear`/`clearall` trigger.
+      An integer from 0 to 11.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    description: |
+      Selects which DB8E display controller shows this circuit's state.
+      `1` = first DB8E (default); `2` = second DB8E. Set to `0` to suppress
+      display output from this circuit.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E display. If omitted, an automatic
+      title is derived from the target of `output` or `semitone`. Set to
+      `""` or `0` to remove the header and display only the value.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Allows overlaying buttons and LEDs with multiple circuits. When this
+      has a positive gate (or matches `selectat`), the circuit processes
+      buttons and LEDs. Otherwise they are left for another circuit.
+      Non-button/LED processing continues regardless.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Specifies at which value of `select` this circuit becomes active.
+      E.g. `selectat = 0` activates the circuit when `select` is exactly 0.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 15
+    description: |
+      Preset number to save or load. The first preset is `0`. This circuit
+      supports 16 presets (0–15).
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: A trigger here loads the preset selected by `preset`.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger here saves the current state to the preset selected by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      A trigger here resets the circuit to its default start state.
+      Presets are not affected unless direct preset switching is active.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: A trigger here resets the circuit and all its presets to the default start state.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      If set to `1`, the circuit state is not saved to or loaded from the SD card.
+
+outputs:
+  - name: led
+    abbr: l
+    valuetype: gate
+    array: 12
+    description: Wire the LEDs in the buttons to these 12 outputs.
+
+  - name: output
+    abbr: o
+    valuetype: integer
+    description: The index of the currently selected button, from 0 to 11.
+
+  - name: semitone
+    abbr: st
+    valuetype: pitch
+    description: |
+      Same as `output` divided by 120, giving a 1 V/octave pitch CV. Patch to
+      a CV output (e.g. `O7`) to send the note on a 1 V/octave scheme.
+
+  - name: gate
+    abbr: g
+    valuetype: gate
+    description: |
+      Outputs `1` as long as one of the buttons is held. Combine with `semitone`
+      to use `notebuttons` as a 12-key CV/gate keyboard.
+
+examples:
+  - title: 12 keys across two controllers, semitone output
+    code: |
+      ```ini
+      [notebuttons]
+      button1  = B1.1
+      button2  = B1.2
+      button3  = B2.1
+      button4  = B1.3
+      button5  = B1.4
+      button6  = B2.3
+      button7  = B1.5
+      button8  = B1.6
+      button9  = B2.5
+      button10 = B1.7
+      button11 = B1.8
+      button12 = B2.7
+      led1     = L1.1
+      led2     = L1.2
+      led3     = L2.1
+      led4     = L1.3
+      led5     = L1.4
+      led6     = L2.3
+      led7     = L1.5
+      led8     = L1.6
+      led9     = L2.5
+      led10    = L1.7
+      led11    = L1.8
+      led12    = L2.7
+      semitone = O7
+      ```

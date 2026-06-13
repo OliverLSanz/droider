@@ -1,0 +1,72 @@
+name: queue
+title: Clocked CV shift register
+manual_page: 372
+category: utility
+description: |
+  A 64-cell shift register (queue). At each clock pulse every cell's content
+  advances one position: the last cell is dropped, and the current `input`
+  value is written into the first cell.
+
+  Eight outputs can be placed at any of the 64 positions via `outputpos1` …
+  `outputpos8`. Defaults to positions 1–8. All position inputs are
+  CV-controllable, allowing dynamic read heads.
+
+  Practical uses include delayed CV / pitch lines, melody delay, and
+  stochastic pattern generation.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    description: CV pushed into the first cell of the shift register on each clock pulse.
+
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      Rising edge advances the shift register: all cells move one position
+      forward, the last cell is discarded, and `input` fills the first cell.
+
+  - name: outputpos
+    abbr: op
+    valuetype: integer
+    array: 8
+    min: 1
+    max: 64
+    description: |
+      Position (1–64) in the shift register that the corresponding output reads.
+      Defaults to 1, 2, … 8 respectively if not patched. May be CV-controlled
+      to create moving read heads.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    array: 8
+    description: |
+      Eight CV outputs reading the positions configured by `outputpos1` …
+      `outputpos8`. By default they reflect positions 1 through 8.
+
+examples:
+  - title: Output delayed by 4 clock steps
+    code: |
+      ```ini
+      [queue]
+      input = I1
+      clock = I2
+      output4 = O4
+      ```
+  - title: Three outputs at custom positions (3, 24, 64)
+    code: |
+      ```ini
+      [queue]
+      input = I1
+      clock = I2
+      outputpos1 = 3
+      outputpos2 = 24
+      outputpos3 = 64
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      ```

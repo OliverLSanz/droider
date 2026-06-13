@@ -1,0 +1,130 @@
+name: transient
+title: Transient generator
+manual_page: 402
+category: modulation
+description: |
+  Generates a linear ramp from a `start` value to an `end` value over a specified
+  `duration`. Duration can be set in seconds or, when a `clock` is patched, in
+  clock ticks. Designed to support extremely long transients — days, weeks, or
+  longer.
+
+  The output is always smooth (no sudden jumps) except when the transient resets
+  to `start`. Changing `end` or `duration` while running is supported and takes
+  effect immediately without discontinuities.
+
+  **Loop and ping-pong**: `loop = 1` immediately restarts from `start` when `end`
+  is reached. `pingpong = 1` bounces the transient back and forth between `start`
+  and `end` indefinitely.
+
+  **In-flight CV control**: `start` is only read at the moment of a reset or
+  restart. Changing `end` adjusts the slope in real time. Increasing `duration`
+  slows down the remaining travel; decreasing it speeds it up.
+
+inputs:
+  - name: start
+    abbr: st
+    valuetype: cv
+    default: 0.0
+    description: |
+      Start value of the transient. Only read when the transient (re)starts — at
+      boot, on a `reset` trigger, or when looping back.
+
+  - name: end
+    abbr: e
+    valuetype: cv
+    default: 1.0
+    description: |
+      Target value of the transient. Changes in flight immediately adjust the
+      slope to still reach the new `end` within the remaining time.
+
+  - name: duration
+    abbr: d
+    valuetype: cv
+    default: 1.0
+    unit: second
+    description: |
+      Duration of the transient. In seconds when no `clock` is patched; in clock
+      ticks when `clock` is used. A negative value is treated as zero; a zero
+      duration makes the output immediately jump to `end`.
+
+  - name: loop
+    abbr: lo
+    valuetype: gate
+    default: 0
+    description: |
+      When set to `1`, the transient immediately restarts from `start` each time
+      it reaches `end`, looping indefinitely.
+
+  - name: pingpong
+    abbr: pp
+    valuetype: gate
+    default: 0
+    description: |
+      When set to `1`, the transient reverses direction each time it reaches `end`
+      or `start`, bouncing back and forth infinitely.
+
+  - name: freeze
+    abbr: f
+    valuetype: gate
+    default: 0
+    description: |
+      While set to `1`, the transient is frozen at its current output level. The
+      internal phase does not advance until `freeze` is cleared.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: |
+      A trigger immediately sets the output to `start` and restarts the transient
+      from phase 0.
+
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      When patched, `duration` is interpreted as a number of clock ticks instead
+      of seconds. Requires a steady clock for predictable results.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: Current value of the transient, moving linearly from `start` to `end`.
+
+  - name: phase
+    abbr: p
+    valuetype: fraction
+    description: |
+      Internal phase of the transient normalised to 0…1, as if `start` were 0 and
+      `end` were 1. Useful for driving other circuits in sync with the transient.
+
+  - name: endoftransient
+    abbr: et
+    valuetype: trigger
+    description: |
+      When `loop` and `pingpong` are both off, goes to `1` and stays there once
+      the transient reaches `end`. In `loop` mode a short trigger is sent at each
+      restart. In `pingpong` mode a trigger is sent after each complete cycle (when
+      the transient is back at `start`).
+
+examples:
+  - title: Ten-minute ramp from 1 V to 3 V
+    code: |
+      ```ini
+      [transient]
+      start = 1V
+      end = 3V
+      duration = 600
+      output = O1
+      ```
+  - title: Looping ramp synced to 32 clock ticks
+    code: |
+      ```ini
+      [transient]
+      start = 0.2
+      end = 0.7
+      duration = 32
+      clock = I1
+      loop = 1
+      output = O1
+      ```

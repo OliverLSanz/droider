@@ -1,0 +1,600 @@
+name: algoquencer
+title: Algorithmic sequencer
+manual_page: 127
+obsolete: false
+category: sequencer
+description: |
+  Versatile performance sequencer that combines a classical trigger sequencer
+  with Turing Machine-style algorithms. Main roles:
+
+  - Manual + algorithmic trigger sequencer for drum voices
+  - Generator of (possibly) repeating random CVs
+
+  Key high-level parameters — `activity`, `variation`, `dejavu`, `morphs` —
+  let you dial in density and complexity in real time. Up to 16 step buttons
+  can be assigned for manual editing, with separate accent and alternate pages.
+  Fills, ratchets/rolls, branching (fractal sequencing), presets, and button
+  sharing between multiple instances (via `select`) are also supported.
+
+  Each instance handles one voice; use multiple instances for a full drum kit.
+
+inputs:
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      Clock input (mandatory). Each rising edge advances the sequencer by one
+      step.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: Reset input. A trigger here switches back to step 1.
+
+  - name: button
+    abbr: b
+    valuetype: gate
+    array: 16
+    description: |
+      Step buttons 1–16. Assign to physical buttons on your controller. Each
+      button toggles the corresponding step on or off. The number of assigned
+      buttons implicitly sets the default pattern length. Do not leave gaps
+      (e.g. use `button8` only if `button1`–`button7` are also assigned).
+
+  - name: length
+    abbr: l
+    valuetype: integer
+    min: 1
+    max: 64
+    description: |
+      Sets the pattern length (1–64). If at least one `button` is assigned the
+      default is the number of assigned buttons; otherwise 16. Values above 64
+      are clamped to 64. Ignored once `lengthbutton` has been used
+      interactively at least once.
+
+  - name: pattern
+    abbr: pt
+    valuetype: integer
+    default: 0
+    description: |
+      Selects a pseudo-random pattern seed. When `dejavu` is 1, all random
+      decisions are deterministic and repeat. Different integer values produce
+      different repeating patterns. Combine with `nextpattern`, `prevpattern`
+      and `reroll` — those create an offset to this base value.
+
+  - name: nextpattern
+    abbr: np
+    valuetype: trigger
+    description: Advances to the next pseudo-random pattern (increments the internal offset).
+
+  - name: prevpattern
+    abbr: pp
+    valuetype: trigger
+    description: Steps back to the previous pseudo-random pattern.
+
+  - name: reroll
+    abbr: rr
+    valuetype: trigger
+    description: Selects one of the pseudo-random patterns completely at random.
+
+  - name: clearpage
+    abbr: cp
+    valuetype: trigger
+    description: |
+      A trigger here deactivates all step buttons on the currently active page
+      (normal steps, accent page, or alternate page).
+
+  - name: pitchlow
+    abbr: pl
+    valuetype: cv
+    default: 0.0
+    unit: volt
+    description: |
+      Lower voltage boundary for the randomized `pitch` output. Negative
+      values are allowed.
+
+  - name: pitchhigh
+    abbr: ph
+    valuetype: cv
+    default: 0.3
+    unit: volt
+    description: Upper voltage boundary for the randomized `pitch` output.
+
+  - name: pitchresolution
+    abbr: pre
+    valuetype: integer
+    default: 0
+    min: 0
+    description: |
+      When non-zero, quantizes the `pitch` output to this many discrete voltage
+      levels between `pitchlow` and `pitchhigh`. `2` allows only the exact
+      boundary values; `3` adds one intermediate value. `0` disables
+      quantization.
+
+  - name: gatelength
+    abbr: gl
+    valuetype: cv
+    default: 0.1
+    description: |
+      Gate length expressed in clock cycles. `0.5` means half a clock cycle.
+      Values ≥ 1.0 produce a continuous (legato) gate across successive notes.
+      During rolls the gate length is divided by the number of roll beats so
+      individual gates remain audible.
+
+  - name: lengthbutton
+    abbr: lb
+    valuetype: gate
+    description: |
+      While this input is high the sequencer enters length-edit mode: pressing
+      a step button sets the pattern length to that step number, and the step
+      LEDs show the current length. Assign to a momentary button or a toggle
+      `[button]` circuit to avoid holding continuously.
+
+  - name: repeats
+    abbr: rp
+    valuetype: integer
+    default: 1
+    min: 1
+    description: |
+      Number of times the pattern is repeated to form one bar. `repeats = 2`
+      doubles the effective bar length. Useful with fills, branches and the
+      alternate pattern, which all operate per bar.
+
+  - name: alternaterepeats
+    abbr: arp
+    valuetype: integer
+    min: 1
+    description: |
+      Overrides `repeats` for the purpose of alternate-page selection. Allows
+      a different bar length for the alternation cycle than for normal playback.
+      Only relevant when both `repeats` and `alternatebars` / `alternatebutton`
+      are in use.
+
+  - name: branches
+    abbr: bs
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 3
+    description: |
+      Enables fractal (branching) sequencing. `0` = off. `1` produces an A B
+      bar pattern. `2` produces A B A C. `3` produces A B A C A B A D (repeats
+      after 8 bars). Best combined with `dejavu > 0` and `variation` or
+      `activity > 0.5`.
+
+  - name: mutebutton
+    abbr: mb
+    valuetype: gate
+    description: |
+      Toggle mute button. The first press mutes all triggers; a second press
+      unmutes. Wire `muteled` to the button LED. Always active regardless of
+      the `select` jack.
+
+  - name: unmutebutton
+    abbr: ub
+    valuetype: trigger
+    description: |
+      Schedules an unmute to take effect at the start of the next bar. While
+      waiting, `unmuteled` blinks. Always active regardless of the `select`
+      jack.
+
+  - name: accentbutton
+    abbr: ab
+    valuetype: gate
+    description: |
+      While this input is high the step buttons switch to accent-edit mode:
+      each button toggles the accent for its step. Use a toggle `[button]`
+      circuit to avoid holding the button continuously.
+
+  - name: alternatebutton
+    abbr: alb
+    valuetype: gate
+    description: |
+      While this input is high you edit the alternate step page. Active steps
+      on the alternate page flip the corresponding normal step on every
+      alternate bar (determined by `alternatebars`).
+
+  - name: alternatebars
+    abbr: aba
+    valuetype: integer
+    default: 2
+    min: 1
+    description: |
+      Determines how often the alternate page is applied. `2` (default) means
+      every second bar uses the alternate pattern. Values less than 1 are
+      treated as 1, alternating every bar.
+
+  - name: accentlow
+    abbr: al
+    valuetype: cv
+    default: 0.0
+    description: |
+      Voltage output at the `accent` jack when a non-accented step (or no
+      step) is active.
+
+  - name: accenthigh
+    abbr: ah
+    valuetype: cv
+    default: 1.0
+    description: |
+      Voltage output at the `accent` jack when an accented step is active.
+      Held for the full clock cycle.
+
+  - name: startaccents
+    abbr: sc
+    valuetype: integer
+    default: 2
+    min: 0
+    max: 2
+    description: |
+      Determines the initial accent pattern at startup or after a clear.
+      `0` all accents off; `1` all accents on; `2` accents on odd steps
+      (downbeats) and off on even steps (off-beats).
+
+  - name: activity
+    abbr: a
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Controls how many steps produce an active gate. At `0.5` (center) the
+      sequencer plays exactly the pattern set with the step buttons. Below
+      `0.5` beats are randomly removed; at `0.0` the output is completely
+      silent. Above `0.5` extra random beats are added; at `1.0` every step
+      fires. Also gates changes to the `pitch` output.
+
+  - name: variation
+    abbr: v
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Controls how strictly the sequencer follows the button-set pattern. At
+      `0.0` the pattern plays exactly as programmed. Increasing the value
+      randomly relocates beats to other positions while keeping the total
+      number of beats the same. At `1.0` the button pattern is completely
+      replaced by random positions.
+
+  - name: dejavu
+    abbr: d
+    valuetype: fraction
+    default: 1.0
+    min: 0
+    max: 1
+    description: |
+      Controls the type of randomness. At `0.0` all random decisions are
+      re-rolled every time (fully chaotic). At `1.0` each decision is made
+      once and frozen, producing a deterministic repeating sequence.
+      Intermediate values mix chaotic and deterministic decisions per step.
+
+  - name: morphs
+    abbr: m
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Introduces gradual changes into the deterministic random pattern. At
+      `0.0` no changes occur. Above `0.0` a controlled number of random
+      decisions are remade at every bar boundary. At `1.0` all decisions are
+      remade each bar, effectively disabling `dejavu`. The count of changes
+      scales quadratically with the parameter value.
+
+  - name: offbeats
+    abbr: ob
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Biases randomly placed beats toward off-beats or down-beats. At `0.5`
+      no preference. Above `0.5` favors even-numbered steps (off-beats);
+      below `0.5` favors odd-numbered steps (down-beats).
+
+  - name: distribution
+    abbr: di
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Biases randomly placed beats toward the first or second half of the bar.
+      At `0.5` no preference. Below `0.5` favors the first half; above `0.5`
+      favors the second half.
+
+  - name: fills
+    abbr: f
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      When above `0.0`, adds extra beats at musically useful positions to
+      create a fill. Extra beats are placed preferentially near the end of the
+      bar. Fill timing is controlled by `fillorder`.
+
+  - name: fillorder
+    abbr: fo
+    valuetype: integer
+    default: 0
+    min: 0
+    description: |
+      Controls how frequently fills occur. `0` every bar; `1` every second
+      bar; `2` small fill in bar 2 and big fill in bar 4; `3` tiny fill in
+      bars 2 and 6, medium in bar 4, big in bar 8. Higher values produce
+      longer cycles.
+
+  - name: rolls
+    abbr: rl
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      Controls drum roll (ratchet) density. At `0.0` no rolls. At `1.0` every
+      beat is converted to a roll. Rolls precede the main beat. Monitor roll
+      velocity via the `rollvelocity` output.
+
+  - name: rollcount
+    abbr: rc
+    valuetype: integer
+    default: 1
+    min: 0
+    description: |
+      Number of additional beats in each roll. `0` disables rolls. All roll
+      beats are distributed within the clock tick before the main beat.
+
+  - name: rollsteps
+    abbr: rs
+    valuetype: integer
+    default: 1
+    min: 1
+    description: |
+      Length of a roll in clock ticks. The total number of roll beats is
+      `rollcount × rollsteps`.
+
+  - name: rollstartvelo
+    abbr: rsv
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Starting velocity for roll beats. The first roll beat uses this value
+      and each subsequent beat is louder, ending at `1.0`. Velocity is output
+      via `rollvelocity`.
+
+  - name: pitch
+    abbr: p
+    valuetype: pitch
+    array: 16
+    description: |
+      Manual melody inputs for steps 1–16. When patched, the `pitch` output
+      plays these notes instead of fully random voltages — but all algorithmic
+      parameters (`variation`, `dejavu`, etc.) still apply. If `length > 16`
+      the inputs are cycled: step 17 uses `pitch1`, step 18 uses `pitch2`, etc.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    description: |
+      Selects which DB8E display controller shows this circuit's state (counted
+      among DB8E controllers only). `1` = first DB8E (default). `0` suppresses
+      display output.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown in the DB8E display header when this circuit is active. If
+      omitted an automatic title is used. Set to `""` or `0` to remove the
+      header entirely.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      When patched, buttons and LEDs are controlled by this circuit only while
+      `select` is high. Other inputs and outputs continue to operate normally
+      when not selected. Use with `selectat` for non-boolean selection.
+      `mutebutton` and `unmutebutton` are always active regardless.
+
+  - name: selectat
+    abbr: sa
+    valuetype: cv
+    description: |
+      Specifies the exact value at which `select` activates this circuit.
+      E.g. `selectat = 0` makes the circuit active when `select` is exactly
+      `0`.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 15
+    description: |
+      Preset number to load or save (0–15). Each preset stores activated
+      steps, accents, alternate steps, manually-set length, mute state and the
+      current random seed.
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: |
+      A trigger here loads the preset selected by `preset`. When `preset` is
+      not patched the trigger CV value itself selects the preset number.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: |
+      A trigger here saves the current state into the preset selected by
+      `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      Loads the default initial state into the circuit. Presets are not
+      affected unless using direct preset switching (without load/save
+      triggers).
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: |
+      Loads the default initial state into the circuit and into all of its
+      presets.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      When `1`, the circuit's state is neither saved to nor loaded from the
+      SD card on startup.
+
+outputs:
+  - name: trigger
+    abbr: t
+    valuetype: trigger
+    description: |
+      Main trigger output. Patch to the trigger input of a drum voice or
+      synthesizer.
+
+  - name: gate
+    abbr: g
+    valuetype: gate
+    description: |
+      Gate output with variable length (controlled by `gatelength`). Use
+      instead of `trigger` when driving envelope inputs that need a sustained
+      gate.
+
+  - name: pitch
+    abbr: p
+    valuetype: cv
+    description: |
+      (Pseudo-)random CV output, unquantized, updated at every step that has
+      an active gate. Respects all randomness settings (`dejavu`, `variation`,
+      `fills`, `branches`). Feed into a quantizer (e.g. `minifonion`) for
+      musical use.
+
+  - name: accent
+    abbr: ac
+    valuetype: cv
+    description: |
+      Outputs `accenthigh` while an accented step is active, otherwise
+      `accentlow`. Held for the full clock cycle.
+
+  - name: led
+    abbr: l
+    valuetype: gate
+    array: 16
+    description: |
+      LED outputs for step buttons 1–16. Assign to the LEDs in the step
+      buttons. Fully lit LEDs show active steps; dimmed LEDs (50 % brightness)
+      mark the current sequencer position.
+
+  - name: barled
+    abbr: bl
+    valuetype: gate
+    array: 4
+    description: |
+      Bar indicator LEDs 1–4. Wire to LEDs to show the current bar within the
+      sequence.
+
+  - name: rollvelocity
+    abbr: rv
+    valuetype: cv
+    description: |
+      Velocity of each roll beat, ramping from `rollstartvelo` up to `1.0`
+      across the roll. For normal (non-roll) beats always outputs `1.0`.
+
+  - name: startofbar
+    abbr: sb
+    valuetype: trigger
+    description: Outputs a trigger at the beginning of every bar.
+
+  - name: muteled
+    abbr: ml
+    valuetype: gate
+    description: Wire to the LED in the mute button. Lit while the voice is muted.
+
+  - name: unmuteled
+    abbr: ul
+    valuetype: gate
+    description: |
+      Wire to the LED in the unmute button. Blinks while an unmute is pending
+      (waiting for the start of the next bar).
+
+  - name: morphled
+    abbr: mol
+    valuetype: trigger
+    description: |
+      Outputs a trigger whenever a morph occurs. Wire to an LED to monitor
+      morphs.
+
+  - name: fillsled
+    abbr: fl
+    valuetype: trigger
+    description: |
+      Outputs a trigger for every fill beat played. Wire to an LED to monitor
+      fills.
+
+  - name: branch
+    abbr: br
+    valuetype: integer
+    description: |
+      Outputs the current branch number (1, 2, 3 …). Always `1` when
+      `branches = 0`.
+
+  - name: lengthoutput
+    abbr: lo
+    valuetype: integer
+    description: |
+      Outputs the currently active pattern length. Useful when using
+      `lengthbutton` interactively and you want to share the length with other
+      circuits.
+
+examples:
+  - title: Minimal Turing machine (random repeating CVs)
+    code: |
+      ```ini
+      [algoquencer]
+      clock = G1
+      pitch = O1
+      ```
+  - title: Drum sequencer with 4 step buttons (P2B8)
+    code: |
+      ```ini
+      [p2b8]
+      [algoquencer]
+      clock = I1
+      reset = I2
+      button1 = B1.1
+      button2 = B1.2
+      button3 = B1.3
+      button4 = B1.4
+      led1 = L1.1
+      led2 = L1.2
+      led3 = L1.3
+      led4 = L1.4
+      trigger = O1
+      ```
+  - title: Quantized melodic sequencer with dejavu pot
+    code: |
+      ```ini
+      [algoquencer]
+      clock = G1
+      pitchlow = 1V
+      pitchhigh = 4V
+      dejavu = P1.1
+      pitch = _PITCH
+      [minifonion]
+      input = _PITCH
+      output = O1
+      ```

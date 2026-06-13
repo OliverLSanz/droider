@@ -1,0 +1,56 @@
+# CIRCUIT: flipflop
+# MANUAL PAGES (physical, 1-based): 259-259
+# TITLE: flipflop – Simple flip flop
+
+16.31
+flipflop – Simple ﬂip ﬂop
+This circuit implements a ﬂip ﬂop that
+stores one bit, which can be manipulated
+with various triggers.
+Here is a simple example for a ﬂip ﬂop that
+toggles at each trigger. Fun fact: this im-
+plements a clock divider by two:
+[flipflop]
+toggle
+= I1
+output
+= O1
+As an alternative you can work with set and reset trig-
+gers:
+[flipflop]
+set
+= I1
+reset = I2
+output
+= O1
+Note: The ﬂip ﬂop does not save its state to the SD card.
+And it has no presets. If you need any of these, have a
+look at button (see page 154).
+Input
+Type
+Default
+Description
+toggle (t)
+A trigger here inverts the state of the ﬂip ﬂop. It changes 0 to 1 and 1 to 0.
+set (s)
+Sets the ﬂip ﬂop to 1.
+reset (r)
+Sets the ﬂip ﬂop to 0.
+clear (cl)
+Sets the ﬂip ﬂop to the value deﬁned by startvalue.
+startvalue (sv)
+0
+The ﬂip ﬂop starts its live with this value. Also clear will set the ﬂip ﬂop to this value.
+load (ld)
+Loads the value into the ﬂip ﬂop that’s deﬁned with loadvalue.
+loadvalue (lv)
+1
+Value to set the ﬂip ﬂop to, when load is triggered.
+Output
+Type
+Description
+output (o)
+Outputs the current value of the ﬂip ﬂop: either 0 or 1.
+DROID manual for blue-7
+259
+Table of contents at page 2

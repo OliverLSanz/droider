@@ -1,0 +1,65 @@
+# CIRCUIT: random
+# MANUAL PAGES (physical, 1-based): 373-373
+# TITLE: random – Random number generator
+
+16.59
+random – Random number generator
+A random number generator with clocked
+and unclocked mode, that can either create
+voltages at discrete steps and completely
+free values.
+This circuit creates random numbers be-
+tween two tunable levels minimum and maximum.
+In
+clocked mode each clock creates and holds a new random
+value. In unclocked mode the random values change at
+the maximum possible speed (about 6000 times per sec-
+ond).
+Simple example for clocked random numbers between
+0.0 and 1.0 (1.0 translates into 10 V at the output):
+[random]
+clock
+= I1
+output
+= O1
+Example for creating random output voltages between
+1 V and 3 V:
+[random]
+clock
+= I1
+output
+= O1
+minimum = 1V
+maximum = 3V
+Input
+Type
+Default
+Description
+clock (c)
+Optional triggger: if this input is used then the output holds the current random number until the next clock impulse
+(sample & hold)
+minimum (m)
+0.0
+Minimum possible random number
+maximum (x)
+1.0
+Maximum possible random number
+steps (s)
+1
+2
+3
+0
+Number of different voltage levels. If this is set to 0 (default), any voltage can appear, there is no limit. If this is 1,
+then there is no random any more since there is only one allowed step (which is the average between minimum and
+maximum. At 2 the only two possible output values are minimum and maximum. At 3 the possible levels are minimum,
+minimum+maximum
+2
+and maximum and so on...
+Output
+Type
+Description
+output (o)
+Output of the random number / voltage
+DROID manual for blue-7
+373
+Table of contents at page 2

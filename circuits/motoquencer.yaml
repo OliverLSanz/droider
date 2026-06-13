@@ -1,0 +1,823 @@
+name: motoquencer
+title: Motor fader sequencer
+manual_page: 315
+category: sequencer
+description: |
+  Motor fader sequencer supporting up to 32 steps and up to eight M4 controllers
+  (up to 32 faders). Each step has eight editable parameters: pitch/CV, randomize
+  CV, gate probability, repeats, gate pattern, ratchets, gate, and skip.
+
+  Features include musical scale quantization (`root`/`degree`/`select…`),
+  direction, ping pong, movement patterns, song forms (AAAB, AABB, …), pitch
+  accumulator, keyboard recording, copy/paste pages, the "I Feel Lucky"
+  randomization system, and The Metric Saver that keeps sync after polymetric
+  experimentation.
+
+  Multiple instances can be linked (`linktonext`) for multi-CV/gate tracks driven
+  by a single clock.
+
+inputs:
+  - name: firstfader
+    abbr: f
+    valuetype: integer
+    default: 1
+    min: 1
+    description: First M4 fader used by the sequencer (1-based index). Defaults to the first fader of the first M4.
+
+  - name: numfaders
+    abbr: n
+    valuetype: integer
+    min: 1
+    max: 32
+    description: Number of M4 faders allocated to this sequencer. Typical values are 4, 8, 16, 32 (maximum). Defaults to all available faders.
+
+  - name: numsteps
+    abbr: ns
+    valuetype: integer
+    min: 1
+    max: 32
+    description: |
+      Total number of steps in the sequence. Can exceed `numfaders`; use `page` to
+      navigate. Defaults to the number of faders. Avoid changing dynamically — use
+      `endstep` or `autoreset` instead.
+
+  - name: page
+    abbr: p
+    valuetype: integer
+    default: 0
+    description: Selects which page (group of faders) is currently visible for editing when steps exceed faders. First page is 0. Feed a `buttongroup` output here.
+
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      Clock input — each tick advances the sequencer by one step (or one repetition
+      of the current step). For ratcheting, the clock must be steady and regular.
+      Accepts irregular clocks when ratcheting is not used.
+
+  - name: taptempo
+    abbr: tt
+    valuetype: clock
+    description: Steady reference clock used to compute gate length and ratchet timing when the main `clock` may stop and restart. Prevents wrong gate lengths on the first step after a clock restart.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: |
+      Resets the sequencer to its start step. The next clock tick plays step 1. A
+      reset without a simultaneous clock tick moves the sequencer to "step 0" so that
+      step 1 is not skipped on the following clock.
+
+  - name: run
+    abbr: ru
+    valuetype: gate
+    default: 1
+    description: |
+      When 0, the sequencer ignores all incoming clock ticks. `1` (default) = normal
+      operation. Preferred over stopping the clock because gate length and ratchet
+      computation requires at least two clock ticks to establish tempo.
+
+  - name: composemode
+    abbr: cm
+    valuetype: gate
+    description: When 1, clocking stops. Instead, every time you move a CV fader the sequencer jumps to that step, outputs the new CV, and briefly opens the gate so you can audition the note.
+
+  - name: mute
+    abbr: m
+    valuetype: gate
+    description: When 1, the gate output is held at 0. The CV output and sequencer position continue to advance normally.
+
+  - name: cvbase
+    abbr: cb
+    valuetype: cv
+    default: 0.0
+    min: -1
+    max: 1
+    description: Voltage output when the CV fader is at its lowest position. Range -1 to 1 (equivalent to -10 V to +10 V at a module output).
+
+  - name: cvrange
+    abbr: cr
+    valuetype: cv
+    default: 0.2
+    min: 0
+    max: 1
+    description: Voltage range of the CV output above `cvbase`. Output lies in [`cvbase`, `cvbase + cvrange`]. Cannot be negative; maximum is 1.
+
+  - name: invert
+    abbr: iv
+    valuetype: gate
+    default: 0
+    description: When 1, mirrors the fader position so a high fader produces a low output and vice versa. Scale quantization is still respected.
+
+  - name: quantize
+    abbr: q
+    valuetype: integer
+    default: 2
+    min: 0
+    max: 2
+    description: |
+      Quantization mode. `0` = free continuous CV; `1` = semitone steps (1/12 V,
+      fader notches up to 25); `2` = musical scale defined by `root` and `degree`,
+      with individual note selection via `select1`…`select13`.
+
+  - name: cvnotches
+    abbr: cn
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 127
+    description: |
+      When ≥ 2, switches the CV faders to integer notch mode outputting values
+      0 … (cvnotches − 1). `cvbase`, `cvrange`, and `quantize` are ignored. Force
+      feedback is disabled above 25 notches.
+
+  - name: shiftsteps
+    abbr: sh
+    valuetype: integer
+    default: 0
+    description: Shifts all steps left by this number (negative = right), wrapping at the sequence boundary. Applied before `startstep`, `endstep`, and other step-order modifications.
+
+  - name: startstep
+    abbr: ss
+    valuetype: integer
+    default: 1
+    description: First step played after a reset or after the sequence wraps. Overridden by interactive button settings (buttonmode 1) until `clearstartend` is triggered.
+
+  - name: endstep
+    abbr: es
+    valuetype: integer
+    description: |
+      Last step played before returning to `startstep`. Defaults to the last active
+      step. Setting `startstep` larger than `endstep` reverses the playing order. Can
+      also be changed interactively via step buttons in buttonmode 1.
+
+  - name: setendstep
+    abbr: ses
+    valuetype: integer
+    description: |
+      Acts as both a number and a trigger: whenever this changes to a non-zero value
+      the end step is set to that value (as if set interactively). A value of 0 has
+      no effect. Useful with `buttongroup` output to set the end step without
+      conflicting with interactive overrides.
+
+  - name: form
+    abbr: fo
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 6
+    description: |
+      Creates musical song forms by dividing steps into parts played in a set order.
+      `0` = plain sequence; `1` = AAAB; `2` = AABB; `3` = ABAC; `4` = AAABAAAC;
+      `5` = AB; `6` = AAB. Forms using A, B and C require a step count divisible
+      by 3 for equal-sized parts.
+
+  - name: direction
+    abbr: d
+    valuetype: gate
+    default: 0
+    description: "`0` = play steps forward (default); `1` = play steps backward."
+
+  - name: pingpong
+    abbr: pp
+    valuetype: gate
+    default: 0
+    description: When 1, the sequencer reverses direction each time it reaches the start or end step. Turning points are played only once, so an 8-step ping-pong sequence has a period of 14, not 16.
+
+  - name: pattern
+    abbr: pt
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 7
+    description: |
+      Non-linear step movement pattern. `0` = linear (normal); `1` = two forward,
+      one back; `2` = double step forward, one back; `3` = double forward/backward
+      plus single forward; `4` = mixed double/single; `5` = random single step
+      forward or backward; `6` = random small forward jump; `7` = random jump to
+      any allowed step.
+
+  - name: repeatshift
+    abbr: rs
+    valuetype: integer
+    default: 0
+    min: -24
+    max: 24
+    description: Shifts the pitch by this many scale notes for each repetition of a step. Only applies when a step's repeat count is > 1 and `quantize` = 2.
+
+  - name: ratchetshift
+    abbr: ras
+    valuetype: integer
+    default: 0
+    min: -24
+    max: 24
+    description: Shifts the pitch by this many scale notes for each ratchet within a step. Only applies when a step's ratchet count is > 1 and `quantize` = 2. Resets at each repetition.
+
+  - name: accumulatorrange
+    abbr: ac
+    valuetype: integer
+    min: 0
+    max: 16
+    description: |
+      Enables the pitch accumulator and sets its maximum value (1–16). The top four
+      fader positions of the "randomize CV" fader mode then control how the
+      accumulator shifts each step's pitch per sequence run. The accumulator resets
+      after this many runs or on an external reset.
+
+  - name: constantlength
+    abbr: co
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 2
+    description: |
+      Keeps total sequence length constant when step parameters change. `1` =
+      compensate repeat changes in neighboring steps; `2` = also compensate skip
+      changes. Compensation is limited to the active start/end range.
+
+  - name: autoreset
+    abbr: ar
+    valuetype: integer
+    default: 0
+    description: When non-zero, resets the sequence every N clock ticks automatically. Creates polymetric patterns. The pitch accumulator is advanced (not reset) on each autoreset.
+
+  - name: metricsaver
+    abbr: ms
+    valuetype: gate
+    default: 1
+    description: |
+      The Metric Saver tracks total elapsed clock ticks since the last external reset.
+      When all polymetric modifications are deactivated, it snaps the playback
+      position back to where it would have been without them, instantly restoring
+      sync. Enabled by default; set to 0 to disable.
+
+  - name: fadermode
+    abbr: fm
+    valuetype: integer
+    default: 0
+    min: 0
+    description: |
+      Controls what the motor faders edit. `0` = pitch/CV; `1` = randomize CV;
+      `2` = gate probability; `3` = repeats; `4` = gate pattern; `5` = ratchets;
+      `6` = gate; `7` = skip. Add 10 per linked sequencer to address parameters of
+      subsequent linked instances (e.g. `10` = CV of next, `11` = CV randomization
+      of next, `20` = CV of the one after that).
+
+  - name: buttonmode
+    abbr: bm
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 3
+    description: "Controls what the touch buttons below the faders edit. `0` = gates; `1` = start/end step; `2` = gate pattern; `3` = skip."
+
+  - name: holdcv
+    abbr: hc
+    valuetype: gate
+    default: 1
+    description: |
+      When 1 (default), the CV output only updates when a gated step is played.
+      When 0, steps without gates also change the CV output. Either way, CV never
+      changes mid-step — repeats and ratchets always play at the same pitch.
+
+  - name: defaultcv
+    abbr: dc
+    valuetype: cv
+    default: 0.0
+    description: CV value applied to all steps when `clear` is triggered. Must lie within [`cvbase`, `cvbase + cvrange`]. In `cvnotches` mode, an integer in [0, cvnotches − 1].
+
+  - name: defaultgate
+    abbr: dfg
+    valuetype: gate
+    default: 1
+    description: Gate state (on/off) applied to all steps when `clear` is triggered.
+
+  - name: clearskips
+    abbr: cs
+    valuetype: trigger
+    description: A trigger removes the "skip" flag from all steps.
+
+  - name: clearrepeats
+    abbr: crp
+    valuetype: trigger
+    description: A trigger resets the repeat count of every step to 1.
+
+  - name: clearstartend
+    abbr: cse
+    valuetype: trigger
+    description: A trigger clears manually set start and end steps, restoring full-length playback.
+
+  - name: gatelength
+    abbr: gl
+    valuetype: cv
+    default: 0.5
+    min: 0
+    description: |
+      Gate length as a fraction of one clock cycle. `0.5` = half a clock cycle.
+      Values ≥ 1.0 produce legato (overlapping gates between successive steps). Set
+      to `0` to emit a minimal ~10 ms trigger when using an unsteady clock.
+
+  - name: keyboardmode
+    abbr: km
+    valuetype: integer
+    default: 1
+    min: 0
+    max: 2
+    description: |
+      How a connected keyboard (`keyboardcv`/`keyboardgate`) interacts with playback.
+      `0` = ignore keyboard; `1` = keyboard and sequencer play together, keyboard
+      has precedence; `2` = mute sequencer and play keyboard only.
+
+  - name: keyboardcv
+    abbr: kc
+    valuetype: pitch
+    unit: octave
+    description: Pitch CV (1 V/oct) from a keyboard or MIDI interface. Used for play-along and for recording when `recordmode` is active.
+
+  - name: keyboardgate
+    abbr: kg
+    valuetype: gate
+    description: Gate from a keyboard. High gate enables play-along (see `keyboardmode`) and recording when `recordmode` is active.
+
+  - name: recordmode
+    abbr: rm
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 2
+    description: |
+      Enables keyboard recording into the sequencer. `0` = off; `1` = record and
+      automatically tie long notes across steps via gate pattern; `2` = record
+      without tying (ignore input note length).
+
+  - name: recordsilence
+    abbr: rsi
+    valuetype: gate
+    default: 0
+    description: When 1 during recording, steps where `keyboardgate` is low are silenced. When 0, only pressed-key pitches are written; existing notes in silent steps are preserved.
+
+  - name: copy
+    abbr: cy
+    valuetype: trigger
+    description: Copies the current page of the sequence into an internal clipboard (not saved to SD card or presets).
+
+  - name: paste
+    abbr: pa
+    valuetype: trigger
+    description: Pastes all clipboard data to the current page of the sequence.
+
+  - name: pastefaders
+    abbr: pf
+    valuetype: trigger
+    description: Like `paste` but only pastes the fader values of the current `fadermode`, leaving other step data unchanged.
+
+  - name: pastebuttons
+    abbr: pb
+    valuetype: trigger
+    description: Like `paste` but only pastes the button values of the current `buttonmode`. The start/end mode is not supported by copy/paste.
+
+  - name: stepcopy
+    abbr: sc
+    valuetype: gate
+    description: |
+      Wire to a push button to enable per-step copying. Hold the button and touch a
+      step to copy it into the clipboard; touch further steps to paste there. All step
+      parameters (including linked sequencer data) are copied.
+
+  - name: doublerange
+    abbr: dr
+    valuetype: trigger
+    description: Doubles the playing range by copying the current steps into the second half of the new range and extending the end step. Only works when the range is shorter than maximum. Can share a button with `stepcopy`.
+
+  - name: bulkedit
+    abbr: be
+    valuetype: gate
+    description: When 1, any fader move or button press is simultaneously applied to all steps to the right of the touched step, including steps on other pages. Wire to a button for rapid bulk parameter setting.
+
+  - name: linktonext
+    abbr: ln
+    valuetype: gate
+    default: 0
+    description: |
+      When 1, the next `motoquencer` in the patch is slaved to this one: it always
+      plays the same step, including all step-order features. Clock, reset, direction,
+      form, etc. are ignored on the linked instance. Use to add extra CV/gate outputs
+      to a single sequencer. Must be a fixed value (not dynamic).
+
+  - name: luckychance
+    abbr: lc
+    valuetype: fraction
+    default: 1.0
+    min: 0
+    max: 1
+    description: Fraction of steps affected by the next "I Feel Lucky" operation. `1.0` = all steps; `0.5` = half; `0.0` = none.
+
+  - name: luckyscope
+    abbr: ls
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 3
+    description: |
+      Which steps are eligible for "lucky" operations. `0` = between current start
+      and end; `1` = all steps; `2` = between start and end on the current page;
+      `3` = all steps on the current page.
+
+  - name: luckyamount
+    abbr: la
+    valuetype: fraction
+    default: 1.0
+    min: 0
+    max: 1
+    description: Amount of change applied by a "lucky" operation. The exact meaning depends on the specific lucky trigger used.
+
+  - name: luckycvbase
+    abbr: lv
+    valuetype: cv
+    default: 0.0
+    min: 0
+    max: 1
+    description: Minimum CV added to the random result of `luckycvs` and `luckyfaders` (in pitch mode). The random CV lies in [`luckycvbase`, `luckycvbase + luckyamount`].
+
+  - name: luckyfaders
+    abbr: lf
+    valuetype: trigger
+    description: Moves the currently selected faders (per `fadermode`) to new random positions. `luckyamount` sets the maximum fader value (`1.0` = full range).
+
+  - name: luckybuttons
+    abbr: lb
+    valuetype: trigger
+    description: Randomly toggles the currently selected buttons (per `buttonmode`). `luckyamount` restricts the gate pattern range when gate patterns are selected.
+
+  - name: luckycvs
+    abbr: lcv
+    valuetype: trigger
+    description: Replaces affected steps' CVs with new random values in [`cvbase`, `cvbase + luckyamount × cvrange`].
+
+  - name: luckycvdrift
+    abbr: ld
+    valuetype: trigger
+    description: Randomly shifts affected steps' CVs up or down within the allowed CV range. `luckyamount` controls the magnitude of the change.
+
+  - name: luckyspread
+    abbr: lr
+    valuetype: trigger
+    description: Adjusts the spread of affected steps' CVs around their mean. `luckyamount` > 0.5 increases spread; < 0.5 decreases it.
+
+  - name: luckyinvert
+    abbr: li
+    valuetype: trigger
+    description: Inverts the CVs of affected steps within the allowed CV range. `luckyamount` has no effect.
+
+  - name: luckyrandomizecv
+    abbr: lrc
+    valuetype: trigger
+    description: Sets the "randomize CV" parameter of affected steps to random values. `luckyamount` sets the maximum randomization value applied.
+
+  - name: luckygates
+    abbr: lg
+    valuetype: trigger
+    description: Randomly sets the gates of affected steps on or off. `luckyamount` controls the probability of on (`1.0` = all on; `0.0` = all off).
+
+  - name: luckyskips
+    abbr: lk
+    valuetype: trigger
+    description: Randomly sets the "skip" flag on affected steps. `luckyamount` controls the probability of skipping.
+
+  - name: luckyties
+    abbr: lt
+    valuetype: trigger
+    description: Randomly sets the "tie to next step" gate pattern on affected steps. `luckyamount` controls the probability of tying.
+
+  - name: luckygatepattern
+    abbr: lgp
+    valuetype: trigger
+    description: Randomizes the gate pattern of affected steps among the four options (once, all, hold, tie). `luckyamount` restricts the range of possible values.
+
+  - name: luckygateprob
+    abbr: lga
+    valuetype: trigger
+    description: Sets the gate probability of affected steps to random values. `luckyamount` sets the minimum probability (inverted — `1.0` = always play; `0.0` = lowest probability).
+
+  - name: luckyrepeats
+    abbr: lrp
+    valuetype: trigger
+    description: Randomly sets the repeat count of affected steps (1–16). `luckyamount` controls the maximum (`1.0` = up to 16 repeats).
+
+  - name: luckyratchets
+    abbr: lrt
+    valuetype: trigger
+    description: Randomly sets the ratchet count of affected steps (1–8). `luckyamount` controls the maximum (`1.0` = up to 8 ratchets).
+
+  - name: luckyshuffle
+    abbr: lsh
+    valuetype: trigger
+    description: Randomly swaps the playing order of affected steps, including all their attributes. `luckyamount` has no effect.
+
+  - name: buttoncolor
+    abbr: bc
+    valuetype: fraction
+    default: 0.1
+    min: 0
+    max: 1
+    description: Custom color for the gate buttons when `buttonmode` = 0. Use to visually distinguish linked sequencer tracks from the primary track.
+
+  - name: cvname
+    abbr: ce
+    valuetype: text
+    description: Custom label shown on the DB8E display when a step's CV is changed. Defaults to "CV" or "Number".
+
+  - name: gatename
+    abbr: gn
+    valuetype: text
+    description: Custom label shown on the DB8E display when a step's gate is changed. When set, changes the display text from "silent"/"play" to "off"/"on".
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    description: Selects which DB8E display controller shows sequencer status. `1` = first DB8E; `2` = second; `0` = suppress display output.
+
+  - name: luckyreverse
+    abbr: lrv
+    valuetype: trigger
+    description: Reverses the playing order of affected steps. `luckyamount` has no effect.
+
+  - name: root
+    abbr: ro
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 12
+    description: |
+      Root note of the scale. `0` = C, `1` = C♯, `2` = D, …, `11` = B, `12` = C
+      (octave above). Multiply a 1 V/oct input by 120 for direct CV control (also
+      compatible with the Sinfonion ROOT CV).
+
+  - name: degree
+    abbr: dg
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 107
+    description: |
+      Musical scale (0–107). `0` = Lydian, `1` = Major, `2` = Mixolydian, `3` = Sus,
+      `4` = Altered, `5` = Harmonic minor 5th, `6` = Dorian, `7` = Minor,
+      `8` = Harmonic minor, `9` = Phrygian, `10` = Diminished, `11` = Augmented.
+      See manual page 119 for all 108 scales.
+
+  - name: select1
+    abbr: s1
+    valuetype: gate
+    description: Gate input to include the root note as an allowed interval in scale quantization. When all select and selectfill inputs are 0, all seven scale notes are automatically enabled.
+
+  - name: select3
+    abbr: s3
+    valuetype: gate
+    description: Gate input to include the 3rd as an allowed scale note in quantization.
+
+  - name: select5
+    abbr: s5
+    valuetype: gate
+    description: Gate input to include the 5th as an allowed scale note in quantization.
+
+  - name: select7
+    abbr: s7
+    valuetype: gate
+    description: Gate input to include the 7th as an allowed scale note in quantization.
+
+  - name: select9
+    abbr: s9
+    valuetype: gate
+    description: Gate input to include the 9th (same as 2nd) as an allowed scale note in quantization.
+
+  - name: select11
+    abbr: s11
+    valuetype: gate
+    description: Gate input to include the 11th (same as 4th) as an allowed scale note in quantization.
+
+  - name: select13
+    abbr: s13
+    valuetype: gate
+    description: Gate input to include the 13th (same as 6th) as an allowed scale note in quantization.
+
+  - name: selectfill1
+    abbr: sf1
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 9th (the 9th not contained in the current scale) as an allowed note.
+
+  - name: selectfill2
+    abbr: sf2
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 3rd (the 3rd not in the current scale) as an allowed note.
+
+  - name: selectfill3
+    abbr: sf3
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 4th or 5th (usually the diminished 5th) as an allowed note.
+
+  - name: selectfill4
+    abbr: sf4
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 13th (the 13th not in the current scale) as an allowed note.
+
+  - name: selectfill5
+    abbr: sf5
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 7th (the 7th not in the current scale) as an allowed note.
+
+  - name: harmonicshift
+    abbr: has
+    valuetype: integer
+    default: 0
+    min: -7
+    max: 7
+    description: |
+      Filters out scale/non-scale notes to reduce harmonic complexity, applied after
+      `select…` inputs. Positive values progressively remove complex intervals (fills,
+      11th, 13th, 9th, 7th, 3rd, 5th). Negative values remove simple intervals first.
+      `0` = all selected notes allowed.
+
+  - name: noteshift
+    abbr: nos
+    valuetype: integer
+    default: 0
+    min: -24
+    max: 24
+    description: Shifts the output pitch by this many scale notes up (positive) or down (negative). The result remains a note within the scale.
+
+  - name: selectnoteshift
+    abbr: sns
+    valuetype: integer
+    default: 0
+    min: -24
+    max: 24
+    description: Shifts the output pitch by this many *selected* scale notes. Applied before `noteshift`.
+
+  - name: tuningmode
+    abbr: tm
+    valuetype: gate
+    default: 0
+    description: When 1, outputs `tuningpitch` instead of the sequence CV. Use for tuning VCOs without changing the sequence.
+
+  - name: tuningpitch
+    abbr: tp
+    valuetype: pitch
+    unit: octave
+    default: 0
+    description: Pitch CV (1 V/oct) output while `tuningmode` is active. Default is 0 V.
+
+  - name: transpose
+    abbr: tr
+    valuetype: pitch
+    unit: octave
+    default: 0
+    description: Value added to the output pitch when not in tuning mode. Use for musical transposition or vibrato modulation.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      When patched, the circuit controls buttons and LEDs only while `select` is high.
+      All other inputs and outputs remain active regardless. Use to share a button/LED
+      panel between multiple circuits.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: Specifies the exact value of `select` that activates this circuit, instead of any positive gate signal.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    description: Preset number to save or load (0-based). This circuit has 4 presets (0–3).
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: A trigger loads the preset specified by `preset`.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger saves the current state to the preset specified by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: A trigger resets all step parameters to their defaults (`defaultcv`, `defaultgate`). Saved presets are not affected.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: A trigger resets the current state and all presets to their defaults.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: When 1, the circuit's state is neither saved to nor loaded from the SD card.
+
+outputs:
+  - name: cv
+    abbr: null
+    valuetype: cv
+    description: CV output of the current step. Outputs 1 V/oct pitch when `quantize` = 2, semitone-quantized CV when `quantize` = 1, or a free CV when `quantize` = 0.
+
+  - name: gate
+    abbr: g
+    valuetype: gate
+    description: Gate output. Goes high for the active portion of the step's clock cycle (duration set by `gatelength`).
+
+  - name: startofsequence
+    abbr: ssq
+    valuetype: trigger
+    description: Triggers whenever the sequencer returns to its start step. Also fires on an external reset. Useful for synchronizing other sequencers.
+
+  - name: startofpart
+    abbr: spa
+    valuetype: trigger
+    description: Triggers whenever a song-form part (A, B, or C) restarts. Only meaningful when `form` is non-zero.
+
+  - name: startstepout
+    abbr: sso
+    valuetype: integer
+    description: Outputs the current start step number. Reflects interactive changes made via step buttons in `buttonmode` 1.
+
+  - name: endstepout
+    abbr: eso
+    valuetype: integer
+    description: Outputs the current end step number. Reflects interactive changes made via step buttons in `buttonmode` 1.
+
+  - name: currentstep
+    abbr: cst
+    valuetype: integer
+    description: Outputs the number of the step currently being played (0-based index).
+
+  - name: currentpage
+    abbr: cpg
+    valuetype: integer
+    description: Outputs the fader page number that contains the currently playing step. Feed back to `page` to auto-scroll the fader display.
+
+  - name: accumulator
+    abbr: acc
+    valuetype: integer
+    description: Current value of the pitch accumulator (integer in 0 … `accumulatorrange`).
+
+examples:
+  - title: Minimal four-step sequencer
+    code: |
+      ```ini
+      [m4]
+      [motoquencer]
+      clock = I1
+      cv = O1
+      gate = O2
+      ```
+  - title: 16-step sequencer with page switching
+    code: |
+      ```ini
+      [p2b8]
+      [m4]
+      [buttongroup]
+      button1 = B1.1
+      button2 = B1.2
+      button3 = B1.3
+      button4 = B1.4
+      led1 = L1.1
+      led2 = L1.2
+      led3 = L1.3
+      led4 = L1.4
+      output = _PAGE
+      [lfo]
+      hz = 20 * P1.1
+      square = _CLOCK
+      [motoquencer]
+      clock = _CLOCK
+      page = _PAGE
+      numsteps = 16
+      cv = O1
+      gate = O5
+      ```
+  - title: Two linked tracks sharing one clock
+    code: |
+      ```ini
+      [m4]
+      [lfo]
+      hz = 4
+      square = _CLOCK
+      [motoquencer]
+      clock = _CLOCK
+      linktonext = 1
+      cv = O1
+      gate = O5
+      [motoquencer]
+      cv = O2
+      gate = O6
+      ```

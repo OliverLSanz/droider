@@ -1,0 +1,174 @@
+# Fixed registers of the master and the G8 / X7 expanders.
+# The registers each controller contributes (controller P, B, L, S, E, R) are
+# defined in controllers.yaml.
+#
+# Schema: docs/hardware-schema.md
+# Narrative: docs/reference.md §3
+
+masters:
+  master:
+    title: MASTER
+    registers:
+      - prefix: I
+        shape: indexed
+        index: {min: 1, max: 8}
+        direction: input
+        valuetype: cv
+        description: The eight CV inputs of the master.
+
+      - prefix: N
+        shape: indexed
+        index: {min: 1, max: 8}
+        direction: output
+        valuetype: cv
+        default: 0.0
+        description: |
+          Normalization of the inputs. When no cable is patched into an input
+          `Ix`, it takes the value of the matching `Nx` register. Defaults to
+          `0.0`.
+
+      - prefix: O
+        shape: indexed
+        index: {min: 1, max: 8}
+        direction: output
+        valuetype: cv
+        description: The eight CV outputs of the master.
+
+      - prefix: G
+        shape: indexed
+        index: {min: 1, max: 8}
+        direction: inout
+        valuetype: gate
+        requires: g8
+        description: |
+          The eight jacks of the first G8 expander. Each can be used as a gate
+          input or output (0 V / 5 V). `G1` is equivalent to `G1.1`.
+
+      - prefix: G
+        shape: dotted
+        group: {min: 2, max: 4}
+        element: {min: 1, max: 8}
+        direction: inout
+        valuetype: gate
+        requires: g8
+        description: |
+          Jacks of the 2nd, 3rd and 4th G8 expanders. E.g. `G2.7` is the 7th gate
+          of the second G8. Each can be used as an input or an output.
+
+      - prefix: G
+        shape: indexed
+        index: {min: 9, max: 12}
+        direction: output
+        valuetype: gate
+        requires: x7
+        description: The four gate jacks of the X7 expander (always outputs).
+
+      - prefix: R
+        shape: indexed
+        index: {min: 1, max: 8}
+        direction: output
+        valuetype: cv
+        description: |
+          Colored LED squares of the first two rows of the 4×4 matrix (the input
+          rows). The value selects color/brightness (see the color table in
+          reference.md §3.3).
+
+      - prefix: R
+        shape: indexed
+        index: {min: 9, max: 16}
+        direction: output
+        valuetype: cv
+        description: |
+          Colored LED squares of rows three and four of the 4×4 matrix (the output
+          rows).
+
+      - prefix: R
+        shape: indexed
+        index: {min: 17, max: 48}
+        direction: output
+        valuetype: cv
+        requires: g8
+        description: Colored LED squares of the G8 expanders (1st to 4th).
+
+      - prefix: R
+        shape: indexed
+        index: {min: 49, max: 56}
+        direction: output
+        valuetype: cv
+        requires: x7
+        description: Colored LED squares of the X7 expander.
+
+      - prefix: X
+        shape: single
+        index: {min: 1, max: 1}
+        direction: output
+        valuetype: cv
+        description: |
+          Special register for displaying a value encoded in the master's 4×4 LED
+          matrix.
+
+  master18:
+    title: MASTER18
+    registers:
+      - prefix: I
+        shape: indexed
+        index: {min: 1, max: 2}
+        direction: input
+        valuetype: gate
+        description: The two gate/trigger inputs.
+
+      - prefix: O
+        shape: indexed
+        index: {min: 1, max: 8}
+        direction: output
+        valuetype: cv
+        description: The eight CV outputs.
+
+      - prefix: G
+        shape: indexed
+        index: {min: 1, max: 4}
+        direction: output
+        valuetype: gate
+        description: The four gate/trigger outputs of the MASTER18.
+
+      - prefix: G
+        shape: dotted
+        group: {min: 2, max: 5}
+        element: {min: 1, max: 8}
+        direction: inout
+        valuetype: gate
+        requires: g8
+        description: |
+          Jacks of the G8 expanders. On the MASTER18 the first G8 starts at
+          `G2.x`; use `G3.x`, `G4.x` and `G5.x` for the 2nd, 3rd and 4th G8.
+
+      - prefix: G
+        shape: indexed
+        index: {min: 9, max: 12}
+        direction: output
+        valuetype: gate
+        requires: x7
+        description: The four gate jacks of the X7 expander (always outputs).
+
+      - prefix: R
+        shape: indexed
+        index: {min: 1, max: 4}
+        direction: output
+        valuetype: cv
+        description: The four colored diagnostic LEDs on the back of the module.
+
+      - prefix: R
+        shape: indexed
+        index: {min: 17, max: 48}
+        direction: output
+        valuetype: cv
+        requires: g8
+        description: Colored LED squares of the G8 expanders (1st to 4th).
+
+      - prefix: R
+        shape: indexed
+        index: {min: 49, max: 56}
+        direction: output
+        valuetype: cv
+        requires: x7
+        description: Colored LED squares of the X7 expander.

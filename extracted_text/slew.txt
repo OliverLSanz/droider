@@ -1,0 +1,116 @@
+# CIRCUIT: slew
+# MANUAL PAGES (physical, 1-based): 388-389
+# TITLE: slew – Slew limiter
+
+16.65
+slew – Slew limiter
+This is a CV controllable slew limiter for
+CVs. Special about it is that it implements
+three alternative algorithms.
+The tradi-
+tional exponential algorithm (as is com-
+monly implemented in analog circuits), a
+linear algorithm and a special S-shaped curve.
+Here is a simple example for a slew limiting on I1 −→O1
+which is controlled with the pot P1.1:
+[slew]
+input
+= I1
+slew
+= P1.1
+exponential = O1
+Exponential shape
+This is the “classical” slew limit shape, which originates
+from the (negative) exponential loading current of a ca-
+pacitor. It is also the shape of a low pass ﬁlter that is
+used for slew limiting. The slope is proportional to the
+distance between the current and the target voltage. Or
+in other words the voltage changes fast at the beginning
+and slower at the end:
+0
+2
+4
+6
+time
+V olts
+Exponential
+original pitch
+Linear shape
+The linear algorithm simply limits the voltage change per
+time to a certain change rate, e.g. to 10 V per second.
+If the input voltage changes faster (for example suddenly
+jumps up), the output voltage follows that with that max-
+imum rate. At a pot position of 0.5 the maximum slew is
+120 V per second.
+0
+2
+4
+6
+time
+V olts
+Linear
+original pitch
+S-Curve shape
+The S-curve – when applied to pitches – sounds different
+than an exponential curve since it more reﬂects the way
+e.g. a trombone player accelerates and deaccelerates his
+arm in order to move to another pitch. In our algorithm
+we assume that in the ﬁrst half of the time the arm accel-
+erates at a constant rate (which is controlled by the slew
+parameter) and at the second half of the time it deaccel-
+erates (again at that rate, just negative), until it exactly
+reaches the target pitch.
+There is one audible difference to a real trombone player,
+however. The real musician would start to move his arm
+before the new note begins, in order to be at the target
+position right in time. But here the movement is initiated
+by the pitch change it self so it is delayed by the slew lim-
+iting.
+0
+2
+4
+6
+time
+V olts
+S-curve
+original pitch
+DROID manual for blue-7
+388
+Table of contents at page 2
+
+Input
+Type
+Default
+Description
+input (i)
+Wire the CV that you wish to slew limit here.
+slew (sw)
+1.0
+This controls the slew rate. A value of 0.0 disables slew limiting. The output immediately follows the input without
+any delay. A value of for example 2.0 in linear mode means that 2.0 seconds are needed for a change of 1 V (which is
+a value of 0.1 or one octave if used as pitch). In the other two modes the slew time is tuned to sound similar. Negative
+values of this parameter are treated as 0.0.
+slewup (u)
+1.0
+This allows a special handling when the voltage moves upwards. The slew limiting for upwards is slew multiplied
+with slewup. Since slew defaults to 1.0 you can just use slewup and slewdown if you want to control both directions
+separately.
+slewdown (d)
+1.0
+Sets the slew rate for downwards movement.
+gate (g)
+
+If this jack is patched, the slew limiting is only active while this gate is high. Otherwise it’s like setting the slew param-
+eter to zero.
+Output
+Type
+Description
+exponential (e)
+Output for the resulting CV with the exponential (classical) slew algorithm applied
+linear (l)
+Output for linear slew limiting
+scurve (c)
+Output with the slew limitation according to the S-curve algorithm.
+DROID manual for blue-7
+389
+Table of contents at page 2

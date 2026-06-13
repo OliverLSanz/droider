@@ -1,0 +1,53 @@
+# CIRCUIT: sample
+# MANUAL PAGES (physical, 1-based): 380-380
+# TITLE: sample – Sample & Hold Circuit
+
+16.61
+sample – Sample & Hold Circuit
+This is a simple sample & hold circuit. Each
+time a positive trigger is seen at the jack
+sample a new value is sampled from input
+and sent to the output.
+Example:
+[sample]
+input
+= I1
+sample
+= I2
+output
+= O1
+Input
+Type
+Default
+Description
+input (i)
+0.0
+Input signal to be sampled
+sample (sm)
+A positive trigger here will read the current value from input and store it internally.
+gate (g)
+This is an alternative way of making the circuit take a sample from the input. Here it is sampling all the time while the
+gate is high. In that way it is a bit like bypass. But as soon as the gate goes low again, the output sticks to the last
+sample value just before that.
+timewindow (tw)
+0.0
+This optional parameter helps tackling a problem that many (non-analog) sequencers show: often their pitch CV is not
+at its ﬁnal destination value at the time their gate is being output. Often you see a very short “slew” ramp of say 5 ms
+after the gate. During that time the pitch CV moves from its former to the new value.
+Now if you trigger the sample circuit with the sequencer’s gate you will essentially sample the previous pitch CV instead
+of the new one. Or maybe something in between.
+Now the timewindow parameter introduces a short time window after the sample trigger. During that time period the
+sample & hold circuit will constantly adapt to a changed input CV (is essentially in bypass mode). When that time is
+over, the input is ﬁnally frozen.
+The timewindow parameter is in seconds. So when you set timewindow to say 0.005 (which means 5 ms), you give the
+input CV 5 ms time for settling to its ﬁnal value after a trigger to sample before freezing it.
+bypass (b)
+While this gate input is high, the circuit is bypassed and input is copied to output.
+Output
+Type
+Description
+output (o)
+The most recently sampled value is sent here.
+DROID manual for blue-7
+380
+Table of contents at page 2

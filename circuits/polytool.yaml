@@ -1,0 +1,100 @@
+name: polytool
+title: Change number of voices in polyphonic setups
+manual_page: 360
+category: utility
+description: |
+  Transforms a polyphonic melody with N parallel voices into M output voices,
+  intelligently mapping pitch and gate signals. Works in two complementary
+  modes:
+
+  1. **Reduce polyphony** — feed N input CV/gate pairs into `pitchinputX` /
+     `gateinputX` and route fewer `pitchoutputX` / `gateoutputX` pairs to
+     synth voices. `voiceallocation` controls which note is dropped when
+     demand exceeds capacity.
+  2. **Expand polyphony** — feed a single monophonic melody and fan it out to
+     multiple output voices. Combined with long envelope releases this can
+     turn fast arpeggios into chord pads. Use `roundrobin` to distribute notes
+     evenly across outputs.
+
+inputs:
+  - name: pitchinput
+    abbr: pi
+    valuetype: pitch
+    array: 16
+    description: |
+      Pitch CV inputs (1 V/octave) for up to 16 input voices.
+
+  - name: gateinput
+    abbr: gi
+    valuetype: gate
+    array: 16
+    description: |
+      Gate inputs for up to 16 input voices, paired with the corresponding
+      `pitchinputX`.
+
+  - name: roundrobin
+    abbr: rr
+    valuetype: gate
+    default: 0
+    description: |
+      When `0` (default), the circuit searches for a free output starting from
+      `pitchoutput1`, so the first active note is consistently routed to the
+      lowest-numbered output — deterministic behaviour for chords. When `1`,
+      outputs are allocated in round-robin order so every output has an equal
+      chance to receive a new note; useful for creating pad textures from a
+      monophonic melody.
+
+  - name: voiceallocation
+    abbr: va
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 3
+    description: |
+      Selects the note-stealing strategy when more voices are active than
+      outputs are available:
+      - `0` — cancel the oldest note (default)
+      - `1` — omit the new note
+      - `2` — cancel the lowest note
+      - `3` — cancel the highest note
+
+outputs:
+  - name: pitchoutput
+    abbr: po
+    valuetype: pitch
+    array: 16
+    description: |
+      Pitch CV outputs (1 V/octave) for up to 16 output voices.
+
+  - name: gateoutput
+    abbr: go
+    valuetype: gate
+    array: 16
+    description: |
+      Gate outputs for up to 16 output voices.
+
+examples:
+  - title: Reduce three input voices to one output voice
+    code: |
+      ```ini
+      [polytool]
+      pitchinput1 = _PITCH_1
+      pitchinput2 = _PITCH_2
+      pitchinput3 = _PITCH_3
+      gateinput1 = _GATE_1
+      gateinput2 = _GATE_2
+      gateinput3 = _GATE_3
+      pitchoutput1 = O1
+      gateoutput1 = O2
+      ```
+  - title: Expand one monophonic melody to two overlapping voices
+    code: |
+      ```ini
+      [polytool]
+      pitchinput1 = _PITCH
+      gateinput1 = _GATE
+      pitchoutput1 = O1
+      pitchoutput2 = O2
+      gateoutput1 = O3
+      gateoutput2 = O4
+      ```

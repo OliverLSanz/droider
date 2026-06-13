@@ -1,0 +1,239 @@
+name: minifonion
+title: "minifonion – Musical quantizer"
+manual_page: 308
+obsolete: false
+category: quantizer
+description: |
+  Musical quantizer that gently moves any input CV (pitch at 1 V/oct) into selected
+  notes of a musical scale. It is equivalent to a single channel of the Sinfonion, but
+  without its hardware interface and with more flexibility.
+
+  Quantization happens in two steps: first the input is snapped to the nearest semitone;
+  then, if that semitone is not in the selected scale/notes, the circuit searches for the
+  next allowed semitone in the direction set by `direction`.
+
+  The `root` and `degree` inputs use plain integers (0, 1, 2 …), not semitone voltages.
+  Multiply by 120 to make them compatible with the Sinfonion's CV inputs.
+
+  A complete table of all 108 scales is on page 119 of the manual.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: Unquantized input pitch CV (1 V/oct). Patch your raw pitch source here.
+
+  - name: trigger
+    abbr: t
+    valuetype: trigger
+    description: |
+      Optional triggered mode. When patched, the output pitch is frozen and only updates
+      on each rising edge received here.
+
+  - name: bypass
+    abbr: b
+    valuetype: gate
+    default: 0
+    description: |
+      When set to 1 (on), quantization is bypassed and the input voltage is copied
+      directly to the output.
+
+  - name: direction
+    abbr: d
+    valuetype: integer
+    default: 1
+    min: 0
+    max: 2
+    description: |
+      Direction in which to search for the next allowed semitone in the current scale:
+      `0` = nearest semitone, `1` = upwards (default), `2` = downwards.
+
+  - name: root
+    abbr: ro
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 12
+    description: |
+      Root note of the scale: `0`=C, `1`=C#, `2`=D, `3`=D#, `4`=E, `5`=F, `6`=F#,
+      `7`=G, `8`=G#, `9`=A, `10`=A#, `11`=B, `12`=C. Multiply a 1 V/oct CV by 120
+      to use a sequencer or MIDI keyboard for root selection (also Sinfonion-compatible).
+
+  - name: degree
+    abbr: dg
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 107
+    description: |
+      Musical scale selection, 0–107. The first 12 most important scales:
+      `0`=Lydian major, `1`=Major (Ionian), `2`=Mixolydian, `3`=Sus (mixolydian 3/4 swap),
+      `4`=Altered, `5`=Harmonic minor from 5th, `6`=Dorian, `7`=Natural minor,
+      `8`=Harmonic minor, `9`=Phrygian, `10`=Diminished, `11`=Augmented (whole tones).
+      Full table on page 119 of the manual.
+
+  - name: select1
+    abbr: s1
+    valuetype: gate
+    description: |
+      Gate input for selecting the root note as an allowed interval. When all `select`
+      and `selectfill` inputs are 0, all seven scale notes are automatically selected.
+
+  - name: select3
+    abbr: s3
+    valuetype: gate
+    description: Gate input for selecting the 3rd as an allowed interval.
+
+  - name: select5
+    abbr: s5
+    valuetype: gate
+    description: Gate input for selecting the 5th as an allowed interval.
+
+  - name: select7
+    abbr: s7
+    valuetype: gate
+    description: Gate input for selecting the 7th as an allowed interval.
+
+  - name: select9
+    abbr: s9
+    valuetype: gate
+    description: Gate input for selecting the 9th (same as the 2nd) as an allowed interval.
+
+  - name: select11
+    abbr: s11
+    valuetype: gate
+    description: Gate input for selecting the 11th (same as the 4th) as an allowed interval.
+
+  - name: select13
+    abbr: s13
+    valuetype: gate
+    description: Gate input for selecting the 13th (same as the 6th) as an allowed interval.
+
+  - name: selectfill1
+    abbr: sf1
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 9th (the 9th note not in the current scale).
+
+  - name: selectfill2
+    abbr: sf2
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 3rd (the 3rd note not in the current scale).
+
+  - name: selectfill3
+    abbr: sf3
+    valuetype: gate
+    default: 0
+    description: "Selects the alternative 4th or 5th (in most cases the diminished 5th)."
+
+  - name: selectfill4
+    abbr: sf4
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 13th (the 13th note not in the current scale).
+
+  - name: selectfill5
+    abbr: sf5
+    valuetype: gate
+    default: 0
+    description: Selects the alternative 7th (the 7th note not in the current scale).
+
+  - name: harmonicshift
+    abbr: has
+    valuetype: integer
+    default: 0
+    min: -7
+    max: 7
+    description: |
+      Further filters allowed notes based on their harmonic relation to the scale.
+      Applied after the `select` inputs. `0` = off (all selected notes allowed).
+      Positive values progressively disable notes in order of complexity (fills, then
+      11th, 13th, 9th, 7th, 3rd, 5th). Negative values remove simpler functions first
+      (root, 5th, 3rd, …), creating more unusual sounds.
+
+  - name: noteshift
+    abbr: nos
+    valuetype: integer
+    default: 0
+    min: -24
+    max: 24
+    description: |
+      Shifts the output note by this many scale notes up (positive) or down (negative).
+      The shifted note is still part of the scale. Range: -24 to +24.
+
+  - name: selectnoteshift
+    abbr: sns
+    valuetype: integer
+    default: 0
+    min: -24
+    max: 24
+    description: |
+      Shifts the output note by this many *selected* scale notes up or down. Applied
+      before `noteshift` if both are used. Range: -24 to +24.
+
+  - name: tuningmode
+    abbr: tm
+    valuetype: gate
+    default: 0
+    description: |
+      While set to 1 (on), outputs the value of `tuningpitch` instead of the quantized
+      pitch. Intended as a tuning aid for VCOs.
+
+  - name: tuningpitch
+    abbr: tp
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: Pitch CV output while `tuningmode` is active (1 V/oct).
+
+  - name: transpose
+    abbr: tr
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: |
+      Value added to the output pitch when not in tuning mode. Use for musical
+      transposition or adding vibrato.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: pitch
+    description: Quantized output pitch voltage (1 V/oct).
+
+  - name: notechange
+    abbr: n
+    valuetype: trigger
+    description: |
+      Outputs a 10 ms trigger whenever the quantization changes to a new note.
+      No trigger is emitted in bypass mode.
+
+examples:
+  - title: Minimal (C Lydian quantizer)
+    code: |
+      ```ini
+      [minifonion]
+      input = I1
+      output = O2
+      ```
+  - title: D natural minor (root=2, degree=7)
+    code: |
+      ```ini
+      [minifonion]
+      input = I1
+      output = O2
+      root = 2
+      degree = 7
+      ```
+  - title: Sinfonion-compatible root and degree via CV
+    code: |
+      ```ini
+      [minifonion]
+      input = I1
+      output = O2
+      root = I2 * 120
+      degree = I3 * 120
+      ```

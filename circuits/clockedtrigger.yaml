@@ -1,0 +1,93 @@
+name: clockedtrigger
+title: Delay a trigger until the next clock tick
+manual_page: 177
+category: clock
+description: |
+  Synchronizes a trigger with an external clock. When a trigger arrives at `trigger`, it
+  is held as "pending" until the next pulse at `clock`, at which point it is forwarded
+  to `clockedtrigger`. Only one trigger is emitted per pending event, even if multiple
+  `trigger` pulses arrived since the last clock.
+
+  An optional `value` input can be frozen at the moment the trigger is captured and
+  released alongside the clocked trigger via `clockedvalue`.
+
+  If the trigger and clock arrive in the same processing cycle, the trigger is forwarded
+  immediately.
+
+inputs:
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      Clock input. Each rising edge here releases any pending trigger to `clockedtrigger`
+      and the frozen `value` to `clockedvalue`. Does not need to be a steady clock —
+      any trigger source works.
+
+  - name: trigger
+    abbr: t
+    valuetype: trigger
+    description: |
+      Trigger to be synchronized with `clock`. When a trigger arrives here it is stored
+      as pending until the next `clock` pulse. Multiple triggers between clock pulses are
+      collapsed into a single output trigger.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: A trigger here discards any pending trigger and resets `clockedvalue` to 0.0.
+
+  - name: value
+    abbr: v
+    valuetype: cv
+    default: 0.0
+    description: |
+      Optional value to freeze at the moment `trigger` is received. The frozen value is
+      sent to `clockedvalue` when the next `clock` pulse arrives.
+
+outputs:
+  - name: clockedtrigger
+    abbr: ct
+    valuetype: trigger
+    description: |
+      Outputs a trigger when a `clock` pulse arrives and there is a pending trigger. Only
+      one trigger is emitted per pending event, regardless of how many `trigger` pulses
+      occurred since the last clock.
+
+  - name: clockedvalue
+    abbr: cv
+    valuetype: cv
+    description: |
+      Outputs the value frozen by the last `trigger` when the next clock pulse arrives.
+      Holds its value until the next clocked trigger is released.
+
+  - name: pendingtrigger
+    abbr: p
+    valuetype: gate
+    description: Gate output that is high while a trigger is pending and waiting for the next clock pulse.
+
+  - name: pendingvalue
+    abbr: pv
+    valuetype: cv
+    description: |
+      The value currently frozen from `value`, waiting to be released as `clockedvalue`
+      on the next clock pulse.
+
+examples:
+  - title: Sync a button press to the clock
+    code: |
+      ```ini
+      [clockedtrigger]
+      clock          = _CLOCK
+      trigger        = B1.1
+      clockedtrigger = _BUTTON_PRESSED
+      ```
+  - title: Capture a pot value at button press, release on clock
+    code: |
+      ```ini
+      [clockedtrigger]
+      clock          = _CLOCK
+      trigger        = B1.1
+      value          = P1.1
+      clockedtrigger = _BUTTON_PRESSED
+      clockedvalue   = _VALUE
+      ```

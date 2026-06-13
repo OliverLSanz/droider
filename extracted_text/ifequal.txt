@@ -1,0 +1,58 @@
+# CIRCUIT: ifequal
+# MANUAL PAGES (physical, 1-based): 266-266
+# TITLE: ifequal – Check if two values are equal
+
+16.35
+ifequal – Check if two values are equal
+This circuit is a simpliﬁed version of
+compare (see page 181). It uses less mem-
+ory and CPU and just checks if two values
+are equal.
+The following example shows the usage: The values of
+input1 and input2 are compared. If they are equal (i.e.
+if _TRACK = 2), the value speciﬁed by ifequal is output
+to output, otherwise the value of else.
+[ifequal]
+input1 = _TRACK
+input2 = 2
+ifequal = _TRACK2_GATES
+else = 0
+output = O1
+Notes:
+• A comparison of a value read from an analog input
+will probably never work since there is always a tiny
+amount of jitter and noise.
+• Comparison of ﬂoating point values like 0.3 might
+fail, as well, because these number can introduce
+internal rounding errors.
+• If you run into these issues, use compare (see page
+181) instead. That circuit deals with unprecision
+by introducing a allowed range for the values to be
+equal.
+• The main purpose of this circuit is to save a bit a
+RAM and CPU in cases where you don’t use the full
+feature set of compare.
+Input
+Type
+Default
+Description
+input1 (i1)
+0.0
+A value.
+input2 (i2)
+1.0
+Another value
+ifequal (q)
+1.0
+Value to be output if input1 is exactly equal to input2.
+else (e)
+0.0
+Value to output otherwise.
+Output
+Type
+Description
+output (o)
+Here comes the result.
+DROID manual for blue-7
+266
+Table of contents at page 2

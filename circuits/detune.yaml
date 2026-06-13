@@ -1,0 +1,85 @@
+name: detune
+title: Detune multiple voices in a most disharmonic way
+manual_page: 198
+obsolete: false
+category: utility
+description: |
+  Detunes up to eight pitch voices in a deliberately disharmonic way. Feed pitch
+  CVs (from sequencers, quantizers, chord generators, arpeggiators, etc.) into
+  the `input` array and use the `detune` CV to dial in the amount of ugly
+  detuning. Each output receives a *different* detuning offset so that a chord
+  becomes progressively distorted rather than simply transposed.
+
+  The algorithm is identical to the one used in the Sinfonion hardware, making
+  this circuit a good match for the `chaoticdetune` output of `sinfonionlink`
+  (page 386).
+
+  **Tips:**
+  - Try a slow, slight bipolar triangle LFO on `detune` for a gentle beating
+    effect.
+  - Use a short-attack / long-release envelope on `detune` to push voices out
+    of tune at the start of each bar and let them drift back in.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: pitch
+    array: 8
+    description: |
+      Pitch CV inputs (1 V/octave), one per voice. Connect up to 8 voices;
+      each receives its own unique detuning offset at the corresponding `output`.
+
+  - name: detune
+    abbr: d
+    valuetype: cv
+    default: 0.0
+    description: |
+      Amount of detuning to apply. `0.0` means no detuning (all outputs equal
+      their inputs). Increasing this value spreads the voices apart in a
+      disharmonic, chaotic way. A bipolar LFO or envelope works well here.
+
+  - name: tuningmode
+    abbr: tm
+    valuetype: gate
+    default: 0
+    description: |
+      While set to `1`, all outputs are forced to `tuningpitch` instead of the
+      normal (detuned) pitch. Use this to hold a fixed reference pitch so you
+      can tune all connected VCOs.
+
+  - name: tuningpitch
+    abbr: tp
+    valuetype: pitch
+    default: 0
+    unit: volt
+    description: |
+      Reference pitch CV (1 V/octave) output to all voices while `tuningmode`
+      is active. Default is 0 V (typically C in a 1 V/oct system).
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: pitch
+    array: 8
+    description: |
+      Detuned pitch CV outputs, one per voice. Each output applies a different
+      detuning offset derived from the `detune` amount so that voices diverge
+      from each other rather than shifting in unison.
+
+examples:
+  - title: Five-voice detune controlled by a pot
+    code: |
+      ```ini
+      [detune]
+      detune = P1.1
+      input1 = _PITCH1
+      input2 = _PITCH2
+      input3 = _PITCH3
+      input4 = _PITCH4
+      input5 = _PITCH5
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      output4 = O4
+      output5 = O5
+      ```

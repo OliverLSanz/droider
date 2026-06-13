@@ -1,0 +1,118 @@
+# CIRCUIT: octave
+# MANUAL PAGES (physical, 1-based): 355-356
+# TITLE: octave – Multi-VCO octave animator
+
+16.52
+octave – Multi-VCO octave animator
+This circuit is used to control the pitches of
+three oscillators by octave or even ﬁfths. It
+also allows a linear detune in order to make
+the common sound of the VCOs sound fat-
+ter.
+Here is an example for a setup where the octave spread-
+ing and the detune is controlled with two pots:
+[octave]
+input
+= I1
+output1
+= O1
+output2
+= O2
+output3
+= O3
+spread
+= P1.1
+detune
+= P1.2
+Patch the 1 V / octave inputs of three VCOs at O1, O2 and
+O3. Tune all VCOs at exactly the same pitch. Patch the
+pitch output from your sequencer, quantizer or whatever
+to I1.
+Now with the pot P1.1 turned fully left nothing changes.
+All VCOs will get exactly the same pitch. As you turn up
+the pot the pitches of the VCOs 2 and 3 will start to get oc-
+taved up more and more until VCO 2 is two octaves above
+VCO 1 and VCO 3 is four octaves above VCO 1.
+If you add fifths = on then intermediate steps shift the
+pitch by perfect ﬁfths.
+Note: The output output1 was implemented just for sake
+of completeness. It passes through the input to output1,
+since the pitch of VCO 1 is never detuned nor pitched up.
+If you are running low in outputs then some use a passive
+multiple or stacked cable and connect VCO 1 externally
+the pitch and thus save one output.
+Detune
+In the example, if you turn P1.2, VCO 2 will be detuned
+up and VCO 3 down. A very slight turn will get get you
+the nice fat classical detune sound. The speciality here
+is: the detune is linear. This means that the detune is al-
+ways done by the same number of Hertz – regardless of
+the current pitch. This is done by automatically adapting
+the detune voltage to be less in higher pitches and greater
+in lower pitches. The result is a beating independent of
+pitch.
+Animation
+Since everything in
+is CV’able so is spread. A nice
+application is to use a sequencer or clocked random gen-
+erator for animating the octaving. Here is an example:
+[random]
+trigger
+= I1
+output
+= _RANDOM
+[octave]
+input
+= I1
+output1
+= O1
+output2
+= O2
+output3
+= O3
+spread
+= _RANDOM * P1.1
+Now P1.1 controls the depth of random octave anima-
+tion.
+DROID manual for blue-7
+355
+Table of contents at page 2
+
+Input
+Type
+Default
+Description
+input (i)
+
+1V
+Oct
+0V
+The general pitch information on a 1 V / octave base to be used for the three VCOs.
+spread (s)
+0
+The amount of octave spread between output1 and output3. At a value of 1.0 the spread is four octaves.
+detune (d)
+0
+1
+0.0
+The amount of linear detune of VCO 2 and 3. This is not on a 1 V / octave base but corresponds to an absolute frequency
+difference in Hertz. The exact frequency difference cannot be set here, since that depends on how you have tuned your
+VCOs. But the rule is the following: If input is a 0 V and detune is 1.0, the detune is by four semitones. And for an
+input of 1 V (one octave higher) it is just two semitones, because that results in the same frequency difference. For
+2 V (two octaves up) it ist just one semitone and for 3 V half a semitone (and so on). Best thing is to simply try out and
+listen!
+fifths (f)
+off
+Set this to 1 or on if you want to include perfect ﬁfths as intermediate steps.
+Output
+Type
+Description
+output1 ... output3 (o)
+
+1V
+Oct
+Outputs for the 1 V / octave of the three VCOs. output1 is an exact copy of input so you could omit that and rather
+patch VCO 1 to the original pitch CV.
+DROID manual for blue-7
+356
+Table of contents at page 2

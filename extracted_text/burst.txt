@@ -1,0 +1,141 @@
+# CIRCUIT: burst
+# MANUAL PAGES (physical, 1-based): 152-153
+# TITLE: burst – Generate burst of pulses
+
+16.5
+burst – Generate burst of pulses
+This circuit produces – when triggered – a
+number of pulses. It can be used for solving
+various musical or technical tasks. Look at
+this example:
+[burst]
+trigger
+= I1
+hz
+= 10
+count
+= 5
+output
+= O1
+When a trigger arrives at I1, the output O1
+will send ﬁve triggers in a row, with a distance of 0.1 sec-
+onds (thus 10 Hz). The gate length is ﬁxed to half of the
+cycle (thus here 0.05 seconds). This means that the pulse
+width is 50% – or in other words – the faster the burst the
+shorter the outgoing triggers.
+Note: When a new trigger arrives while the current burst
+is still ongoing, it will not be ﬁnished but restarted from
+the beginning immediately.
+If you want the bursts to be synchronized to a musical
+clock, you can use the taptempo input (here I2):
+[burst]
+taptempo = I2
+count
+= 4
+trigger
+= I1
+output
+= O1
+Similar to the circuit lfo (see page 267), there is a third in-
+put for selecting the speed: rate. This works on a 1 V/Oct
+base, so here is an example for outputting the bursts at
+half of the clock speed (-1 V pitches down one octave,
+which is the same as half of the speed):
+[burst]
+taptempo = I2
+rate
+= -1V
+count
+= 4
+trigger
+= I1
+output
+= O1
+burst can also be used for very fast switching through
+things like presets in external gear. Here you might want
+fast updates. Simply set a very high frequency. Burst
+makes sure that the actual output rate is limited to the
+maximum the DROID hardware can do, so not one single
+burst can get lost. Also you might want to use the skip
+input, which skips a certain number of ticks before start-
+ing. This can be used to send out a reset signal to some in-
+put and after that sending a couple of skip forward trig-
+gers to some other input:
+[burst]
+hz = 5000
+skip = 5
+count = 3
+trigger
+= I1
+output
+= O1
+Another very simple yet useful application of burst is
+converting a gate signal into a short trigger. That way you
+can for example convert a running state from MIDI into a
+reset trigger. Since count defaults to 1, you don’t need
+any parameters except the input and output:
+[burst]
+trigger = _MIDI_RUNNING
+output = _RESET
+In this example the trigger is emitted when the running
+state goes from 0 to 1.
+Simple clocked trigger delay
+Another application of burst is a clocked trigger delay.
+Consider the following patch:
+[burst]
+taptempo = I1
+trigger = I2
+skip = 7
+output = O1
+A trigger at I2 will be delayed by 7 clock cycles.
+Note: This simple trigger delay has no memory of more
+than one trigger. Any ongoing trigger currently being de-
+layed is overridden and forgotten as soon as the next trig-
+ger arrives. If that is what you want, ﬁne. If you are look-
+ing for a more complex trigger delay, you ﬁnd one in the
+circuit triggerdelay (see page 404) circuit.
+DROID manual for blue-7
+152
+Table of contents at page 2
+
+Input
+Type
+Default
+Description
+rate (ra)
+0.0
+Frequency control: The default frequency of the burst rate is 1 Hz (one trigger per second or 60 BPM if you like). Each
+volt doubles the frequency. So an input of 1 V (a number of 0.1) speeds up to two triggers per second (120 BPM), 2 V
+(0.2) creates triggers at 4 Hz (240 BPM) and so on. On the other hand negative voltages reduce the speed, so -1 V
+(-0.1) will give 0.5 Hz (30 BPM) and so on.
+taptempo (tt)
+Feed a reference clock here and the burst will run at the speed of that clock – albeit optionally modiﬁed by rate. Please
+see page 23 for details on using taptempo inputs.
+hz ()
+1.0
+Set the frequency in Hz directly by setting a number here. This is exclusive to taptempo, but will work in combination
+with rate.
+trigger (t)
+Send a trigger here in order to start the bursts
+reset (r)
+Send a trigger here to immediately stop any ongoing burst.
+count (c)
+1
+2
+3
+1
+Number of triggers to send in one burst.
+skip (s)
+1
+2
+3
+0
+Number of time slots to wait before starting with the burst.
+Output
+Type
+Description
+output (o)
+The triggers are output here.
+DROID manual for blue-7
+153
+Table of contents at page 2

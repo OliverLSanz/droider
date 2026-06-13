@@ -1,0 +1,148 @@
+name: togglebutton
+title: Create on/off buttons (OBSOLETE)
+manual_page: 400
+obsolete: true
+category: controller
+description: |
+  Converts a normal push button into a toggle button that alternates between on
+  and off each time the button is pressed.
+
+  **This circuit is obsolete** and has been superseded by `button` (see page 154),
+  which does everything `togglebutton` does and more. It will be removed in a
+  future firmware version.
+
+  Wire `button` to a controller button (e.g. `B1.1`) and `led` to the LED in
+  that button (e.g. `L1.1`). The `led` output always sends 0 or 1 so the LED
+  reflects the state; `output` sends `onvalue` or `offvalue` instead.
+
+  If `startvalue` is not patched, the current state is persisted in the DROID's
+  internal flash memory and restored at the next power-on. Patching `startvalue`
+  disables that persistence.
+
+  The circuit supports up to four independent button layers, selected by the
+  `switch` input; each layer has its own persisted state and maps to a
+  corresponding `output1`–`output4`.
+
+inputs:
+  - name: button
+    abbr: b
+    valuetype: gate
+    description: |
+      The push button input. Wire to a controller button (e.g. `B1.1`). Each
+      rising edge (low → high) toggles the on/off state.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: |
+      A positive trigger edge resets the button to the "not pressed" (off)
+      state, regardless of its current state.
+
+  - name: onvalue
+    abbr: ov
+    valuetype: cv
+    default: 1.0
+    description: |
+      Value sent to `output` when the button is on. Changing this from the
+      default saves attenuating the CV downstream.
+
+  - name: offvalue
+    abbr: fv
+    valuetype: cv
+    default: 0.0
+    description: |
+      Value sent to `output` when the button is off.
+
+  - name: doubleclickmode
+    abbr: dm
+    valuetype: gate
+    default: 'off'
+    description: |
+      When set to 1, enables double-click mode: a double press toggles the
+      persistent state, while a single press momentarily inverts it (acts like
+      a momentary button that flips the latched state temporarily).
+
+  - name: startvalue
+    abbr: sv
+    valuetype: gate
+    description: |
+      State of the button at system power-on. Setting to `on` or `off` forces
+      the button into that state at start-up. **Patching this jack disables
+      flash persistence.** In layered mode (`switch`) this start value applies
+      to all layers.
+
+  - name: switch
+    abbr: null
+    valuetype: integer
+    min: 0
+    max: 3
+    description: |
+      Selects the active button layer (0–3), allowing one physical button to
+      carry up to four independent on/off states. Each layer has its own
+      persisted state and sends its value to the corresponding `output1`–`output4`.
+
+outputs:
+  - name: led
+    abbr: l
+    valuetype: gate
+    description: |
+      Sends 1.0 when the button is on and 0.0 when off — regardless of
+      `onvalue` and `offvalue`. Wire to the LED register of the button
+      (e.g. `L1.1`).
+
+  - name: output
+    abbr: o
+    valuetype: cv
+    array: 4
+    description: |
+      Outputs `onvalue` or `offvalue` for the 1st–4th button layer. When
+      `switch` is not used, `output` (≡ `output1`) is equivalent to `led`
+      if `onvalue` and `offvalue` are at their defaults.
+
+  - name: inverted
+    abbr: iv
+    valuetype: cv
+    description: |
+      Same as `output` (first layer only), but inverted: sends `onvalue` when
+      the button is **off** and `offvalue` when it is **on**. There is no
+      inverted version for layers 2–4.
+
+  - name: negated
+    abbr: n
+    valuetype: gate
+    description: |
+      Similar to `inverted`, but always sends 1 when the button is off and 0
+      when on — independent of `onvalue` and `offvalue`.
+
+examples:
+  - title: Basic toggle for CV looper loop enable
+    code: |
+      ```ini
+      [togglebutton]
+      button = B1.4
+      led = L1.4
+      [cvlooper]
+      loop = L1.4
+      ```
+  - title: Toggle with startvalue (disables flash persistence)
+    code: |
+      ```ini
+      [togglebutton]
+      button = B1.4
+      led = L1.4
+      startvalue = off
+      ```
+  - title: Switch between two LFO waveforms
+    code: |
+      ```ini
+      [lfo]
+      hz = 2
+      sawtooth = _SAWTOOTH
+      sine = _SINE
+      [togglebutton]
+      button = B3.1
+      led = L3.1
+      offvalue = _SAWTOOTH
+      onvalue = _SINE
+      output = O1
+      ```

@@ -1,0 +1,73 @@
+name: random
+title: Random number generator
+manual_page: 373
+obsolete: false
+category: random
+description: |
+  Generates random numbers between a configurable `minimum` and `maximum`.
+
+  In **clocked mode** (when `clock` is patched) each rising edge samples a new
+  random value and holds it until the next clock — classic sample-and-hold
+  behavior. In **free-running mode** (no `clock`) the output changes at the
+  maximum possible speed (~6000 times per second).
+
+  Use `steps` to quantize the output to a discrete set of voltage levels (e.g.
+  only `minimum` and `maximum`, or evenly-spaced steps in between).
+
+inputs:
+  - name: clock
+    abbr: c
+    valuetype: trigger
+    description: |
+      Optional clock / trigger input. When patched, a new random value is sampled
+      on each rising edge and held until the next one (sample-and-hold). When
+      left unpatched the output changes freely at ~6000 Hz.
+
+  - name: minimum
+    abbr: m
+    valuetype: cv
+    default: 0.0
+    description: Minimum possible output value (inclusive).
+
+  - name: maximum
+    abbr: x
+    valuetype: cv
+    default: 1.0
+    description: Maximum possible output value (inclusive).
+
+  - name: steps
+    abbr: s
+    valuetype: integer
+    default: 0
+    min: 0
+    description: |
+      Number of discrete voltage levels the output may take:
+      - `0` (default) — continuous: any value between `minimum` and `maximum`.
+      - `1` — no randomness: output is always the midpoint of the range.
+      - `2` — only `minimum` and `maximum`.
+      - `3` — `minimum`, midpoint, `maximum`.
+      - `N` — `N` evenly-spaced levels from `minimum` to `maximum`.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: The current random number / voltage.
+
+examples:
+  - title: Clocked random values between 0.0 and 1.0
+    code: |
+      ```ini
+      [random]
+      clock = I1
+      output = O1
+      ```
+  - title: Random voltages between 1 V and 3 V
+    code: |
+      ```ini
+      [random]
+      clock = I1
+      minimum = 1V
+      maximum = 3V
+      output = O1
+      ```

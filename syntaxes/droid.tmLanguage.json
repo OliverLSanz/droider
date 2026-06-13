@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "DROID Patch",
+  "scopeName": "source.droid",
+  "comment": "Minimal grammar: only comments and headers (always-unambiguous things). The rest of the coloring is done by the semantic layer (src/semantic.ts) to avoid flicker and to distinguish inputs/outputs and unknown circuits.",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#header" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.number-sign.droid",
+      "begin": "#",
+      "end": "$"
+    },
+    "header": {
+      "match": "^\\s*(\\[)([a-z0-9]+)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.begin.droid" },
+        "2": { "name": "entity.name.function.droid" },
+        "3": { "name": "punctuation.definition.tag.end.droid" }
+      }
+    }
+  }
+}

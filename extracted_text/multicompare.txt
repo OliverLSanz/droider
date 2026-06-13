@@ -1,0 +1,59 @@
+# CIRCUIT: multicompare
+# MANUAL PAGES (physical, 1-based): 347-347
+# TITLE: multicompare – Compare in input with up to eight possible values
+
+16.48
+multicompare – Compare in input with up to eight possible values
+With this circuit you can assign a different
+output value for up to eight different input
+values. It allows you to pick one of eight
+signals based on the current value of the in-
+put.
+There is some overlap with switch (see page 394), but
+there the offset needs to be an integer in the range 0, 1,
+2, etc. without any “holes”. With multicompare you can
+do a logic like the following:
+• If the input is 5, use sawtooth
+• If the input is 7, use triangle
+• If the input is 98, use square
+• else use sine
+Here is an example:
+[lfo]
+sawtooth = _SAWTOOTH
+triangle = _TRIANGLE
+square = _SQUARE
+sine = sine
+[multicompare]
+input = _WAVEFORMSWITCH # from somewhere
+compare1 = 5
+ifequal1 = _SAWTOOTH
+compare1 = 7
+ifequal1 = _TRIANGLE
+compare1 = 98
+ifequal1 = _SQUARE
+else = _SINE
+output = O1
+Input
+Type
+Default
+Description
+input (i)
+0.0
+A value to compare.
+compare1 ... compare16
+(c)
+Up to eight reference values to compare the input with.
+ifequal1 ... ifequal16
+(if)
+The output values if the according comparison value is found at the input.
+else (e)
+0.0
+Speciﬁes the output value in case non of comparison values is found at the input.
+Output
+Type
+Description
+output (o)
+The vaue of the matching ifequal or else input.
+DROID manual for blue-7
+347
+Table of contents at page 2

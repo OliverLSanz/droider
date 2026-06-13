@@ -1,0 +1,154 @@
+// Droid Forge label legend: a block of comments at the top of the patch that
+// the Forge reads to show labels on the jacks and controls.
+//
+//   # LABELS: master=16
+//   # INPUTS:
+//   #  I1: [ENV TRIG] long description
+//   #  I4: [1VOCT]
+//   # OUTPUTS:
+//   #  O4: [VOCT COPY] another description
+//   # CONTROLLER 1:
+//   #  S1.1: [shrt] description of a pot
+//
+// Both the short label between [brackets] and the long description are
+// optional. This logic is pure (VSCode-free): used by the linter, the CLI and
+// the autocompletion.
+
+import type { Problem } from "./linter";
+import { DroidData } from "./data";
+
+const SEC_LABELS = /^#\s*LABELS:\s*/;
+const SEC_INPUTS = /^#\s*INPUTS:\s*$/;
+const SEC_OUTPUTS = /^#\s*OUTPUTS:\s*$/;
+const SEC_CONTROLLER = /^#\s*CONTROLLER\s+(\d+):\s*$/;
+const ENTRY =
+  /^#\s+([A-Za-z][A-Za-z0-9]*(?:\.\d+)?):\s*(?:\[([^\]]*)\])?\s*(.*?)\s*$/;
+
+const LABEL_MAX = 5;
+
+export interface LabelSection {
+  kind: "inputs" | "outputs" | "controller";
+  controller?: number;
+}
+
+/**
+ * End (exclusive) of the label region: the leading block of comments and blank
+ * lines. -1 if there is no `# LABELS:` header (then there is no legend).
+ */
+function labelRegion(lines: string[]): number {
+  let hasLabels = false;
+  let end = lines.length;
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (t === "" || t.startsWith("#")) {
+      if (SEC_LABELS.test(lines[i])) hasLabels = true;
+    } else {
+      end = i;
+      break;
+    }
+  }
+  return hasLabels ? end : -1;
+}
+
+/** Label section that governs line `idx`, or null if it does not apply. */
+export function labelSectionAtLine(
+  lines: string[],
+  idx: number
+): LabelSection | null {
+  const end = labelRegion(lines);
+  if (end < 0 || idx >= end) return null;
+  let sec: LabelSection | null = null;
+  for (let i = 0; i <= idx && i < end; i++) {
+    const l = lines[i];
+    if (SEC_INPUTS.test(l)) sec = { kind: "inputs" };
+    else if (SEC_OUTPUTS.test(l)) sec = { kind: "outputs" };
+    else {
+      const m = l.match(SEC_CONTROLLER);
+      if (m) sec = { kind: "controller", controller: Number(m[1]) };
+    }
+  }
+  return sec;
+}
+
+/** The controller number a register like `S1.1` or `P3.2` belongs to. */
+function controllerOf(reg: string): number | null {
+  const m = reg.match(/^[A-Za-z]+(\d+)\./);
+  return m ? Number(m[1]) : null;
+}
+
+export function lintLabels(text: string, data: DroidData): Problem[] {
+  const lines = text.split(/\r?\n/);
+  const end = labelRegion(lines);
+  if (end < 0) return [];
+
+  const chain = data.controllerChain(lines);
+  const problems: Problem[] = [];
+  let section: LabelSection | null = null;
+
+  for (let i = 0; i < end; i++) {
+    const raw = lines[i];
+
+    // Section headers.
+    if (SEC_LABELS.test(raw)) continue;
+    if (SEC_INPUTS.test(raw)) {
+      section = { kind: "inputs" };
+      continue;
+    }
+    if (SEC_OUTPUTS.test(raw)) {
+      section = { kind: "outputs" };
+      continue;
+    }
+    const cm = raw.match(SEC_CONTROLLER);
+    if (cm) {
+      section = { kind: "controller", controller: Number(cm[1]) };
+      continue;
+    }
+
+    // Label entries.
+    const m = raw.match(ENTRY);
+    if (!m) continue;
+    const reg = m[1];
+    const label = m[2]; // may be undefined
+    const regStart = raw.indexOf(reg, raw.indexOf("#") + 1);
+    const regEnd = regStart + reg.length;
+
+    const add = (
+      startCol: number,
+      endCol: number,
+      message: string,
+      severity: "error" | "warning"
+    ) => problems.push({ line: i, startCol, endCol, message, severity });
+
+    if (!section) {
+      add(regStart, regEnd, `label outside a section (INPUTS/OUTPUTS/CONTROLLER)`, "warning");
+    }
+
+    // The register must exist for this hardware.
+    const info = data.registerInfo(reg, chain);
+    if (!info) {
+      add(regStart, regEnd, `label for a non-existent register: ${reg}`, "error");
+    } else if (section) {
+      // Consistency with the section.
+      if (section.kind === "inputs" && !/^I\d+$/.test(reg)) {
+        add(regStart, regEnd, `INPUTS expects master inputs (I1…); '${reg}' is not one`, "warning");
+      } else if (section.kind === "outputs" && !/^O\d+$/.test(reg)) {
+        add(regStart, regEnd, `OUTPUTS expects master outputs (O1…); '${reg}' is not one`, "warning");
+      } else if (section.kind === "controller") {
+        const c = controllerOf(reg);
+        if (c !== section.controller) {
+          add(regStart, regEnd, `'${reg}' does not belong to CONTROLLER ${section.controller}`, "warning");
+        }
+      }
+    }
+
+    // Length of the short label (recommendation, not mandatory).
+    if (label !== undefined && label.length > LABEL_MAX) {
+      const lb = raw.indexOf("[", regEnd);
+      if (lb >= 0) {
+        add(lb + 1, lb + 1 + label.length, `label is ${label.length} characters (recommended ≤${LABEL_MAX}; longer ones don't display well in the Forge)`, "warning");
+      }
+    }
+  }
+
+  return problems;
+}

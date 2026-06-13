@@ -1,0 +1,312 @@
+name: contour
+title: Contour generator
+manual_page: 183
+obsolete: false
+category: envelope
+description: |
+  Enhanced version of the classic ADSR envelope generator, with six phases:
+  predelay (P), attack (A), hold (H), decay (D), sustain (S) and release (R).
+
+  There are two alternative trigger inputs: `gate` and `trigger`. Use `trigger`
+  if you don't care about the gate length (in that case there is no decay/sustain
+  phase).
+
+  **Timing scaling.** If you don't change `shape`, at a value of 1 the attack
+  phase lasts 0.1 s while decay and release last 2.0 s (the `attack` range is
+  1/20 of the decay/release range, for musical reasons). To make them equal,
+  multiply `attack` by 20 (`attack = P1.1 * 20`).
+
+  **Curve shapes.** The inputs `attackshape`, `decayshape`, `swellshape` and
+  `releaseshape` (or the global `shape`) control the curvature: 0.0 logarithmic,
+  0.5 linear, 1.0 exponential.
+
+inputs:
+  - name: gate
+    abbr: g
+    valuetype: gate
+    description: |
+      Patch here a gate signal that triggers the envelope. The gate length
+      matters: while the gate is high the sustain phase holds; when it goes low
+      the release phase begins.
+
+  - name: trigger
+    abbr: t
+    valuetype: trigger
+    description: |
+      Alternative trigger method. The trigger duration is ignored and there is
+      **no decay/sustain phase** (attack and hold go straight to release;
+      `sustain` and `decay` have no effect). The predelay and attack phases are
+      completed even if the trigger ends.
+
+  - name: retrigger
+    abbr: rt
+    valuetype: gate
+    default: 1
+    description: |
+      With `0`/`off`, a new gate/trigger does not restart the envelope unless it
+      is already in the release phase. Default `on`: any trigger always restarts
+      it.
+
+  - name: startfromzero
+    abbr: sz
+    valuetype: gate
+    default: 0
+    description: |
+      With `1`/`on`, a trigger immediately sets the current level to zero
+      ("digital mode"). In the normal analog mode the envelope resumes from
+      wherever it is.
+
+  - name: abortattack
+    abbr: aa
+    valuetype: gate
+    default: 0
+    description: |
+      Decides what happens if `gate` goes low during predelay or attack. By
+      default the phase is finished anyway; with `on`, the end of the gate stops
+      attack and moves to hold (the envelope does not reach the maximum). Only
+      works when using `gate`, not `trigger`.
+
+  - name: loop
+    abbr: lo
+    valuetype: gate
+    default: 0
+    description: |
+      With `on`, the envelope restarts as soon as it finishes, with no need for a
+      trigger (turns `contour` into a kind of LFO). Combinable with gate/trigger.
+
+  - name: predelay
+    abbr: pd
+    valuetype: cv
+    default: 0.0
+    unit: second
+    description: |
+      Delay between the incoming gate and the start of the envelope. Lasts 0.1 s
+      per volt (a value of 1.0 = 1 second).
+
+  - name: attack
+    abbr: a
+    valuetype: cv
+    default: 0.0
+    description: |
+      Length of the attack phase (time from the start of the gate until the
+      maximum level is reached). See the scaling note in the circuit description.
+
+  - name: hold
+    abbr: h
+    valuetype: cv
+    default: 0.0
+    unit: second
+    description: |
+      If non-zero, the envelope stays at its maximum level for this time after
+      attack and before decay. The value is in seconds (0.5 = 5 V = 0.5 s).
+
+  - name: decay
+    abbr: d
+    valuetype: cv
+    default: 0.2
+    description: Time of the decay phase.
+
+  - name: sustain
+    abbr: s
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: Sustain level.
+
+  - name: swell
+    abbr: sw
+    valuetype: fraction
+    default: 0.0
+    min: 0
+    max: 1
+    description: |
+      If greater than 0.0, during the sustain phase the level rises or falls until
+      it reaches `swelllevel`.
+
+  - name: swelltime
+    abbr: st
+    valuetype: cv
+    default: 5.0
+    unit: second
+    description: Time of the swell phase.
+
+  - name: swelllevel
+    abbr: sl
+    valuetype: cv
+    default: 1.0
+    description: |
+      Level the swell phase approaches. Setting it equal to `sustain` disables
+      swell.
+
+  - name: release
+    abbr: r
+    valuetype: cv
+    default: 0.2
+    description: Time of the release phase.
+
+  - name: level
+    abbr: l
+    valuetype: cv
+    default: 1.0
+    description: |
+      Maximum level and scaling of the envelope (an output attenuator). Sudden
+      changes have an immediate, audible impact.
+
+  - name: velocity
+    abbr: v
+    valuetype: fraction
+    default: 1.0
+    min: 0
+    max: 1
+    description: |
+      Energy of the attack: similar to `level` but effective only during attack.
+      The maximum read from the jack during that phase is used; later changes are
+      ignored. Ideal for an accent output from a sequencer.
+
+  - name: pitch
+    abbr: p
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: |
+      A 1 V/octave input that affects all envelope timings except attack. `0`
+      (default) is neutral; `0.1` (1 V) doubles the speed of all phases. Useful so
+      that low notes last longer than high ones.
+
+  - name: taptempo
+    abbr: tt
+    valuetype: clock
+    description: |
+      Alternative to `pitch`: when you patch a clock, all envelope timings become
+      relative to it. The reference speed is 120 BPM (at that speed nothing
+      changes; faster speeds it up, slower slows it down).
+
+  - name: shape
+    abbr: sh
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Sets the curvature of all relevant phases (attack, decay, swell, release)
+      that do not use their dedicated input. Ranges from 0.0 (logarithmic) through
+      0.5 (linear) to 1.0 (exponential).
+
+  - name: attackshape
+    abbr: as
+    valuetype: fraction
+    min: 0
+    max: 1
+    description: |
+      Curvature of the attack phase. If not patched, `shape` is used. 0.0
+      logarithmic, 0.5 linear, 1.0 exponential.
+
+  - name: decayshape
+    abbr: ds
+    valuetype: fraction
+    min: 0
+    max: 1
+    description: |
+      Curvature of the decay phase. If not patched, `shape` is used. 0.0
+      logarithmic, 0.5 linear, 1.0 exponential.
+
+  - name: swellshape
+    abbr: ss
+    valuetype: fraction
+    min: 0
+    max: 1
+    description: Curvature of the swell phase. If not patched, `shape` is used.
+
+  - name: releaseshape
+    abbr: rs
+    valuetype: fraction
+    min: 0
+    max: 1
+    description: |
+      Curvature of the release phase. If not patched, `shape` is used. 0.0
+      logarithmic, 0.5 linear, 1.0 exponential.
+
+  - name: zerocrossing
+    abbr: z
+    valuetype: cv
+    description: |
+      Experimental feature: patch the output of an oscillator here and the trigger
+      will be delayed until the next zero crossing of that signal, avoiding clicks
+      even when attack is 0. The delay may vary from note to note.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: Main envelope output. Patch it to your filter, VCA, etc.
+
+  - name: negated
+    abbr: n
+    valuetype: cv
+    description: Same as `output` but in negative voltage.
+
+  - name: inverted
+    abbr: iv
+    valuetype: cv
+    description: |
+      Always positive but inverted relative to the level: when `output` gives 0 V,
+      `inverted` gives `level`, and vice versa.
+
+  - name: endofpredelay
+    abbr: ep
+    valuetype: trigger
+    description: Emits a 10 ms trigger when the predelay phase ends.
+
+  - name: endofattack
+    abbr: ea
+    valuetype: trigger
+    description: Emits a 10 ms trigger when the attack phase ends.
+
+  - name: endofhold
+    abbr: eh
+    valuetype: trigger
+    description: Emits a 10 ms trigger when the hold phase ends.
+
+  - name: endofdecay
+    abbr: ed
+    valuetype: trigger
+    description: Emits a 10 ms trigger when the decay phase ends.
+
+  - name: endofrelease
+    abbr: er
+    valuetype: trigger
+    description: Emits a 10 ms trigger when the release phase ends.
+
+examples:
+  - title: Minimal (gate and output)
+    code: |
+      ```ini
+      [contour]
+      gate = I1
+      output = O1
+      ```
+  - title: Classic ADSR with pots
+    code: |
+      ```ini
+      [p2b8]
+      [p2b8]
+      [contour]
+      gate = I1
+      attack = P1.1
+      decay = P1.2
+      sustain = P2.1
+      release = P2.2
+      output = O1
+      ```
+  - title: Match the attack range to decay/release
+    code: |
+      ```ini
+      [contour]
+      gate = I1
+      attack = P1.1 * 20
+      decay = P1.2
+      sustain = P2.1
+      release = P2.2
+      output = O1
+      ```

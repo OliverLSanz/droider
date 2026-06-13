@@ -1,0 +1,438 @@
+name: midifileplayer
+title: MIDI file player
+manual_page: 282
+category: midi
+description: |
+  Reads a MIDI file from the Micro SD card and produces CV/gate outputs for
+  pitch, gate, velocity, pitch bend, mod wheel, and more, so MIDI tracks can
+  drive modular synth voices.
+
+  MIDI files must be named `midi1.mid`, `midi2.mid`, … (no leading zeros,
+  up to `midi9999.mid`). Each circuit instance plays one track at a time;
+  use multiple `midifileplayer` circuits in parallel to play additional
+  tracks simultaneously.
+
+  **Polyphony.** By patching `pitch1`…`pitch8` and `gate1`…`gate8` you
+  define up to eight simultaneous voices. The `voiceallocation` and
+  `roundrobin` inputs control how notes are distributed and what happens when
+  demand exceeds available voices.
+
+  **Clocking.** By default the file's internal tempo is used. Patch `clock`
+  to sync to an external clock (one pulse = one 16th note); `speed` scales the
+  internal tempo without an external clock.
+
+  **Limitations.** One track per circuit; maximum track size is 6000 bytes
+  (~1500 note events); MIDI channel information is ignored.
+
+inputs:
+  - name: file
+    abbr: f
+    valuetype: integer
+    default: 1
+    min: 1
+    description: |
+      Selects which MIDI file to play. `7` plays `midi7.mid`. Defaults to `1`
+      (`midi1.mid`). If the file is missing, nothing plays. Changing this
+      value while playing causes the new file/track to be loaded from the SD
+      card (may take a few milliseconds).
+
+  - name: track
+    abbr: tc
+    valuetype: integer
+    default: 1
+    min: 1
+    description: |
+      Selects which track inside the MIDI file to play, counting only
+      non-empty tracks starting at 1. Values smaller than 1 are clamped to 1;
+      values beyond the last track select the last track. Changing this
+      restarts playback.
+
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      External clock input. When patched, one clock pulse advances playback by
+      one 16th note worth of content (internally multiplied for full
+      resolution). Overrides `speed` — the `speed` input has no effect when
+      an external clock is connected.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: |
+      A trigger here resets the playback position to the beginning of the
+      track. Useful for precise synchronised restarts.
+
+  - name: loop
+    abbr: lo
+    valuetype: gate
+    default: 1
+    description: |
+      When `1` (default), the track restarts automatically at its end
+      (looping). When `0`, playback stops and `endoftrack` fires instead.
+
+  - name: end
+    abbr: e
+    valuetype: cv
+    unit: beat
+    description: |
+      Sets the playback end position in quarter notes counted from the start.
+      Setting this beyond the actual end of the track inserts a pause. Omit to
+      use the natural end of the track.
+
+  - name: speed
+    abbr: sp
+    valuetype: cv
+    default: 1.0
+    description: |
+      Scales the internal playback speed. `1.0` = original speed; `0.5` = half
+      speed; `2.0` = double speed; `0.0` = frozen (stopped). Has no effect
+      when `clock` is connected.
+
+  - name: channel
+    abbr: ch
+    valuetype: integer
+    min: 1
+    max: 16
+    description: |
+      Restricts playback to events on a specific MIDI channel (1–16). Leave
+      unpatched to play events from all channels.
+
+  - name: tuningmode
+    abbr: tm
+    valuetype: gate
+    default: 0
+    description: |
+      When `1`, all pitch outputs are set to `tuningpitch` and all gate
+      outputs fire at 120 BPM, making it easy to tune all connected voices
+      simultaneously.
+
+  - name: tuningpitch
+    abbr: tp
+    valuetype: pitch
+    default: "2V"
+    description: |
+      Pitch CV output on all pitch outputs while `tuningmode` is active.
+      Defaults to `2V` (two octaves above the base pitch).
+
+  - name: transpose
+    abbr: tr
+    valuetype: pitch
+    default: "0V"
+    description: |
+      Transposes all pitch outputs by adding this value. `-1V` (`-0.1`)
+      transposes one octave down. Changes are applied immediately, even to
+      currently active notes.
+
+  - name: holdvelocity
+    abbr: hv
+    valuetype: gate
+    default: 0
+    description: |
+      When `1`, velocity outputs are not reset to 0 on note-off events. The
+      velocity from the last note-on is held through the release phase, which
+      prevents a VCA patched to velocity from cutting off the envelope release.
+
+  - name: pitchbendrange
+    abbr: pbr
+    valuetype: cv
+    description: |
+      Maximum pitch deviation output by the `pitchbend` output. The default is
+      approximately two semitones (one whole tone) in either direction. Setting
+      this to a negative value inverts the pitch bend direction. When
+      `bendpitch` is `1`, this range is also applied directly to the pitch
+      outputs.
+
+  - name: bendpitch
+    abbr: bp
+    valuetype: gate
+    default: 1
+    description: |
+      When `1` (default), pitch bend is applied directly to all pitch outputs.
+      Set to `0` to disable this and use the `pitchbend` output independently.
+
+  - name: roundrobin
+    abbr: rr
+    valuetype: gate
+    default: 0
+    description: |
+      When `0` (default), note search always starts at `pitch1`, so a
+      deterministic voice is used for the first note — useful for chords. When
+      `1`, outputs are allocated in round-robin order; useful with long
+      envelope releases to transform monophonic melodies into chord pads.
+
+  - name: voiceallocation
+    abbr: va
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 3
+    description: |
+      Note-stealing strategy when more simultaneous notes are needed than
+      voices are available:
+      - `0` — cancel the oldest note (default)
+      - `1` — omit the new note
+      - `2` — cancel the lowest note
+      - `3` — cancel the highest note
+
+  - name: notegap
+    abbr: ngp
+    valuetype: cv
+    default: 0.0
+    min: 0
+    description: |
+      Forces the gate output low for this many milliseconds before a new note
+      begins when a note must be re-triggered without a gap (e.g. legato or
+      voice-stealing). `0.0` keeps legato mode. For internal DROID circuits
+      `0.1` ms is typically enough; for external envelopes start with `1` ms.
+      Does not affect `trigger` outputs.
+
+  - name: ccnumber
+    abbr: cn
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 127
+    array: 4
+    description: |
+      Selects the MIDI CC number to monitor for each of the four CC output
+      slots. For example `ccnumber1 = 17` routes CC#17 to the `cc1` output.
+
+  - name: lowestnote
+    abbr: ln
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 127
+    description: |
+      Lower bound (inclusive) for notes that will be played, as a MIDI note
+      number (0 = C-2, 127 = G9). Notes below this value are silently ignored.
+      Useful for keyboard splits combined with `highestnote` on a second
+      circuit.
+
+  - name: highestnote
+    abbr: hn
+    valuetype: integer
+    default: 127
+    min: 0
+    max: 127
+    description: |
+      Upper bound (inclusive) for notes that will be played, as a MIDI note
+      number. Notes above this value are silently ignored. See `lowestnote`
+      for keyboard split applications.
+
+  - name: note
+    abbr: n
+    valuetype: integer
+    min: 0
+    max: 127
+    array: 16
+    description: |
+      Selects up to 16 individual MIDI note numbers (0–127) for dedicated gate
+      outputs (`notegate1`…`notegate16`). Defaults to 0, 1, 2… for `note1`,
+      `note2`, etc. Use to trigger up to 16 drum voices or map a MIDI
+      controller as a button expander.
+
+outputs:
+  - name: clockout
+    abbr: co
+    valuetype: clock
+    description: |
+      Outputs a steady clock at one pulse per 16th note of the playing tune.
+
+  - name: midiclock
+    abbr: mc
+    valuetype: clock
+    description: |
+      Outputs a MIDI clock signal at 24 pulses per quarter note (6× faster
+      than `clockout`). Use to sync external MIDI gear to the MIDI file tempo.
+
+  - name: endoftrack
+    abbr: et
+    valuetype: trigger
+    description: |
+      Fires a trigger when the playback reaches the end of the track. When
+      `loop` is `1` this fires before the track restarts.
+
+  - name: error
+    abbr: er
+    valuetype: cv
+    description: |
+      Non-zero when an error occurred loading or parsing the MIDI file. Wire to
+      an R register to display the error color on an LED:
+      - `0` — black: no error
+      - `-1` — white: SD card or MIDI file missing
+      - `1` — magenta: file corrupted or not a valid MIDI file
+      - `0.75` — orange: file contains no non-empty track
+      - `0.25` — cyan: track too long (> 6000 bytes)
+
+  - name: pitch
+    abbr: p
+    valuetype: pitch
+    array: 8
+    description: |
+      Pitch outputs (1 V/octave) for up to eight simultaneous voices. Notes
+      are distributed across the defined outputs according to `roundrobin` and
+      `voiceallocation`. `pitch` (no index) is equivalent to `pitch1`.
+
+  - name: velocity
+    abbr: v
+    valuetype: fraction
+    array: 8
+    description: |
+      Velocity outputs for each voice, normalized to 0.0–1.0 (MIDI 0–127
+      mapped proportionally). Controlled by `holdvelocity`.
+
+  - name: pressure
+    abbr: pr
+    valuetype: fraction
+    array: 8
+    description: |
+      After-touch (key pressure) outputs per voice, 0.0–1.0. Handles both
+      channel pressure and polyphonic key pressure messages. When only channel
+      pressure is used, all `pressureX` outputs carry the same value, so
+      `pressure1` alone suffices.
+
+  - name: gate
+    abbr: g
+    valuetype: gate
+    array: 8
+    description: |
+      Gate outputs for up to eight simultaneous voices. High while the
+      corresponding note is active.
+
+  - name: trigger
+    abbr: t
+    valuetype: trigger
+    array: 8
+    description: |
+      Trigger outputs for up to eight voices. Sends a 5 ms trigger at the
+      start of each note, regardless of note gaps. Useful when notes have no
+      silence between them and `gate` never goes low.
+
+  - name: cc
+    abbr: null
+    valuetype: fraction
+    array: 4
+    description: |
+      Current value of the CC number configured by the corresponding
+      `ccnumberX` input, normalized to 0.0–1.0 (MIDI 0–127). Multiply by
+      `127` to recover the raw integer. Outputs `0` until the first matching
+      CC event arrives.
+
+  - name: cctrigger
+    abbr: ct
+    valuetype: trigger
+    array: 4
+    description: |
+      Fires a trigger whenever a CC event matching the corresponding
+      `ccnumberX` is received. Useful when a device sends CC as discrete
+      events rather than continuous values.
+
+  - name: notegate
+    abbr: ng
+    valuetype: gate
+    array: 16
+    description: |
+      High gate for each of the up to 16 notes selected by `note1`…`note16`.
+      High as long as the selected note is held.
+
+  - name: notegatevelocity
+    abbr: ngv
+    valuetype: fraction
+    array: 16
+    description: |
+      Velocity (0.0–1.0) for the corresponding `notegateX` output. Updated on
+      note-on; reset to 0 on note-off.
+
+  - name: pitchbend
+    abbr: pb
+    valuetype: bipolar
+    description: |
+      Current pitch bend value as a bipolar voltage. The maximum deviation is
+      set by `pitchbendrange`. Only useful when `bendpitch` is `0`.
+
+  - name: programchange
+    abbr: pc
+    valuetype: trigger
+    description: |
+      Fires a trigger whenever a MIDI program change message is received,
+      including when the same program number is repeated. The `program` output
+      is updated just before the trigger fires.
+
+  - name: program
+    abbr: pm
+    valuetype: integer
+    description: |
+      The number of the last program change (0–127). Starts at 0.
+
+  - name: bank
+    abbr: ba
+    valuetype: integer
+    description: |
+      Currently selected MIDI bank (0–16384). The MSB is set by CC#0 and the
+      LSB by CC#32. Outputs 0 until a bank-select CC is received.
+
+  - name: modwheel
+    abbr: w
+    valuetype: fraction
+    description: |
+      Current mod wheel level (MIDI CC 1), normalized to 0.0–1.0.
+
+  - name: volume
+    abbr: vo
+    valuetype: fraction
+    description: |
+      Current global volume (MIDI CC 7), normalized to 0.0–1.0.
+
+  - name: portamento
+    abbr: po
+    valuetype: gate
+    description: |
+      Current state of the portamento pedal (MIDI CC 65). Use to enable an
+      external slew circuit for portamento effects.
+
+  - name: soft
+    abbr: so
+    valuetype: gate
+    description: |
+      Current state of the soft pedal (MIDI CC 67). High while the pedal is
+      held, low otherwise.
+
+examples:
+  - title: Minimal single-voice playback
+    code: |
+      ```ini
+      [midifileplayer]
+      pitch = O1
+      gate = O2
+      ```
+  - title: Three-voice polyphonic playback from file 2
+    code: |
+      ```ini
+      [midifileplayer]
+      file = 2
+      track = 1
+      pitch1 = O1
+      pitch2 = O2
+      pitch3 = O3
+      gate1 = G1
+      gate2 = G2
+      gate3 = G3
+      ```
+  - title: Variable speed via pot (0–2x)
+    code: |
+      ```ini
+      [midifileplayer]
+      pitch = O1
+      gate = O2
+      speed = P1.1 * 2
+      ```
+  - title: Sync to external clock
+    code: |
+      ```ini
+      [midifileplayer]
+      pitch = O1
+      gate = O2
+      clock = G1
+      ```

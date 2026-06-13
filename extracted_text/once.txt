@@ -1,0 +1,40 @@
+# CIRCUIT: once
+# MANUAL PAGES (physical, 1-based): 357-357
+# TITLE: once – Output one trigger after the Droid has started
+
+16.53
+once – Output one trigger after the Droid has started
+This circuit outputs exactly one trigger af-
+ter the Droid module has started. You can
+set a delay for that to happen.
+Example:
+[once]
+delay
+= 0.2 # 200 ms
+trigger
+= _DO_ONCE
+The applications are up to you. Maybe you
+want to automatically start something when the Droid
+starts or update some MIDI data or whatever weird other
+idea you have in mind.
+Input
+Type
+Default
+Description
+delay (dl)
+0.01
+Set a delay in seconds after the Droid’s start before the trigger triggers. Note: the default value is 10 ms, not zero. This
+allows all attached controllers to have sent at least one update before and the real pot values etc. are available at the
+circuits.
+onlycoldstart (c)
+0
+If you set this input to 1, once just sends a trigger after a cold start, only. A cold start means that the Droid has been
+powered up. Pressing the button for loading a new patch and does a warm start.
+Output
+Type
+Description
+trigger (t)
+The trigger is output here.
+DROID manual for blue-7
+357
+Table of contents at page 2

@@ -1,0 +1,161 @@
+# CIRCUIT: adc
+# MANUAL PAGES (physical, 1-based): 125-126
+# TITLE: adc – AD Converter with 12 bits
+
+16.1
+adc – AD Converter with 12 bits
+This circuit converts an input value into
+a binary representation of up to 12 bits.
+Consider the following example:
+[adc]
+input = I1
+bit1 = O1
+bit2 = O2
+bit3 = O3
+In this example three bits are being used.
+Three bits can represent a number from 0
+to 7. These are mapped to the input range from 0 to 1 (or
+0 V to 10 V) in the following way:
+input
+bit1
+bit2
+bit3
+bit value
+−∞... 0.125
+0
+0
+0
+0
+0.125 ... 0.250
+0
+0
+1
+1
+0.250 ... 0.375
+0
+1
+0
+2
+0.375 ... 0.500
+0
+1
+1
+3
+0.500 ... 0.625
+1
+0
+0
+4
+0.625 ... 0.750
+1
+0
+1
+5
+0.750 ... 0.875
+1
+1
+0
+6
+0.875 ... ∞
+1
+1
+1
+7
+Values lower than 0 are treated as 0. Values higher than
+1 are treated as one.
+In other words: this circuit will convert an analog input
+value into three different gate outputs.
+The expected range of the input value is from 0 to 1 per
+default, but you can change that with the parameters
+minimum and maximum. For example you could have just
+the range of 0.1 to 0.5 mapped to the three bits:
+[adc]
+input = I1
+minimum = 0.1 # 1V
+maximum = 0.5 # 4V
+bit1 = O1
+bit2 = O2
+bit3 = O3
+Now the table looks like this:
+input
+bit1
+bit2
+bit3
+bit value
+−∞... 0.15
+0
+0
+0
+0
+0.15 ... 0.20
+0
+0
+1
+1
+0.20 ... 0.25
+0
+1
+0
+2
+0.25 ... 0.30
+0
+1
+1
+3
+0.30 ... 0.35
+1
+0
+0
+4
+0.35 ... 0.40
+1
+0
+1
+5
+0.40 ... 0.45
+1
+1
+0
+6
+0.45 ... ∞
+1
+1
+1
+7
+If you use more of the bit-outputs you get more resolu-
+tion. For example if you use bit1 ... bit8, the total range
+will be divided into 256 equal pieces. Since bit 1 is the
+most signiﬁcant bit, adding more and more bits will not
+change the way bit 1 is behaving.
+The applications of this circuit are various and often sur-
+prising. For example using different LFO wave forms as
+inputs (other than square) and you will get slower and
+faster gate patterns.
+Please also have a look at the dac (see page 193), which
+does the exact opposite!
+DROID manual for blue-7
+125
+Table of contents at page 2
+
+Input
+Type
+Default
+Description
+input (i)
+0.0
+Input signal to convert to binary representation.
+minimum (m)
+0.0
+The lowest assumed input value. This value and all lower values will be converted to the bit sequence 000000000000.
+maximum (x)
+1.0
+The highest assumed input value. This value and all higher values will be converted to the bit sequence 111111111111.
+Output
+Type
+Description
+bit1 ... bit12 (b)
+The 12 bit outputs. bit1 is the MSB – the most signiﬁcant bit. The LSB (least signiﬁcant bit) is the highest output that
+you actually patch. If you do not need the full resolution of 12 bits, simply just use the ﬁrst couple of outputs.
+DROID manual for blue-7
+126
+Table of contents at page 2

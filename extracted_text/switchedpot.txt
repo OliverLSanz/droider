@@ -1,0 +1,129 @@
+# CIRCUIT: switchedpot
+# MANUAL PAGES (physical, 1-based): 396-397
+# TITLE: switchedpot – Overlay pot with multiple functions (OBSOLETE)
+
+16.69
+switchedpot – Overlay pot with multiple functions (OBSOLETE)
+This circuit has been superseded by the
+new circuit pot (see page 362). pot can do
+all switchedpot can do and much more.
+switchedpot will be removed soon.
+This circuit allows you to use one of your
+potentiometers on your controllers for up to eight differ-
+ent functions. It is like creating up to eight virtual pots.
+With the inputs switch1 … switch8 you select, which of
+these virtual pots are currently active. When you turn the
+(physical) pot, all active virtual pots are being changed.
+The values of all virtual pots start at center position (0.5).
+The current values of all virtual pots are saved in the
+’s internal ﬂash memory, so next time you power
+on you have all settings of the virtual pots reserved.
+Here is an example, where one pot is used to control both
+decay and release of an envelope.
+[switchedpot]
+pot
+= P1.1
+switch1
+= B1.1
+switch2
+= B1.2
+output1
+= _DECAY
+output2
+= _RELEASE
+[contour]
+gate
+= I1
+decay
+= _DECAY
+release
+= _RELEASE
+output
+= O1
+Now – while you press and hold button B1.1 and turn the
+knob, the decay parameter will change. Holding B1.2 will
+change release. Holding both at the same time is also
+possible and will change decay and release at the same
+time.
+Hints:
+• If you do not like to hold the buttons then you
+might want to use the button circuit for convert-
+ing the buttons into toggle buttons.
+• If you want one button per function and want
+always one pot to be selected, you can use the
+buttongroup circuit for combining the buttons
+into a group.
+Picking up the pots
+Pots are no encoders. So when reusing a pot for more
+than one function at a time there is always the problem
+that when you switch to one pot function the pot prob-
+ably currently is not set to the current value of the func-
+tion. As an example let’s assume that – using the upper
+example–youﬁrst press B1.1andsetdecayfully CW 1.0.
+Now you select release. Because 0.5 is the start position
+of every virtual pot that is the current value of release.
+But the physical pot is at 1.0.
+solves this in the following way:
+• If you turn the physical pot right, then the value of
+the virtual pot is always increased until both pots
+reach 1.0 at the same time.
+• If the physical pot is already at 1.0 when you select
+a virtual pot, it cannot be increased further. You
+ﬁrst have to turn the pot left a bit and then right
+again.
+• If you turn the physical pot left, then the value of
+the virtual pot is always decreased until both pots
+reach 0.0 at the same time.
+• If the physical pot is already at 0.0 when you select
+a virtual pot, it cannot be decreased further. You
+ﬁrst have to turn the pot right a bit and then left
+again.
+Let’s assume that the virtual pot is at 0.4 when you se-
+lect it. And let’s further assume that the physical pot is
+at position 0.8. When you turn it left the physical pot
+as a way of 0.8 go until 0.0 and the virtual just 0.4. So
+the virtual pot is moving with half of the speed, so that
+both reach 0.0 at the same time. When you turn the pot
+right, on the other hand, the virtual pot has 0.6 to go un-
+til maximum while the physical pot has just 0.2 left until
+it reaches its maximum. So now the virtual pot moves
+three times faster than the physical.
+This algorithm is different than the common “picking up”
+up pots that you see in Eurorack land quite a lot in such
+situations. We preferred our solution over that because it
+seems to be more convenient – especially if you just want
+to change a value just a little bit. Also it allows to have
+multiple virtual pots to be selected at the same time.
+By the way: in the upper example it is possible to select
+none of the pots. That is a convenient way to reset the
+physical pot to the middle position so that you always
+have headroom for movement left and right, before se-
+lecting one of the virtual pots.
+DROID manual for blue-7
+396
+Table of contents at page 2
+
+Input
+Type
+Default
+Description
+pot (p)
+0
+1
+The pot that you want to overlay, e.g. P1.1
+bipolar (b)
+If this input is set to 1, the usual pot range of 0 ... 1 will be mapped to -1 ... +1, which converts this to a bipolar
+potentiometer. This is done by multiplying the output with 2.0 and substracting 1.0 afterwards.
+switch1 ... switch8 (s)
+These inputs select which of the virtual pots should be changed when the physical pot is being turned. These should
+be set to 0 or 1 (or off and on).
+Output
+Type
+Description
+output1 ... output8 (o)
+0
+1
+The output of the up to eight virtual pots.
+DROID manual for blue-7
+397
+Table of contents at page 2

@@ -1,0 +1,143 @@
+name: clocktool
+title: Clock divider / multiplier / shifter
+manual_page: 178
+obsolete: false
+category: clock
+description: |
+  Implements several clock transformations: clock division, clock multiplication,
+  gate-length control, and clock time-shifting.
+
+  **Divide and multiply.** Set `divide` to N to emit one output clock pulse for
+  every N input pulses. Set `multiply` to M to insert M-1 extra pulses evenly
+  spaced between each pair of input pulses. Both can be combined to produce
+  polyrhythms such as "two over three" (`divide = 3`, `multiply = 2`).
+
+  **Gate length.** By default the output gate is 10 ms (DROID standard trigger
+  duration). Use `dutycycle` to set the gate as a fraction of the output clock
+  period, or `gatelength` to set a fixed duration in seconds. If the gate length
+  exceeds the time to the next output pulse, both pulses merge and the gate count
+  drops by one.
+
+  **Time shift.** `delay` shifts each output clock pulse earlier or later relative
+  to the input, in units of one input clock cycle. Positive values delay; negative
+  values advance. Because advancing requires predicting the next pulse, a steady
+  input clock is essential. When combined with `divide`/`multiply`, the delay is
+  applied to the input clock first.
+
+inputs:
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      The incoming clock signal. Must be a steady clock for any useful output,
+      especially when using `delay` or `dutycycle`.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: |
+      A trigger here resets the internal counters, useful for aligning the
+      clock divider with an external sequencer at the start of a pattern.
+
+  - name: divide
+    abbr: d
+    valuetype: integer
+    default: 1
+    min: 1
+    description: |
+      Integer divisor: one output clock pulse is produced for every `divide`
+      input pulses. Values are rounded to the nearest integer. When using an
+      external CV, multiply it by the desired range first (e.g. `I1 * 8`),
+      since a raw 0–1 V CV would only yield divisors of 0 or 1.
+
+  - name: multiply
+    abbr: m
+    valuetype: integer
+    default: 1
+    min: 1
+    description: |
+      Integer multiplier: `multiply` evenly-spaced output pulses are produced
+      for each input pulse. Same CV-scaling considerations apply as for `divide`.
+
+  - name: dutycycle
+    abbr: dc
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Output gate duty cycle as a fraction (0.0–1.0, or 0%–100%) of the output
+      clock period. When not patched, the output pulse length is 10 ms (DROID
+      standard trigger duration). Note: immediately after start-up or a
+      significant speed change, `clocktool` needs a short time to learn the new
+      clock rate, which may cause two pulses to merge.
+
+  - name: gatelength
+    abbr: gl
+    valuetype: cv
+    unit: second
+    description: |
+      Alternative to `dutycycle`: sets a fixed output gate length in seconds,
+      independent of the clock rate. Overrides `dutycycle` when patched. A
+      value of 0.5 produces a 500 ms gate.
+
+  - name: delay
+    abbr: dl
+    valuetype: bipolar
+    default: 0.0
+    description: |
+      Shifts each output clock pulse in time by a fraction of one input clock
+      cycle. Range is -1.0 to 1.0: positive values delay, negative values
+      advance (requires a steady input clock to predict the next beat). A value
+      of 0.1 delays by 10%; -0.1 advances by 10%. When combined with
+      `divide`/`multiply`, the delay is applied to the input clock first.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: clock
+    description: The modified clock output.
+
+  - name: inputpitch
+    abbr: ip
+    valuetype: pitch
+    description: |
+      Experimental: the input clock speed represented as a 1 V/octave pitch,
+      referenced to 60 BPM (1 Hz = 0 V). For example, 120 BPM outputs 1 V
+      (0.1). Feeding this into an LFO's `rate` input makes the LFO run at
+      exactly the input clock speed.
+
+  - name: outputpitch
+    abbr: op
+    valuetype: pitch
+    description: |
+      Same as `inputpitch` but for the modified output clock speed.
+
+examples:
+  - title: Simple divide-by-7
+    code: |
+      ```ini
+      [clocktool]
+      clock = I1
+      output = O1
+      divide = 7
+      ```
+  - title: Two-over-three polyrhythm
+    code: |
+      ```ini
+      [clocktool]
+      clock = I1
+      output = O1
+      divide = 3
+      multiply = 2
+      ```
+  - title: Clock shift mapped to a pot (+/- 10%)
+    code: |
+      ```ini
+      [clocktool]
+      clock = I1
+      output = _SHIFTED_CLOCK
+      delay = P1.1 * 0.2 - 0.1
+      [algoquencer]
+      clock = _SHIFTED_CLOCK
+      ```

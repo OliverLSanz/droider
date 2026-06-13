@@ -1,0 +1,65 @@
+# CIRCUIT: clockedtrigger
+# MANUAL PAGES (physical, 1-based): 177-177
+# TITLE: clockedtrigger – Delay a trigger until the next clock tick
+
+16.11
+clockedtrigger – Delay a trigger until the next clock tick
+This is a small helper circuit that helps you
+synchronize a trigger with the clock. This
+can for example be used to delay the press
+of a button until the next clock tick or next
+start of a sequence.
+The most simple for of operation is:
+[clockedtrigger]
+clock = _CLOCK
+trigger = B1.1
+clockedtrigger = _BUTTON_PRESSED
+In addition you can delay (the change of) a value together
+with the trigger:
+[clockedtrigger]
+clock = _CLOCK
+trigger = B1.1
+clockedtrigger = _BUTTON_PRESSED
+value = P1.1
+clockedvalue = _VALUE
+Here when the button is pressed, the value of the pot
+P1.1 is read and stored until the button is pressed and
+then presented at clockedvalue. This way you can cap-
+ture a value that is short lived and only valid while the
+button is pressed.
+Note: When the trigger and the clock happen at exactly
+the same time (the same internal loop cycle), the trigger is
+immediately output and the optional value input copied
+to its output.
+Input
+Type
+Default
+Description
+clock (c)
+Each time a clock signal is seen here, a potentially pending trigger is sent to the output clockedtrigger. The “clock
+signal” does not need to be a steady clock signal. It can be any trigger source you like.
+trigger (t)
+When a trigger appears at this input, it is stored and pending until the next trigger to clock is seen. At this point it is
+output at clockedtrigger. The length of the input trigger is not preserved.
+clear (cl)
+A trigger here removes and forgets a potential previous pending trigger. The clockedvalue output is set to 0.0.
+value (v)
+0.0
+This input allows you to freeze a value at the point of time when the trigger is seen.
+Output
+Type
+Description
+clockedtrigger (ct)
+A trigger is output here when a clock signal arrives and there is a pending trigger previously seen at trigger. This
+output trigger is only happening once, even if there were multiple input triggers since the last clock signal.
+clockedvalue (cv)
+Here the value that has been frozen by the last trigger is sent when the next clock signal arrives. It stays the same until
+the next clocked trigger is output.
+pendingtrigger (p)
+Here you can “peek” if a trigger is pending but not yet output.
+pendingvalue (pv)
+Here you can “peek” the value that has been frozen from value and will be sent to clockedvalue when the next clock
+signal arrives.
+DROID manual for blue-7
+177
+Table of contents at page 2

@@ -1,0 +1,94 @@
+name: quantizer
+title: Non-musical quantizer
+manual_page: 370
+category: quantizer
+description: |
+  Simple quantizer that snaps an input voltage to the nearest discrete step.
+  By default it uses 12 steps per volt, producing semitone quantization at
+  1 V/oct.
+
+  Setting `steps` to 0 and patching a `trigger` input turns it into a
+  **sample-and-hold** circuit: the output freezes until the next rising edge.
+
+  For musically-aware quantization (scales, modes) see the `minifonion` circuit.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    description: Unquantized input voltage.
+
+  - name: trigger
+    abbr: t
+    valuetype: trigger
+    description: |
+      Optional. When patched, the quantizer enters **triggered mode**: the
+      output is frozen and updated only on each rising edge.
+
+  - name: steps
+    abbr: s
+    valuetype: cv
+    default: 12
+    min: 0
+    description: |
+      Number of quantization steps per volt. Default `12` produces semitone
+      quantization at 1 V/oct. Fractional values are allowed (e.g. `1.2` = 12
+      steps per 10 V). A value of 0 or below disables quantization entirely
+      (pass-through, or sample-and-hold when `trigger` is patched).
+
+  - name: bypass
+    abbr: b
+    valuetype: gate
+    default: 0
+    description: When `1`, quantization is bypassed and the input passes directly to the output.
+
+  - name: direction
+    abbr: d
+    valuetype: integer
+    default: 1
+    min: 0
+    max: 2
+    description: |
+      Rounding direction when the input lies between two quantized steps.
+      `0` = quantize down, `1` = nearest (default), `2` = quantize up.
+
+  - name: histeresis
+    abbr: h
+    valuetype: cv
+    description: |
+      Minimum change threshold to trigger re-quantization, useful for noisy
+      inputs. While the input stays within ±`histeresis` of the previous
+      value, the old quantized output is kept. E.g. `histeresis = 0.01V`
+      (0.001) suppresses noise below 10 mV, preventing random note jumps.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: Quantized output voltage.
+
+  - name: changed
+    abbr: c
+    valuetype: trigger
+    description: |
+      Outputs a 10 ms trigger whenever the quantized output changes to a new
+      value. Not emitted in bypass mode.
+
+examples:
+  - title: Semitone quantization of a pot (one octave)
+    code: |
+      ```ini
+      [quantizer]
+      input = P1.1 * 1V
+      output = O1
+      ```
+  - title: Sample-and-hold (steps = 0, triggered)
+    code: |
+      ```ini
+      [quantizer]
+      input = I1
+      steps = 0
+      trigger = I2
+      output = O1
+      ```

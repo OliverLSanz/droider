@@ -1,0 +1,67 @@
+name: mixer
+title: CV mixer
+manual_page: 314
+obsolete: false
+category: utility
+description: |
+  Adds up to eight CV inputs and exposes the sum, maximum, minimum and average
+  at separate outputs. Since every input supports attenuation and offset (via
+  the `*` and `+` operators), this effectively acts as a mixer with per-channel
+  CV-controlled level and offset.
+
+  Note: an unpatched input is **not** the same as one driven to `0.0`. The
+  `maximum`, `minimum` and `average` outputs consider only patched inputs.
+
+  For more than eight signals, chain several `mixer` instances together.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    array: 8
+    description: |
+      1st to 8th mixing input (`input1` … `input8`). Unpatched inputs are
+      ignored by `maximum`, `minimum` and `average`.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: Sum of all patched inputs.
+
+  - name: maximum
+    abbr: x
+    valuetype: cv
+    description: |
+      Maximum value among all patched inputs. Useful for merging envelopes
+      from multiple sequencer tracks without summing and clipping them when
+      two tracks play simultaneously.
+
+  - name: minimum
+    abbr: m
+    valuetype: cv
+    description: Minimum value among all patched inputs.
+
+  - name: average
+    abbr: a
+    valuetype: cv
+    description: Arithmetic mean of all patched inputs.
+
+examples:
+  - title: Simple two-input mix
+    code: |
+      ```ini
+      [mixer]
+      input1 = I1
+      input2 = I2
+      output = O1
+      ```
+  - title: Four inputs using inline addition
+    code: |
+      ```ini
+      [mixer]
+      input1 = I1 + I2
+      input2 = I3 + I4
+      output = O1
+      ```

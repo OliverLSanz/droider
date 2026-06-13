@@ -1,0 +1,239 @@
+name: calibrator
+title: VCO Calibrator
+manual_page: 164
+category: utility
+description: |
+  Compensates for imperfectly tracking VCOs by applying one specific correction
+  value per octave. Even VCOs that normally track well for only 2–3 octaves can
+  be made to track accurately over 10 octaves.
+
+  **Manual calibration.** Connect `nudgeup` and `nudgedown` to buttons. Each
+  press shifts the tuning of the currently-played octave up or down by one cent
+  (or by `nudgeamount`). Pressing both buttons simultaneously resets the
+  correction for that octave. The calibrator saves one correction value per
+  octave (0–8) plus ranges below 0 V and above 8 V.
+
+  **Fixed calibration.** Alternatively, supply explicit per-octave offsets via
+  `tune0`…`tune8`, `tunelowtail`, and `tunehightail`. A value of `1.0` equals
+  one semitone (100 cents); `12.0` equals one octave.
+
+  **Persistence.** The calibration state is automatically saved to the SD card
+  and reloaded on startup. Each `calibrator` instance in the patch is numbered
+  from 1; the nth instance always loads/saves state number n.
+
+  **DB8E display.** When a DB8E controller is present, it automatically shows
+  the current correction curve whenever `nudgeup` or `nudgedown` is triggered.
+  Use `forcedisplay = 1` to keep the display active continuously.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: Patch your V/Oct pitch input here.
+
+  - name: nudgeup
+    abbr: nu
+    valuetype: trigger
+    description: |
+      A trigger here (typically from a button press) shifts the tuning of the
+      currently-played octave upwards by one cent (or by `nudgeamount`).
+
+  - name: nudgedown
+    abbr: nd
+    valuetype: trigger
+    description: |
+      A trigger here shifts the tuning of the currently-played octave downwards
+      by one cent (or by `nudgeamount`).
+
+  - name: clearhere
+    abbr: ch
+    valuetype: trigger
+    description: |
+      A trigger here sets the correction of the currently-played note to zero.
+      This may affect a range of up to two octaves.
+
+  - name: nudgeamount
+    abbr: na
+    valuetype: cv
+    default: 0.01
+    description: |
+      Amount of tuning shift applied per nudge trigger. `1.0` = one semitone
+      (100 cents). The default `0.01` corresponds to one cent.
+
+  - name: forcedisplay
+    abbr: fd
+    valuetype: gate
+    description: |
+      If set to `1`, a DB8E controller will always show the current correction
+      curve, even without nudging. The circuit must still be selected for the
+      display to activate.
+
+  - name: tune
+    abbr: t
+    valuetype: cv
+    default: 0.0
+    min: -12
+    max: 12
+    array: 9
+    description: |
+      Explicit per-octave tuning correction for octaves 0–8. `tune0` applies to
+      0 V input pitch, `tune1` to 1 V, and so on (0-based index). A value of
+      `1.0` equals one semitone (100 cents); the maximum is ±1 octave (±12).
+      Use this instead of manual nudging when you prefer fixed numeric offsets.
+
+  - name: tunelowtail
+    abbr: tl
+    valuetype: cv
+    default: 0.0
+    description: |
+      Tuning adjustment for the negative voltage range. `1.0` = one semitone
+      upwards per octave; `-1.0` = one semitone downwards.
+
+  - name: tunehightail
+    abbr: th
+    valuetype: cv
+    default: 0.0
+    description: |
+      Tuning adjustment for voltages above 8 V. `1.0` = one semitone upwards
+      per octave; `-1.0` = one semitone downwards.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    max: 3
+    description: |
+      Selects which DB8E display controller shows the correction curve (`1` =
+      first, `2` = second, etc.). Set to `0` to suppress all display output
+      from this circuit.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E display for this circuit. If omitted,
+      an automatic title is used (e.g. the name of the connected internal
+      cable). Set to `""` or `0` to remove the header entirely.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Allows overlaying buttons and LEDs with multiple functions. While this
+      input carries a positive gate, the circuit processes its buttons and
+      LEDs. Otherwise those are left free for other circuits. All other
+      processing (including the `output`) continues regardless.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Makes `select` match an exact value instead of any positive gate. E.g.
+      `selectat = 0` activates this circuit when `select` is exactly `0`.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 3
+    description: |
+      Preset number to save or load. The first preset is `0`; this circuit
+      supports 4 presets (0–3).
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: A trigger here loads the preset selected by `preset`.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger here saves the current state to the preset selected by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      A trigger here resets the circuit to its default start state. Presets
+      are not affected unless using direct preset switching without triggers.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: |
+      A trigger here resets the circuit to its default start state and also
+      clears all presets.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      If set to `1`, the circuit state will not be saved to or loaded from
+      the SD card on startup.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: pitch
+    description: The calibrated pitch output (V/Oct).
+
+  - name: ledup
+    abbr: lu
+    valuetype: gate
+    description: |
+      Patch to the LED corresponding to `nudgeup`. Lights up while the output
+      pitch is being adjusted upwards.
+
+  - name: leddown
+    abbr: ld
+    valuetype: gate
+    description: |
+      Patch to the LED corresponding to `nudgedown`. Lights up while the
+      output pitch is being adjusted downwards.
+
+  - name: correction
+    abbr: c
+    valuetype: cv
+    description: |
+      Current pitch correction amount in semitones. Positive = upwards
+      correction; negative = downwards. E.g. `0.2` means 20 cents (20% of a
+      semitone) upwards. Use as `override` input of an E4 encoder to visualise
+      the correction on its LED ring.
+
+examples:
+  - title: Basic usage with two buttons
+    code: |
+      ```ini
+      [calibrator]
+      input = I1
+      output = O1
+      nudgeup = B1.1
+      nudgedown = B1.3
+      ledup = L1.1
+      leddown = L1.3
+      ```
+  - title: With an E4 encoder for visual feedback and reset
+    code: |
+      ```ini
+      [calibrator]
+      input = I1
+      output = O4
+      nudgeup = _UP
+      nudgedown = _DOWN
+      correction = _CORRECTION
+      clearhere = _CLEARHERE
+      nudgeamount = 0.01
+      [encoder]
+      encoder = 4
+      movedup = _UP
+      moveddown = _DOWN
+      override = _CORRECTION * 2
+      button = _CLEARHERE
+      mode = 2
+      color = 0.4
+      negativecolor = 0.8
+      ```

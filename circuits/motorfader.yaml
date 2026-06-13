@@ -1,0 +1,243 @@
+name: motorfader
+title: Create virtual fader in M4 controller
+manual_page: 343
+category: controller
+description: |
+  Provides basic access to motor faders in the M4 controller, supporting
+  presets, overlaid functions, haptic notch feedback and shared-value control.
+
+  **Presets** — assign `preset` to a `buttongroup` output; the fader motor
+  moves to the stored position when you switch presets.
+
+  **Multiple functions** — use one physical fader for several CV sources by
+  adding one `motorfader` circuit per function and driving `select`/`selectat`
+  from a `buttongroup`. Each function gets a dedicated `output`.
+
+  **Notches** — `notches` adds artificial haptic "dents". Special values: `1`
+  creates a pitch-bend wheel (always springs back to center), `2` creates a
+  binary switch (snaps to top or bottom). Force feedback works for up to 25
+  notches; above that the positions are too narrow for tactile feel (maximum
+  is 201).
+
+  **Sharing** — set `sharewithnext = 1` in the first of two consecutive
+  `motorfader` circuits to make both control the same output (defined in the
+  second). Do not wire `output` in the first circuit when using this.
+
+  If a DB8E display controller is present, the display updates automatically
+  whenever the fader value changes by user interaction.
+
+inputs:
+  - name: fader
+    abbr: f
+    valuetype: integer
+    default: 1
+    min: 1
+    description: |
+      Selects which motor fader to use. `1` is the first fader of the first
+      M4, `5` is the first fader of the second M4, and so on (faders are
+      enumerated globally across all M4 controllers).
+
+  - name: startvalue
+    abbr: sv
+    valuetype: cv
+    default: 0.0
+    description: |
+      Value the fader assumes at startup or after a `clear` trigger.
+
+  - name: notches
+    abbr: n
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 25
+    description: |
+      Number of haptic notches. `0` disables notches (continuous `0`–`1`
+      output). `1` creates a pitch-bend wheel (output centered at `0.5`,
+      springs back when released). `2` creates a binary switch (output `0`
+      or `1`). Higher values create that many discrete positions; output is
+      an integer `0`…`notches-1`. Force feedback is active for up to 25
+      notches; values above 25 disable it (dents too small to feel).
+
+  - name: outputscale
+    abbr: os
+    valuetype: cv
+    default: 1.0
+    description: |
+      Multiplier applied to the fader value before it is sent to `output`.
+      Convenient for scaling the range (e.g. `0.1` maps the full fader travel
+      to `0`–`1 V`).
+
+  - name: outputoffset
+    abbr: oo
+    valuetype: cv
+    default: 0.0
+    unit: volt
+    description: |
+      Offset added to the scaled fader value before sending to `output`.
+      Applied after `outputscale`.
+
+  - name: ledvalue
+    abbr: lv
+    valuetype: cv
+    description: |
+      When used, overrides the brightness of the LED below the fader (only
+      while this circuit is selected). A negative value activates a special
+      mode: LED is at full brightness when the fader is at `startvalue`, and
+      the absolute value of `ledvalue` in all other positions.
+
+  - name: ledcolor
+    abbr: lc
+    valuetype: cv
+    description: |
+      Sets the color of the LED below the fader when this circuit is selected.
+      Has no effect when the LED is off.
+
+  - name: sharewithnext
+    abbr: sw
+    valuetype: gate
+    default: 0
+    description: |
+      If `1`, this circuit shares its output with the next `motorfader` circuit
+      in the patch. The `output` jack of this circuit must not be connected;
+      the shared value appears only on the `output` of the second circuit.
+      Useful for controlling one value from two different physical faders.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    description: |
+      Selects which DB8E display controller shows this circuit's state. `1` is
+      the first DB8E, `2` the second. `0` suppresses display output.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E display when this circuit is active.
+      If omitted, an automatic title is used (e.g. the internal cable name
+      connected to `output`). `""` or `0` removes the header.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      When used, this circuit processes the fader and its LED only while
+      `select` is a positive gate. Other circuits can share the same fader
+      when `select` is low. The `output` jack is always active regardless.
+
+  - name: selectat
+    abbr: sa
+    valuetype: cv
+    description: |
+      The circuit is active when `select` equals exactly this value instead of
+      requiring a positive gate. Convenient for multi-function fader setups
+      driven by a `buttongroup` output.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 7
+    description: |
+      Preset number to save or load (first preset = `0`). This circuit supports
+      8 presets (0–7). The fader motor moves to the preset's stored position
+      when the preset number changes.
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: |
+      A trigger here loads the preset selected by `preset`. Can also serve as
+      the preset selector itself.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger here saves the current fader value to the preset selected by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      A trigger here resets the fader to `startvalue`. Presets are not affected
+      unless using direct preset switching without triggers.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: A trigger here resets the fader and all of its presets to `startvalue`.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      If `1`, the fader state is neither saved to nor loaded from the SD card
+      when the DROID starts.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: |
+      Current value of the virtual motor fader. Continuous `0`–`1` (scaled by
+      `outputscale` / `outputoffset`), or an integer `0`…`notches-1` when
+      notches are enabled. Do not connect when `sharewithnext = 1` is set in
+      the preceding circuit.
+
+  - name: button
+    abbr: b
+    valuetype: gate
+    description: |
+      Current state of the touch button below the fader, but only while this
+      circuit is selected. `0` when the circuit is not selected.
+
+examples:
+  - title: Simple CV source with four presets
+    code: |
+      ```ini
+      [buttongroup]
+      button1 = B1.1
+      button2 = B1.2
+      button3 = B1.3
+      button4 = B1.4
+      led1 = L1.1
+      led2 = L1.2
+      led3 = L1.3
+      led4 = L1.4
+      output = _PRESET
+
+      [motorfader]
+      fader = 1
+      preset = _PRESET
+      output = O1
+      ```
+  - title: One fader controlling four separate CV outputs
+    code: |
+      ```ini
+      [motorfader]
+      fader = 1
+      select = _FUNCTION
+      selectat = 0
+      output = O1
+
+      [motorfader]
+      fader = 1
+      select = _FUNCTION
+      selectat = 1
+      output = O2
+
+      [motorfader]
+      fader = 1
+      select = _FUNCTION
+      selectat = 2
+      output = O3
+
+      [motorfader]
+      fader = 1
+      select = _FUNCTION
+      selectat = 3
+      output = O4
+      ```

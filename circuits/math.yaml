@@ -1,0 +1,179 @@
+name: math
+title: Math utility circuit
+manual_page: 276
+category: utility
+description: |
+  Provides a comprehensive set of mathematical operations on up to two CV inputs.
+  Binary operations (`sum`, `difference`, `product`, `quotient`, etc.) use both
+  `input1` and `input2`. Unary operations (`negation`, `reciprocal`, `sine`, etc.)
+  use only `input1`, which can be abbreviated as `input`.
+
+  **Unused inputs**: when an input is left unpatched for a binary operation, a
+  neutral value is assumed automatically — `0.0` for sums/differences, `1.0` for
+  products. This makes it easy to temporarily disable part of a formula.
+
+  **Value range**: outputs are not range-limited inside the circuit. Values are
+  only clamped to −1…+1 (≡ −10 V…+10 V) when sent to a hardware output such as
+  `O1`. Use internal cables (`_NAME`) to chain math operations without clamping.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    array: 2
+    description: |
+      The two operands for binary operations. `input` is an alias for `input1`.
+      Unary operations only use `input1`. If an operand is omitted, a
+      neutral value is substituted (see circuit description).
+
+outputs:
+  - name: sum
+    abbr: s
+    valuetype: cv
+    description: "`input1` + `input2`"
+
+  - name: difference
+    abbr: d
+    valuetype: cv
+    description: "`input1` − `input2`"
+
+  - name: product
+    abbr: p
+    valuetype: cv
+    description: "`input1` × `input2`"
+
+  - name: quotient
+    abbr: qu
+    valuetype: cv
+    description: |
+      `input1` / `input2`. If `input2` is zero, a very large number is returned
+      with the correct sign (to avoid undefined results while keeping the output
+      useful).
+
+  - name: modulo
+    abbr: md
+    valuetype: cv
+    description: |
+      `input1` modulo `input2`. Folds `input1` into the range 0…`input2`. For
+      example, with `input2 = 1V`: `1.234V` → `0.234V`, `-2.1V` → `0.9V`. If
+      `input2` is zero or negative the output is zero.
+
+  - name: power
+    abbr: pw
+    valuetype: cv
+    description: |
+      `input1` to the power of `input2`. Edge cases: if `input1 < 0`, `input2` is
+      rounded to the nearest integer; if `input1 = 0` and `input2 < 0`, a very
+      large number is output.
+
+  - name: average
+    abbr: a
+    valuetype: cv
+    description: "Arithmetic mean of `input1` and `input2`: (`input1` + `input2`) / 2."
+
+  - name: maximum
+    abbr: x
+    valuetype: cv
+    description: The larger of `input1` and `input2`.
+
+  - name: minimum
+    abbr: m
+    valuetype: cv
+    description: The smaller of `input1` and `input2`.
+
+  - name: negation
+    abbr: "n"
+    valuetype: cv
+    description: "−`input1`"
+
+  - name: reciprocal
+    abbr: rc
+    valuetype: cv
+    description: |
+      `1 / input1`. If `input1` is zero, a very large number is output with the
+      sign preserved.
+
+  - name: amount
+    abbr: am
+    valuetype: cv
+    description: |
+      Absolute value of `input1`: returns `input1` if positive, `−input1` if
+      negative.
+
+  - name: sine
+    abbr: si
+    valuetype: cv
+    description: |
+      sin(2π × `input1`). The range 0.0…1.0 maps to exactly one full wave cycle.
+
+  - name: cosine
+    abbr: cs
+    valuetype: cv
+    description: |
+      cos(2π × `input1`). The range 0.0…1.0 maps to exactly one full wave cycle.
+
+  - name: square
+    abbr: q
+    valuetype: cv
+    description: "`input1` squared (input1²)"
+
+  - name: root
+    abbr: ro
+    valuetype: cv
+    description: |
+      Square root of `input1`. If `input1 < 0`, outputs −√(−`input1`) to keep the
+      output useful.
+
+  - name: logarithm
+    abbr: l
+    valuetype: cv
+    description: |
+      Natural logarithm of `input1` (ln `input1`). If `input1 = 0`, outputs a
+      large negative number. If `input1 < 0`, outputs −ln(−`input1`).
+
+  - name: log2
+    abbr: l2
+    valuetype: cv
+    description: |
+      Binary logarithm of `input1` (log₂ `input1`). If `input1 = 0`, outputs a
+      large negative number. If `input1 < 0`, outputs −log₂(−`input1`).
+
+  - name: round
+    abbr: rd
+    valuetype: cv
+    description: The integer nearest to `input1`.
+
+  - name: floor
+    abbr: f
+    valuetype: cv
+    description: The largest integer not greater than `input1` (round toward −∞).
+
+  - name: ceil
+    abbr: c
+    valuetype: cv
+    description: The smallest integer not less than `input1` (round toward +∞).
+
+examples:
+  - title: Divide I1 by I2
+    code: |
+      ```ini
+      [math]
+      input1 = I1
+      input2 = I2
+      quotient = O1
+      ```
+  - title: Square root of I1
+    code: |
+      ```ini
+      [math]
+      input = I1
+      root = O1
+      ```
+  - title: Scale I1 by pot P1.2 (product, omitting input2 leaves it as 1)
+    code: |
+      ```ini
+      [math]
+      input1 = I1
+      input2 = P1.2
+      product = O1
+      ```

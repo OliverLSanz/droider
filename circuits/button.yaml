@@ -1,0 +1,258 @@
+name: button
+title: Does all sorts of useful things with buttons
+manual_page: 154
+category: controller
+description: |
+  Utility circuit for efficiently working with the buttons of your controllers.
+  It can implement toggle buttons (on/off), buttons with three or four states,
+  detect long presses and double clicks, and let you overload one physical button
+  with several switchable functions.
+
+  **Toggle mode** (default, `states = 2`): each press alternates between on and
+  off. The state persists on the SD card across power cycles unless `dontsave = 1`.
+
+  **Momentary mode** (`states = 1`): the output is high while the button is held.
+  Useful when you want extras like `longpress` or the `select` overlay without
+  creating a toggle.
+
+  **Multi-state** (`states = 3` or `4`): each press advances to the next state
+  and wraps back. The LED uses different brightness levels for each state.
+  Use `value1`–`value4` to assign custom output values per state.
+
+  **Long / short presses**: `longpress` goes high after `longpresstime` seconds;
+  `shortpress` fires a trigger on short releases. Both can coexist on one button.
+
+  **Sharing buttons**: `select` lets multiple `button` circuits share the same
+  physical button and LED — only the selected circuit reacts.
+
+  > This circuit runs at 12.5 % of the normal patch speed (UI slowdown). Do not
+  > use it for audio-rate or timing-critical work. Use `flipflop` for logic needs.
+
+inputs:
+  - name: button
+    abbr: b
+    valuetype: gate
+    description: |
+      The push-button source. Usually wired to `B1.1`, `B1.2`, etc. Each rising
+      edge (low → high) advances the button to its next state.
+
+  - name: onvalue
+    abbr: ov
+    valuetype: cv
+    default: 1.0
+    description: |
+      Value sent to `output` when the button is on (state 2). Alias for `value2`.
+      Accepts dynamic CV signals to switch between two live signals.
+
+  - name: offvalue
+    abbr: fv
+    valuetype: cv
+    default: 0.0
+    description: |
+      Value sent to `output` when the button is off (state 1). Alias for `value1`.
+
+  - name: value
+    abbr: v
+    valuetype: cv
+    array: 4
+    description: |
+      Up to four values output at the corresponding button states. `value1` is the
+      same as `offvalue`, `value2` the same as `onvalue`. The default values are
+      0, 1, 2 and 3 respectively. Specifying `value3` or `value4` automatically
+      sets `states` to 3 or 4.
+
+  - name: doubleclickmode
+    abbr: dm
+    valuetype: gate
+    default: 0
+    description: |
+      When set to `1`, the button only toggles its persistent state on a double
+      click. A single click acts as a momentary inversion of the persisted state.
+      Only meaningful when `states = 2`.
+
+  - name: longpresstime
+    abbr: lt
+    valuetype: cv
+    default: 1.5
+    unit: second
+    description: |
+      Duration in seconds after which a held press is considered a long press.
+      Affects the `longpress` output. Default is 1.5 s.
+
+  - name: states
+    abbr: st
+    valuetype: integer
+    default: 2
+    min: 1
+    max: 4
+    description: |
+      Number of states the button cycles through on each press. `1` = momentary,
+      `2` = toggle (default), `3` or `4` = multi-state. With 3 or 4 states each
+      press advances to the next state and wraps back to the first.
+
+  - name: startvalue
+    abbr: sv
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 3
+    description: |
+      Initial state index on boot or after a `clear` trigger. `0` is the first
+      state (off). Valid range depends on `states` (0–1 for 2 states, 0–3 for 4).
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    description: |
+      Selects which DB8E display controller shows state changes. `1` = first DB8E
+      (default), `2` = second, `0` = suppress display output. Only active when
+      `states = 3` or `4`.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E screen for this circuit. If omitted, an
+      automatic title (e.g. the connected internal cable name) is used. Set to
+      `""` or `0` to remove the header and show only the value.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      When patched, the circuit only interacts with its button and LED while
+      `select` is active (high). Otherwise the button and LED are left to another
+      circuit. All other outputs continue to work normally regardless.
+
+  - name: selectat
+    abbr: sa
+    valuetype: cv
+    description: |
+      Refines `select`: specifies the exact value at which this circuit becomes
+      active. E.g. `selectat = 0` makes the circuit active when `select` is
+      exactly `0` instead of any positive value.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 15
+    description: |
+      Preset slot number (0–15) to save to or load from. The first preset is `0`.
+      This circuit supports 16 presets.
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: A trigger here loads the preset selected by `preset`.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger here saves the current state to the preset selected by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      A trigger resets the circuit to its `startvalue`. Presets are not affected
+      unless direct preset switching (via `preset` without load/save triggers) is used.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: A trigger resets the circuit and all its presets to the default start state.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      When set to `1`, the button state is not saved to or loaded from the SD card.
+      Useful when the state should always start fresh on boot (e.g. a CV looper
+      whose loop is empty at startup).
+
+outputs:
+  - name: led
+    abbr: l
+    valuetype: cv
+    description: |
+      Reflects the button state for driving an LED register (`L1.1`, etc.). Outputs
+      `1.0` when on, `0.0` when off. For 3 or 4 states, outputs intermediate
+      brightness levels to indicate the current state visually.
+
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: |
+      Current button value. Normally `0` (off) or `1` (on); with `states = 3` or
+      `4` outputs `0`–`3`. Customised by `offvalue`/`onvalue` or `value1`–`value4`.
+
+  - name: inverted
+    abbr: iv
+    valuetype: cv
+    description: |
+      Like `output` but inverted: sends `onvalue` when the button is off and
+      `offvalue` when on. For 3 or 4 states, the order of values is mirrored.
+
+  - name: negated
+    abbr: "n"
+    valuetype: gate
+    description: |
+      Always `1` when the button is off, `0` otherwise — independent of `onvalue`
+      and `offvalue`. For 3 or 4 states, `1` only in state 1; `0` for all others.
+
+  - name: longpress
+    abbr: lop
+    valuetype: gate
+    description: |
+      Goes high when the button is held for at least `longpresstime` seconds. While
+      this output is patched, the toggle action is delayed until release; if the
+      button was held long enough, no toggle occurs.
+
+  - name: shortpress
+    abbr: shp
+    valuetype: trigger
+    description: |
+      Emits a trigger on button release, but only if `longpress` is also used and
+      the press was shorter than `longpresstime`. Cleanly distinguishes short from
+      long presses.
+
+examples:
+  - title: Toggle button for a CV looper (state saved to SD)
+    code: |
+      ```ini
+      [button]
+      button = B1.4
+      led = L1.4
+
+      [cvlooper]
+      loop = L1.4
+      ```
+  - title: Toggle button switching between two LFO waveforms
+    code: |
+      ```ini
+      [lfo]
+      hz = 2
+      sawtooth = _SAWTOOTH
+      sine = _SINE
+
+      [button]
+      button = B3.1
+      led = L3.1
+      offvalue = _SAWTOOTH
+      onvalue = _SINE
+      output = O1
+      ```
+  - title: Long and short press on the same button
+    code: |
+      ```ini
+      [button]
+      button = B1.1
+      led = L1.1
+      states = 1
+      longpress = _LONG
+      shortpress = _SHORT
+      ```

@@ -1,0 +1,248 @@
+name: buttongroup
+title: Connected buttons
+manual_page: 160
+category: controller
+description: |
+  Groups a number of push buttons into a unit. The classic operation is "radio
+  buttons": at any time exactly one button is active and all others are off.
+
+  Use `minactive` and `maxactive` to allow more than one button to be active
+  simultaneously (e.g. to build a binary-number selector). When `maxactive = 1`
+  and `output` is wired, the current output value is shown on the DB8E display.
+
+  Buttons can be overlaid with multiple functions using `select` / `selectat`,
+  so the same physical buttons serve different roles depending on context.
+
+  This circuit is designed for user interfaces and is executed at a lower speed;
+  do not use it for other purposes.
+
+inputs:
+  - name: minactive
+    abbr: ma
+    valuetype: integer
+    default: 1
+    min: 0
+    description: |
+      Minimum number of active buttons. `0` allows all buttons to be off
+      (output is then `0.0`). `1` ensures at least one button is always active.
+
+  - name: maxactive
+    abbr: xa
+    valuetype: integer
+    default: 1
+    min: 1
+    description: |
+      Maximum number of active buttons. Setting this to `0` is treated as `1`.
+      When greater than `1`, multiple buttons can be active at once and `output`
+      carries the sum of their values.
+
+  - name: longpresstime
+    abbr: lt
+    valuetype: cv
+    default: 1.5
+    unit: second
+    description: |
+      Number of seconds after which a button press is considered a long press,
+      triggering the `longpress` output instead of `buttonpress`.
+
+  - name: button
+    abbr: b
+    valuetype: trigger
+    array: 32
+    description: |
+      1st through 32nd button of the group. Any positive trigger here toggles
+      that button. Other buttons may turn on or off to keep the active count
+      within `minactive`…`maxactive`.
+
+  - name: value
+    abbr: v
+    valuetype: cv
+    array: 32
+    description: |
+      Value associated with the 1st through 32nd button. When a button is
+      active its value is added to `output`. Defaults vary per element: `0` for
+      `value1`, `1` for `value2`, …, `31` for `value32`.
+
+  - name: startbutton
+    abbr: sb
+    valuetype: integer
+    default: 1
+    description: |
+      Which button is selected at startup or after a `clear` trigger. `-1`
+      activates the maximum allowed number of buttons (filled from the start).
+      `0` is allowed only when `minactive = 0` and clears all buttons.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    description: |
+      Selects which DB8E display controller shows this circuit's state. `1` is
+      the first DB8E, `2` the second. `0` suppresses display output. Only
+      effective when `maxactive = 1` and `output` is used.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E display when this circuit is active.
+      If omitted, an automatic title is used. `""` or `0` removes the header
+      and shows only the current value.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      When used, this circuit processes buttons and LEDs only while `select` is
+      a positive gate (typically `1`). Other circuits can own those same buttons
+      and LEDs when `select` is low. Non-button/LED inputs and outputs always
+      operate regardless of selection state.
+
+  - name: selectat
+    abbr: sa
+    valuetype: cv
+    description: |
+      Makes `select` more flexible: the circuit is active when `select` equals
+      exactly this value instead of requiring a positive gate. Useful for
+      sequencing multiple overlaid button layers.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 15
+    description: |
+      Preset number to save or load (first preset = `0`). This circuit supports
+      16 presets (0–15). See the manual's preset documentation for full details.
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: |
+      A trigger here loads the preset selected by `preset`. The trigger can
+      also serve as the preset selector itself.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger here saves the current state to the preset selected by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      A trigger here resets the circuit to its default start state. Presets are
+      not affected unless using direct preset switching without triggers.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: |
+      A trigger here resets the circuit and all of its presets to the default
+      start state.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      If `1`, the circuit state is neither saved to nor loaded from the SD card
+      when the DROID starts.
+
+outputs:
+  - name: led
+    abbr: l
+    valuetype: gate
+    array: 32
+    description: |
+      High (`1.0`) when the corresponding button is active, low (`0.0`)
+      otherwise. Wire to the button's LED. If `select` is used, these outputs
+      do nothing (not even `0`) when the circuit is not selected.
+
+  - name: buttonoutput
+    abbr: bo
+    valuetype: cv
+    array: 32
+    description: |
+      Per-button output: emits the button's `value` when active, `0` otherwise.
+      If `value` is not defined for a button, outputs `1` (not the button's
+      index). Always active regardless of `select`.
+
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: |
+      Sum of the values of all currently active buttons. `0.0` when no button
+      is active. When `maxactive = 1`, this value is also shown on the DB8E
+      display.
+
+  - name: buttonpress
+    abbr: bp
+    valuetype: trigger
+    description: |
+      Emits a trigger whenever any button is pressed. If `longpress` is wired,
+      this trigger fires only when the button is released before the long-press
+      timeout.
+
+  - name: longpress
+    abbr: lop
+    valuetype: trigger
+    description: |
+      Emits a trigger when any button is held for at least `longpresstime`
+      seconds. When this output is wired, `buttonpress` fires only on short
+      presses (released before the timeout).
+
+  - name: selectionchanged
+    abbr: sc
+    valuetype: trigger
+    description: |
+      Emits a trigger when the button selection changes. Distinct from
+      `buttonpress`: a press that does not change the selection does not trigger
+      here. In multi-button setups, detection may be delayed up to 25 ms for
+      simultaneous presses.
+
+  - name: extrapress
+    abbr: ep
+    valuetype: trigger
+    description: |
+      Emits a trigger when a button was pressed but the selection did not
+      change. Useful for interfaces where pressing an already-selected item
+      triggers a secondary action (e.g. toggling the current page).
+
+examples:
+  - title: Radio buttons selecting one of four voltages
+    code: |
+      ```ini
+      [buttongroup]
+      button1 = B2.1
+      button2 = B2.2
+      button3 = B2.3
+      button4 = B2.4
+      led1 = L2.1
+      led2 = L2.2
+      led3 = L2.3
+      led4 = L2.4
+      value1 = 0V
+      value2 = 1V
+      value3 = 2V
+      value4 = -1V
+      output = O1
+      ```
+  - title: Binary number selector (0–7 with three buttons)
+    code: |
+      ```ini
+      [buttongroup]
+      button1 = B2.1
+      button2 = B2.2
+      button3 = B2.3
+      led1 = L2.1
+      led2 = L2.2
+      led3 = L2.3
+      value1 = 1
+      value2 = 2
+      value3 = 4
+      minactive = 0
+      maxactive = 3
+      output = O1
+      ```

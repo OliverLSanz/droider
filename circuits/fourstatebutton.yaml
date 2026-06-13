@@ -1,0 +1,89 @@
+name: fourstatebutton
+title: fourstatebutton – Button switching through 4 states (OBSOLETE)
+manual_page: 262
+obsolete: true
+category: controller
+description: |
+  **Obsolete** — superseded by `button` (see page 154), which covers all
+  functionality of `fourstatebutton` and more. This circuit will be removed in
+  a future firmware release.
+
+  Converts a push button into a button that cycles through up to four states.
+  The LED brightness reflects the current state: off in state 1, increasing
+  through states 2 and 3, and fully bright in state 4.
+
+inputs:
+  - name: button
+    abbr: b
+    valuetype: gate
+    description: The push button input.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: A positive trigger here resets the button to state 1.
+
+  - name: value
+    abbr: v
+    valuetype: cv
+    array: 4
+    description: |
+      The values forwarded to `output` depending on the active state. `value1`
+      is output in state 1, `value2` in state 2, and so on.
+
+  - name: startvalue
+    abbr: sv
+    valuetype: integer
+    min: 0
+    max: 3
+    description: |
+      Sets the initial state on power-up: `0` = state 1, `1` = state 2,
+      `2` = state 3, `3` = state 4. Setting this also disables automatic
+      saving of the button state to the module's internal flash memory.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: |
+      Outputs the value of `value1`, `value2`, `value3`, or `value4` depending
+      on the current state.
+
+  - name: led
+    abbr: l
+    valuetype: fraction
+    description: |
+      Controls the LED brightness: off in state 1, stepping up through states 2
+      and 3, and fully bright (`1.0`) in state 4.
+
+examples:
+  - title: Octave switch cycling through 0, 1, 2, 3 octaves
+    code: |
+      ```ini
+      [fourstatebutton]
+      button = B1.1
+      led = L1.1
+      value1 = I1 + 0V
+      value2 = I1 + 1V
+      value3 = I1 + 2V
+      value4 = I1 + 3V
+      output = O1
+      ```
+  - title: Cycle through four LFO waveforms
+    code: |
+      ```ini
+      [lfo]
+      hz = 2
+      square = _W1
+      triangle = _W2
+      sawtooth = _W3
+      sine = _W4
+      [fourstatebutton]
+      button = B1.1
+      led = L1.1
+      value1 = _W1
+      value2 = _W2
+      value3 = _W3
+      value4 = _W4
+      output = O1
+      ```

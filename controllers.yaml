@@ -1,0 +1,259 @@
+# DROID controller types.
+#
+# They are declared at the top of the patch with [type] and occupy a position in
+# the chain (controller number N = declaration order, starting at 1). Their
+# elements are addressed as <register><N>.<element> (e.g. P3.2).
+# Maximum 16 controllers per patch.
+#
+# Schema: docs/hardware-schema.md
+# Narrative: docs/reference.md §2.1 and §3.3
+
+controllers:
+  - type: p2b8
+    title: P2B8
+    manual_page: 68
+    description: |
+      The first and most popular controller: two potentiometers and eight
+      buttons. Well balanced and flexible; ideal if you only have one or two
+      controllers.
+    elements:
+      - register: P
+        kind: pot
+        direction: input
+        valuetype: fraction
+        count: 2
+        min: 0
+        max: 1
+        description: The two potentiometers (range 0…1).
+      - register: B
+        kind: button
+        direction: input
+        valuetype: gate
+        count: 8
+        description: The eight buttons (`1.0` while pressed, `0.0` at rest).
+      - register: L
+        kind: led
+        direction: output
+        valuetype: cv
+        count: 8
+        description: The LEDs inside the eight buttons (0 = off … 1 = full brightness).
+
+  - type: p4b2
+    title: P4B2
+    manual_page: 69
+    description: |
+      Four large potentiometers and two buttons. Similar to the P2B8; a good
+      choice if you prefer working with more large pots.
+    elements:
+      - register: P
+        kind: pot
+        direction: input
+        valuetype: fraction
+        count: 4
+        min: 0
+        max: 1
+        description: The four potentiometers (range 0…1).
+      - register: B
+        kind: button
+        direction: input
+        valuetype: gate
+        count: 2
+        description: The two buttons.
+      - register: L
+        kind: led
+        direction: output
+        valuetype: cv
+        count: 2
+        description: The LEDs inside the two buttons.
+
+  - type: p10
+    title: P10
+    manual_page: 70
+    description: |
+      Ten potentiometers (two large ones like the P2B8's and eight small ones),
+      all behaving the same. Useful for controlling many continuous values.
+    elements:
+      - register: P
+        kind: pot
+        direction: input
+        valuetype: fraction
+        count: 10
+        min: 0
+        max: 1
+        description: The ten potentiometers (range 0…1).
+
+  - type: s10
+    title: S10
+    manual_page: 71
+    description: |
+      Ten switches. The first two are eight-position rotary switches (discrete
+      values 0…7); the eight small ones have three positions: 0 (down), 1
+      (center) and 2 (up). Intermediate values during fast movement are not seen.
+    elements:
+      - register: S
+        kind: switch
+        direction: input
+        valuetype: integer
+        index: {min: 1, max: 2}
+        min: 0
+        max: 7
+        description: Eight-position rotary switches (values 0…7).
+      - register: S
+        kind: switch
+        direction: input
+        valuetype: integer
+        index: {min: 3, max: 10}
+        min: 0
+        max: 2
+        description: Small three-position switches (0 down, 1 center, 2 up).
+
+  - type: p8s8
+    title: P8S8
+    manual_page: 72
+    description: |
+      Eight 20 mm Alpha sliders (behaving like pots: 0 at the bottom, 1 at the
+      top, with their own LEDs) and eight three-position switches like the S10's.
+    elements:
+      - register: P
+        kind: fader
+        direction: input
+        valuetype: fraction
+        count: 8
+        min: 0
+        max: 1
+        description: The eight sliders (range 0…1).
+      - register: L
+        kind: led
+        direction: output
+        valuetype: cv
+        count: 8
+        description: |
+          The LEDs inside the sliders. While unused, their brightness reflects the
+          slider position.
+      - register: S
+        kind: switch
+        direction: input
+        valuetype: integer
+        count: 8
+        min: 0
+        max: 2
+        description: The eight three-position switches (0 down, 1 center, 2 up).
+
+  - type: b32
+    title: B32
+    manual_page: 73
+    description: |
+      Thirty-two buttons (and their LEDs). An ideal companion to the M4 for
+      switching between virtual faders, and a good playground for trigger
+      sequencers with `algoquencer`. Very fast button-press detection.
+    elements:
+      - register: B
+        kind: button
+        direction: input
+        valuetype: gate
+        count: 32
+        description: The 32 buttons (labelled B1…B32 on the front panel).
+      - register: L
+        kind: led
+        direction: output
+        valuetype: cv
+        count: 32
+        description: |
+          The LEDs of the 32 buttons. They only support four brightness levels:
+          off, low, medium and full (for speed and low latency).
+
+  - type: e4
+    title: E4
+    manual_page: 74
+    description: |
+      Four endless rotary encoders (96 steps per turn), each surrounded by a ring
+      of 32 multicolor LEDs and with a push button. The encoders have no position:
+      they can only be used through the `encoder`, `encoderbank` and `encoquencer`
+      circuits. Needs its own power.
+    elements:
+      - register: E
+        kind: encoder
+        direction: special
+        count: 4
+        description: |
+          The four encoders. They are not read directly: use them with the
+          `encoder`, `encoderbank` or `encoquencer` circuits.
+      - register: B
+        kind: button
+        direction: input
+        valuetype: gate
+        count: 4
+        description: The push button of each encoder.
+      - register: L
+        kind: led
+        direction: output
+        valuetype: cv
+        count: 4
+        description: |
+          Lets you use each encoder's whole LED ring as one big white LED, overlaid
+          on the encoder's own animation.
+
+  - type: m4
+    title: M4
+    manual_page: 75
+    description: |
+      Four industrial-class motorized faders with touch plates and color LEDs.
+      Used through the `motorfader`, `faderbank`, `fadermatrix` and `motoquencer`
+      circuits. Needs its own power from the Eurorack bus.
+    elements:
+      - register: P
+        kind: fader
+        direction: input
+        valuetype: fraction
+        count: 4
+        min: 0
+        max: 1
+        description: |
+          Current physical fader positions (0.000…1.000). In notched mode they
+          instead show the notch number as an integer.
+      - register: B
+        kind: button
+        direction: input
+        valuetype: gate
+        count: 4
+        description: The four touch plates.
+      - register: L
+        kind: led
+        direction: output
+        valuetype: cv
+        count: 4
+        description: LED brightness.
+      - register: R
+        kind: led
+        direction: output
+        valuetype: cv
+        count: 4
+        description: LED color.
+
+  - type: db8e
+    title: DB8E
+    manual_page: 79
+    description: |
+      A controller with a small display, eight push buttons and one rotary
+      encoder. The display is driven by the `display` circuit. Needs its own
+      power from the rack.
+    elements:
+      - register: B
+        kind: button
+        direction: input
+        valuetype: gate
+        count: 8
+        description: The eight push buttons.
+      - register: L
+        kind: led
+        direction: output
+        valuetype: cv
+        count: 8
+        description: The LEDs inside the eight buttons.
+      - register: E
+        kind: encoder
+        direction: special
+        count: 1
+        description: |
+          The rotary encoder. It is not read directly: use it with the `encoder`,
+          `encoderbank` or `encoquencer` circuits.

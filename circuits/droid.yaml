@@ -1,0 +1,139 @@
+name: droid
+title: General DROID controls
+manual_page: 205
+category: utility
+description: |
+  Provides access to global DROID configuration settings. Only one instance
+  should exist in a patch.
+
+  The most commonly used features are `ledbrightness` (dims all master, G8,
+  and X7 LEDs) and `m4notchpower` (adjusts the force-feedback strength of
+  virtual notches on the M4 motor fader module).
+
+inputs:
+  - name: ledbrightness
+    abbr: l
+    valuetype: fraction
+    default: 1.0
+    description: |
+      Dims all 24 LEDs on the master and the G8. `1.0` = full brightness,
+      `0.0` = completely dark (including any error messages). The input is
+      CV-controllable for animated brightness effects.
+
+  - name: maxslope
+    abbr: s
+    valuetype: cv
+    default: 0.25
+    min: 0
+    array: 8
+    description: |
+      Per-output threshold for the voltage step between two consecutive samples
+      that is treated as an intentional jump and therefore not smoothed. `0.0`
+      disables smoothing entirely (any change is considered intentional). The
+      default `0.25` is suitable for most signals; lower values are common for
+      pitch CV from sequencers.
+
+  - name: lpfilter
+    abbr: lf
+    valuetype: fraction
+    default: 0.25
+    min: 0
+    max: 1
+    array: 8
+    description: |
+      Per-output digital low-pass filter strength (0–1). Filters digital noise
+      produced by the main loop (3–6 kHz). The default `0.25` gives mild
+      filtering while still allowing snappy envelopes. `1.0` removes all fast
+      transients and converts square-wave LFOs into near-sines. Increase for
+      outputs that drive audio-rate VCAs combined with low-harmonic waveforms.
+
+  - name: m4faderspeed
+    abbr: m4f
+    valuetype: fraction
+    min: 0
+    max: 1
+    description: |
+      Force/speed of the motor faders on M4 modules (0 = slowest, 1 =
+      maximum). Higher values consume more power and may increase fader wear.
+      If not patched, a firmware-dependent default is applied.
+
+  - name: m4touchgain
+    abbr: m4t
+    valuetype: fraction
+    min: 0
+    max: 1
+    array: 8
+    description: |
+      Touch-button sensitivity for up to eight M4 modules (0 = least sensitive,
+      1 = most sensitive). Decrease if buttons trigger accidentally when a
+      fader moves; increase if they are hard to activate. Up to eight separate
+      values support mixed hardware revisions.
+
+  - name: statusdump
+    abbr: sd
+    valuetype: trigger
+    description: |
+      A trigger here performs the same action as a double-click on the master
+      button: writes a status dump file to the SD card. Do not trigger at a
+      high rate — each dump takes several milliseconds to write.
+
+  - name: m4notchpower
+    abbr: m4n
+    valuetype: fraction
+    min: 0
+    max: 1
+    description: |
+      Force-feedback power for virtual notches on M4 motor faders (0 = minimum,
+      1 = maximum). Note: `0` does not fully disable notch feedback; a minimal
+      force always remains. If not patched, a firmware-dependent default is
+      used.
+
+  - name: calibrate
+    abbr: c
+    valuetype: trigger
+    description: |
+      Triggers the hardware calibration procedure (MASTER module only),
+      bypassing the maintenance menu. The master resets automatically after
+      calibration completes.
+
+  - name: startcontrollerupgrade
+    abbr: u
+    valuetype: trigger
+    description: |
+      Triggers the firmware upgrade procedure for controller modules such as
+      M4 and E4. The master resets after one successful upgrade.
+
+  - name: startx7upgrade
+    abbr: x7
+    valuetype: trigger
+    description: |
+      Triggers the X7 module firmware upgrade (maintenance menu position 8).
+      The master resets after the upgrade completes.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      Broadcasts a `clear` trigger to every circuit that supports it, resetting
+      each circuit's current state to its start state while preserving presets.
+      Not forwarded to circuits whose own `clear` input is already patched.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: |
+      Broadcasts a `clearall` trigger to every supporting circuit — a global
+      factory reset, including all presets. Not forwarded to circuits whose own
+      `clearall` input is already patched.
+
+  - name: uislowdown
+    abbr: us
+    valuetype: gate
+    default: 1
+    description: |
+      When `1` (default, since blue-6), UI circuits (buttons, buttongroups,
+      pots) run at one-eighth of the normal loop rate, reducing CPU load
+      significantly. Set to `0` if your patch strictly depends on circuit
+      execution order and UI circuits behave unexpectedly.
+
+outputs: []

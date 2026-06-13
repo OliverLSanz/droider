@@ -1,0 +1,72 @@
+name: adc
+title: AD Converter with 12 bits
+manual_page: 125
+obsolete: false
+category: utility
+description: |
+  Converts an input value into a binary representation of up to 12 bits.
+  `bit1` is the most significant bit (MSB); the LSB is the highest-indexed
+  bit output you actually patch. The input range between `minimum` and
+  `maximum` (default 0–1, i.e. 0–10 V) is divided into 2^N equal segments,
+  where N is the number of bit outputs patched.
+
+  Values below `minimum` are treated as all-zeros; values above `maximum`
+  are treated as all-ones. Adding more bit outputs increases resolution
+  without affecting the behaviour of the already-patched higher bits.
+
+  The inverse circuit is `dac`.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    description: Input signal to convert to binary representation.
+
+  - name: minimum
+    abbr: m
+    valuetype: cv
+    default: 0.0
+    description: |
+      Lowest input value. This value and anything lower produces the bit
+      sequence `000000000000` (all zeros).
+
+  - name: maximum
+    abbr: x
+    valuetype: cv
+    default: 1.0
+    description: |
+      Highest input value. This value and anything higher produces the bit
+      sequence `111111111111` (all ones).
+
+outputs:
+  - name: bit
+    abbr: b
+    valuetype: gate
+    array: 12
+    description: |
+      12-bit output array. `bit1` is the MSB. Patch only the bits you need;
+      the LSB is the highest-indexed output you actually connect. Unused
+      higher-index bits do not affect the resolution of the patched bits.
+
+examples:
+  - title: 3-bit conversion (8 levels) of 0–10 V input
+    code: |
+      ```ini
+      [adc]
+      input = I1
+      bit1  = O1
+      bit2  = O2
+      bit3  = O3
+      ```
+  - title: 3 bits over a custom 1 V–5 V range
+    code: |
+      ```ini
+      [adc]
+      input   = I1
+      minimum = 0.1
+      maximum = 0.5
+      bit1    = O1
+      bit2    = O2
+      bit3    = O3
+      ```

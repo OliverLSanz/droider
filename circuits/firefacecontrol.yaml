@@ -1,0 +1,206 @@
+name: firefacecontrol
+title: "Control a RME Fireface interface (experimental)"
+manual_page: 256
+obsolete: false
+category: midi
+description: |
+  **Experimental** circuit that controls the most important volumes and mix
+  sends of an RME Fireface audio interface via MIDI. Requires an X7 MIDI
+  module.
+
+  The circuit covers output levels, main/phones output, 16x16 output mix
+  sends, per-channel panning, post-fader switching and mute states.
+
+  Note: the Fireface MIDI implementation targets Mackie Control user
+  interaction rather than general automation. Panning in particular uses
+  relative CC commands (not absolute positions), which makes precise
+  programmatic control unreliable.
+
+inputs:
+  - name: trs
+    abbr: null
+    valuetype: integer
+    default: 1
+    min: 1
+    description: |
+      Selects which X7 TRS MIDI output port is used to send Fireface control
+      messages. Default `1` = first TRS port.
+
+  - name: outputlevel
+    abbr: ol
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Output fader level for each of the 16 output channels (0 = silent, 1 = full level).
+
+  - name: mainoutput
+    abbr: mo
+    valuetype: fraction
+    default: 1
+    description: Main output level (0 = silent, 1 = full level).
+
+  - name: phonesoutput
+    abbr: po
+    valuetype: fraction
+    default: 1
+    array: 2
+    description: Headphone output level for the two phones outputs (0 = silent, 1 = full level).
+
+  - name: outputmix1in
+    abbr: o1i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 1 (0 = off, 1 = full).
+
+  - name: outputmix2in
+    abbr: o2i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 2 (0 = off, 1 = full).
+
+  - name: outputmix3in
+    abbr: o3i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 3 (0 = off, 1 = full).
+
+  - name: outputmix4in
+    abbr: o4i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 4 (0 = off, 1 = full).
+
+  - name: outputmix5in
+    abbr: o5i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 5 (0 = off, 1 = full).
+
+  - name: outputmix6in
+    abbr: o6i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 6 (0 = off, 1 = full).
+
+  - name: outputmix7in
+    abbr: o7i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 7 (0 = off, 1 = full).
+
+  - name: outputmix8in
+    abbr: o8i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 8 (0 = off, 1 = full).
+
+  - name: outputmix9in
+    abbr: o9i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 9 (0 = off, 1 = full).
+
+  - name: outputmix10in
+    abbr: o10i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 10 (0 = off, 1 = full).
+
+  - name: outputmix11in
+    abbr: o11i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 11 (0 = off, 1 = full).
+
+  - name: outputmix12in
+    abbr: o12i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 12 (0 = off, 1 = full).
+
+  - name: outputmix13in
+    abbr: o13i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 13 (0 = off, 1 = full).
+
+  - name: outputmix14in
+    abbr: o14i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 14 (0 = off, 1 = full).
+
+  - name: outputmix15in
+    abbr: o15i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 15 (0 = off, 1 = full).
+
+  - name: outputmix16in
+    abbr: o16i
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: Send level of each of 16 inputs into output mix bus 16 (0 = off, 1 = full).
+
+  - name: postfader
+    abbr: pf
+    valuetype: gate
+    array: 16
+    description: |
+      Post-fader monitoring switch for each of the 16 channels (`1` = post-fader,
+      `0` = pre-fader).
+
+  - name: pan
+    abbr: p
+    valuetype: fraction
+    default: 0
+    array: 16
+    description: |
+      Panning for each of the 16 channels (0 = left, 0.5 = center, 1 = right).
+      Due to Fireface MIDI limitations, panning is sent as relative commands
+      and cannot be reliably set to an absolute position.
+
+  - name: unmute
+    abbr: u
+    valuetype: gate
+    default: 0
+    array: 16
+    description: |
+      Unmute state for each of the 16 channels (`1` = unmuted/active,
+      `0` = muted).
+
+  - name: update
+    abbr: ud
+    valuetype: trigger
+    description: A trigger here forces an immediate resend of all current values to the Fireface.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Allows overlaying buttons and LEDs with multiple circuits. When this
+      has a positive gate (or matches `selectat`), the circuit processes
+      buttons and LEDs. Otherwise they are left for another circuit.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Specifies at which value of `select` this circuit becomes active.
+      E.g. `selectat = 0` activates the circuit when `select` is exactly 0.

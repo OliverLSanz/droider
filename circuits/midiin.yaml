@@ -1,0 +1,420 @@
+name: midiin
+title: MIDI to CV converter
+manual_page: 289
+category: midi
+description: |
+  Converts incoming MIDI data into CV, gate, and trigger signals. Requires
+  the **X7 expander** or MASTER18 hardware.
+
+  Supports monophonic and polyphonic operation (up to 8 simultaneous voices),
+  individual note gates for up to 16 notes (for drum triggering or MIDI-key-
+  as-button use cases), MIDI clock outputs at multiple divisions, controller
+  (CC) values, pitch bend, program changes, and transport messages.
+
+  By default it listens on all available TRS and USB ports and auto-detects
+  which is active. Up to 32 `midiin` circuits can coexist in a patch, each
+  filtered to a different MIDI channel or CC set.
+
+  **Pedal handling (automatic):** damper/sustain (CC 64), portamento (CC 65),
+  sostenuto (CC 66), soft (CC 67), legato (CC 68) are interpreted according to
+  their standard MIDI meanings.
+
+inputs:
+  - name: trs
+    abbr: null
+    valuetype: integer
+    min: 0
+    max: 10
+    description: |
+      Selects the TRS (3.5 mm) MIDI port. `0` disables TRS. `10` enables
+      auto-detection (locks to the first port that receives data, re-detects
+      after a few seconds of silence). A specific number (1, 2, 3…) selects
+      a fixed port. If both `trs` and `usb` are omitted, auto-detection runs
+      on both port types.
+
+  - name: usb
+    abbr: null
+    valuetype: integer
+    min: 0
+    max: 10
+    description: |
+      Selects the USB MIDI port. Same options as `trs`: `0` disables, `10`
+      enables auto-detection, specific numbers select a fixed port.
+
+  - name: initialrunning
+    abbr: ir
+    valuetype: integer
+    default: 2
+    min: 0
+    max: 2
+    description: |
+      Running state assumed at DROID startup. `0` = start stopped, `1` = start
+      running, `2` = automatic (starts stopped, switches to running on the first
+      note-on event, simulating a MIDI START). Read only once at system start;
+      cannot be CV-controlled.
+
+  - name: systemreset
+    abbr: sr
+    valuetype: trigger
+    description: |
+      A trigger here resets the entire MIDI state: stops all playing notes and
+      resets all controllers and pedal states. Equivalent to a MIDI RESET
+      message.
+
+  - name: channel
+    abbr: ch
+    valuetype: integer
+    min: 1
+    max: 16
+    description: |
+      Restrict processing to a specific MIDI channel (1–16). If omitted, events
+      from all channels are processed.
+
+  - name: tuningmode
+    abbr: tm
+    valuetype: gate
+    default: 0
+    description: |
+      When `1`, all pitch outputs are forced to the `tuningpitch` CV and all
+      gate outputs play a steady 120 BPM gate. Helps tune all attached voices
+      simultaneously.
+
+  - name: tuningpitch
+    abbr: tp
+    valuetype: pitch
+    default: 0.2
+    unit: octave
+    description: |
+      Pitch CV sent to all pitch outputs while `tuningmode` is active. Default
+      is `0.2` (2 V = two octaves above the base reference pitch).
+
+  - name: transpose
+    abbr: tr
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: |
+      Transposes all pitch outputs by adding this value. Set to `-0.1` (`-1V`)
+      to transpose one octave down. Changes take effect immediately, even for
+      currently playing notes.
+
+  - name: holdvelocity
+    abbr: hv
+    valuetype: gate
+    default: 0
+    description: |
+      When `1`, the velocity output for a voice is not cleared on note-off; it
+      retains the attack velocity. Useful when velocity drives a VCA: prevents
+      the release phase from being cut by a zero-velocity note-off.
+
+  - name: pitchbendrange
+    abbr: pbr
+    valuetype: pitch
+    unit: octave
+    description: |
+      Maximum pitch-bend excursion (positive and negative) for the `pitchbend`
+      output. Defaults to approximately 2/12 V (one whole tone at 1 V/oct). A
+      negative value inverts the pitch bend direction.
+
+  - name: bendpitch
+    abbr: bp
+    valuetype: gate
+    default: 1
+    description: |
+      When `1` (default), pitch bend is applied directly to all pitch outputs.
+      Set to `0` to disable automatic pitch-bend application and use the raw
+      `pitchbend` output elsewhere.
+
+  - name: roundrobin
+    abbr: rr
+    valuetype: gate
+    default: 0
+    description: |
+      When `0` (default), voice search starts from `pitch1`, so lower-numbered
+      outputs are preferred — deterministic for chords. When `1`, outputs are
+      assigned in round-robin order, giving each voice an equal chance. Useful
+      with long release envelopes to turn a monophonic line into chords.
+
+  - name: voiceallocation
+    abbr: va
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 3
+    description: |
+      Selects which note is cancelled when more notes arrive than there are free
+      voices. `0` = cancel oldest (default), `1` = drop new note, `2` = cancel
+      lowest note, `3` = cancel highest note.
+
+  - name: notegap
+    abbr: ngp
+    valuetype: cv
+    default: 0.0
+    description: |
+      Forces the gate output low for this many **milliseconds** before a new
+      note starts, so that envelopes can re-trigger on consecutive (legato)
+      notes. `0.0` keeps legato mode. Internal DROID circuits work with as
+      little as `0.1`; hardware envelopes may need `1` or more. Does not
+      affect trigger outputs.
+
+  - name: ccnumber
+    abbr: cn
+    valuetype: integer
+    array: 4
+    default: 0
+    min: 0
+    max: 127
+    description: |
+      CC number (0–127) to monitor. Set `ccnumber1 = 17` and read `cc1` to
+      obtain the current value of CC#17.
+
+  - name: lowestnote
+    abbr: ln
+    valuetype: integer
+    default: 0
+    min: 0
+    max: 127
+    description: |
+      Lower bound for playable note numbers (0–127, where 0 = C-2). Notes
+      below this value are ignored. Note gates (`notegate`) are not affected.
+
+  - name: highestnote
+    abbr: hn
+    valuetype: integer
+    default: 127
+    min: 0
+    max: 127
+    description: |
+      Upper bound for playable note numbers (0–127, where 127 = G9). Notes
+      above this value are ignored. Note gates (`notegate`) are not affected.
+      Use with `lowestnote` for keyboard splits.
+
+  - name: note
+    abbr: n
+    valuetype: integer
+    array: 16
+    min: 0
+    max: 127
+    description: |
+      Up to 16 individual MIDI note numbers (0–127) for which dedicated gate
+      outputs are generated (`notegate1`–`notegate16`). Useful for drum
+      sequencing or using MIDI keys as buttons. Defaults to 0, 1, 2, … 15.
+
+outputs:
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: 16th-note clock derived from the MIDI clock (same as `clock16`).
+
+  - name: clock8
+    abbr: c8
+    valuetype: clock
+    description: 8th-note clock (half the speed of `clock`).
+
+  - name: clock8t
+    abbr: c8t
+    valuetype: clock
+    description: 8th-note triplet clock (faster than `clock8`, slower than `clock`).
+
+  - name: clock16
+    abbr: c16
+    valuetype: clock
+    description: 16th-note clock (same as `clock`).
+
+  - name: clock4
+    abbr: c4
+    valuetype: clock
+    description: Quarter-note clock.
+
+  - name: midiclock
+    abbr: mc
+    valuetype: clock
+    description: |
+      Raw MIDI clock at 24 PPQ — 6× faster than `clock` and 24× faster than
+      `clock4`.
+
+  - name: start
+    abbr: st
+    valuetype: trigger
+    description: Trigger on MIDI START message.
+
+  - name: continue
+    abbr: co
+    valuetype: trigger
+    description: Trigger on MIDI CONTINUE message.
+
+  - name: stop
+    abbr: sp
+    valuetype: trigger
+    description: Trigger on MIDI STOP message.
+
+  - name: running
+    abbr: ru
+    valuetype: gate
+    description: High while the MIDI transport is in running state (after START, before STOP).
+
+  - name: active
+    abbr: a
+    valuetype: gate
+    description: |
+      High while an active-sensing device is connected, or (for devices without
+      active sensing) from the moment the first MIDI message is received.
+
+  - name: pitch
+    abbr: p
+    valuetype: pitch
+    array: 8
+    description: |
+      Pitch outputs for up to 8 simultaneous voices. Notes are distributed
+      across active outputs according to `roundrobin` and `voiceallocation`.
+      `pitch` ≡ `pitch1`.
+
+  - name: velocity
+    abbr: v
+    valuetype: fraction
+    array: 8
+    description: |
+      MIDI velocity for each voice, mapped to 0.0–1.0. `velocity` ≡ `velocity1`.
+
+  - name: pressure
+    abbr: pr
+    valuetype: fraction
+    array: 8
+    description: |
+      After-touch (key pressure) per voice, 0.0–1.0. Handles both channel
+      pressure and polyphonic key pressure messages. `pressure` ≡ `pressure1`.
+
+  - name: gate
+    abbr: g
+    valuetype: gate
+    array: 8
+    description: Gate outputs for up to 8 simultaneous note voices. `gate` ≡ `gate1`.
+
+  - name: trigger
+    abbr: t
+    valuetype: trigger
+    array: 8
+    description: |
+      5 ms trigger at the start of each note per voice. Fires even when notes
+      overlap without a gate gap. `trigger` ≡ `trigger1`.
+
+  - name: cc
+    abbr: null
+    valuetype: fraction
+    array: 4
+    description: |
+      Current value of the CC numbers defined by `ccnumber1`–`ccnumber4`,
+      mapped to 0.0–1.0 (multiply by 127 for the raw integer). Outputs 0.0
+      until the first matching CC is received.
+
+  - name: cctrigger
+    abbr: ct
+    valuetype: trigger
+    array: 4
+    description: |
+      Trigger fired whenever a CC event matching the corresponding `ccnumberN`
+      is received — useful when the CC is used as a discrete event rather than
+      a continuous value.
+
+  - name: notegate
+    abbr: ng
+    valuetype: gate
+    array: 16
+    description: |
+      High gate while the corresponding note (selected by `note1`–`note16`) is
+      held. `notegate` ≡ `notegate1`.
+
+  - name: notegatevelocity
+    abbr: ngv
+    valuetype: fraction
+    array: 16
+    description: |
+      Velocity of the corresponding `notegate` note, 0.0–1.0. Resets to 0.0
+      on note-off.
+
+  - name: pitchbend
+    abbr: pb
+    valuetype: bipolar
+    description: |
+      Current pitch bend as a bipolar value scaled by `pitchbendrange`. Use
+      when `bendpitch` is `0` to apply pitch bend manually elsewhere.
+
+  - name: programchange
+    abbr: pc
+    valuetype: trigger
+    description: |
+      Trigger on every MIDI program change message (even if the program number
+      does not change). The new number is available at `program` just before the
+      trigger fires.
+
+  - name: program
+    abbr: pm
+    valuetype: integer
+    description: Program number from the last program change message (0–127).
+
+  - name: bank
+    abbr: ba
+    valuetype: integer
+    description: |
+      Currently selected bank number (0–16383), controlled by CC#0 (MSB) and
+      CC#32 (LSB). Outputs 0 until a bank-select CC is received.
+
+  - name: modwheel
+    abbr: w
+    valuetype: fraction
+    description: Modulation wheel (MIDI CC#1), mapped to 0.0–1.0.
+
+  - name: volume
+    abbr: vo
+    valuetype: fraction
+    description: Global volume (MIDI CC#7), mapped to 0.0–1.0.
+
+  - name: portamento
+    abbr: po
+    valuetype: gate
+    description: |
+      High while the portamento pedal (CC#65) is held. Use to enable a `slew`
+      circuit for portamento effects.
+
+  - name: soft
+    abbr: so
+    valuetype: gate
+    description: High while the soft pedal (CC#67) is held.
+
+examples:
+  - title: Basic one-voice MIDI-to-CV
+    code: |
+      ```ini
+      [midiin]
+      pitch = O1
+      gate = O2
+      ```
+  - title: Three-voice polyphonic
+    code: |
+      ```ini
+      [midiin]
+      pitch1 = O1
+      pitch2 = O2
+      pitch3 = O3
+      gate1 = G1
+      gate2 = G2
+      gate3 = G3
+      ```
+  - title: Drum triggers from MIDI notes with velocity
+    code: |
+      ```ini
+      [midiin]
+      note1 = 24
+      note2 = 25
+      notegate1 = O1
+      notegate2 = O2
+      notegatevelocity1 = O3
+      notegatevelocity2 = O4
+      ```
+  - title: MIDI clock and transport sync
+    code: |
+      ```ini
+      [midiin]
+      clock = _CLOCK
+      start = _RESET
+      ```

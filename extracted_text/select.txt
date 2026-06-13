@@ -1,0 +1,58 @@
+# CIRCUIT: select
+# MANUAL PAGES (physical, 1-based): 381-381
+# TITLE: select – Copy a signal if selected
+
+16.62
+select – Copy a signal if selected
+Copies a value just when the circuit is se-
+lected via select.
+This solves the problem of having an LED
+displaying something, but just when a cer-
+tain “menu page” or similar is active. Sim-
+ply setting the LED with copy (see page 188) or some
+other circuit’s output will always set it. Checking some
+select state and sending 0 does not help, since it will
+override any other circuit’s values for the LED even when
+those are selected.
+Here is an example of letting the LED L1.1 ﬂash when
+_SELECTED is high, and otherwise don’t copy anything to
+the LED:
+[lfo]
+output = _FLASH
+[select]
+select = _SELECT
+input = _FLASH
+output = L1.1
+Input
+Type
+Default
+Description
+input (i)
+0.0
+Connect the signal you want to copy.
+select (s)
+1
+2
+3
+
+The select input allows you to overlay buttons and LEDs with multiple functions. If you use this input, the circuit will
+process the buttons and LEDs just as if select has a positive gate signal (usually you will select this to 1). Otherwise
+it won’t touch them so they can be used by another circuit. Note: even if the circuit is currently not selected, it will
+nevertheless work and process all its other inputs and its outputs (those that do not deal with buttons or LEDs) in a
+normal way.
+selectat (sa)
+1
+2
+3
+
+This input makes the select input more ﬂexible. Here you specify at which value select should select this circuit.
+E.g. if selectat is 0, the circuit will be active if select is exactly 0 instead of a positive gate signal. In some cases this
+is more conventient.
+Output
+Type
+Description
+output (o)
+The input will be copied here, but just when the circuit is selected via select.
+DROID manual for blue-7
+381
+Table of contents at page 2

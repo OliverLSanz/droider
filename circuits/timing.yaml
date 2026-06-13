@@ -1,0 +1,81 @@
+name: timing
+title: timing – Shuffle/swing and complex timing generator
+manual_page: 398
+obsolete: false
+category: clock
+description: |
+  Converts a steady input clock into an output clock with flexible per-step
+  timing offsets. The most common use is a **swing** pattern (every second beat
+  delayed), but patterns of up to eight steps allow complex groove templates.
+
+  Each `timing1`…`timing8` value shifts the corresponding output pulse forward
+  or backward relative to the input clock, expressed as a fraction of one clock
+  period. Positive values delay the pulse; negative values advance it.
+
+  **Notes:**
+  - Requires a steady, stable input clock.
+  - Use `reset` for a synchronized start with the rest of your patch.
+  - Timing values are clipped to the range -0.9999 … 0.9999.
+  - If two output beats would coincide, only one trigger is produced.
+  - A beat shifted past a later beat is silently dropped.
+  - A delayed beat that is subsequently un-delayed plays immediately (not lost).
+
+inputs:
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      The steady input clock. This circuit only produces useful output when a
+      clock is patched here.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: A trigger here resets the internal step counter and restarts at step 1.
+
+  - name: timing
+    abbr: t
+    valuetype: cv
+    array: 8
+    min: -0.9999
+    max: 0.9999
+    description: |
+      Relative timing offset for each step, as a fraction of one clock period.
+      Positive values delay the output pulse; negative values advance it. Values
+      are clipped to the range -0.9999 … 0.9999. The pattern length equals the
+      number of `timing` inputs that are patched; it then repeats from step 1.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: clock
+    description: The timing-modified output clock.
+
+examples:
+  - title: Standard swing (every second beat delayed by 30%)
+    code: |
+      ```ini
+      [timing]
+      clock = G1
+      output = G2
+      timing1 = 0.0
+      timing2 = 0.3
+      ```
+  - title: Three-step groove pattern
+    code: |
+      ```ini
+      [timing]
+      clock = G1
+      output = G2
+      timing1 = 0.0
+      timing2 = 0.2
+      timing3 = 0.1
+      ```
+  - title: Clock compensation (advance by 3%)
+    code: |
+      ```ini
+      [timing]
+      clock = G1
+      output = G2
+      timing1 = -0.03
+      ```

@@ -1,0 +1,110 @@
+name: burst
+title: Generate burst of pulses
+manual_page: 152
+obsolete: false
+category: utility
+description: |
+  Generates a configurable number of pulses (a "burst") each time a trigger
+  arrives at the `trigger` input. The pulse rate is set by `hz`, `rate`
+  (1 V/octave), or `taptempo` — the same three-way system used by `lfo`.
+
+  Gate length is fixed at 50 % of the cycle (pulse width is always 50 %).
+
+  If a new trigger arrives while a burst is still running, the burst restarts
+  from the beginning immediately.
+
+  The `skip` input lets you delay the start of the burst by a number of time
+  slots, which makes `burst` useful as a simple clocked trigger delay.
+
+  A minimal patch with `count = 1` (the default) converts any gate into a
+  short trigger.
+
+inputs:
+  - name: rate
+    abbr: ra
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: |
+      Frequency control at 1 V/octave. The base frequency is 1 Hz. Each volt
+      doubles the frequency: `1V` (`0.1`) → 2 Hz, `2V` (`0.2`) → 4 Hz.
+      Negative values halve it: `-1V` (`-0.1`) → 0.5 Hz. Can be combined with
+      `taptempo`.
+
+  - name: taptempo
+    abbr: tt
+    valuetype: clock
+    description: |
+      Feed a reference clock here and the burst will run at the speed of that
+      clock, optionally modified by `rate`. Exclusive to `hz` as the primary
+      source.
+
+  - name: hz
+    abbr: null
+    valuetype: cv
+    default: 1.0
+    unit: hz
+    min: 0
+    description: |
+      Set the burst frequency directly in hertz. Exclusive to `taptempo`, but
+      can be combined with `rate`.
+
+  - name: trigger
+    abbr: t
+    valuetype: trigger
+    description: Send a trigger here to start a burst.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: Send a trigger here to immediately stop any ongoing burst.
+
+  - name: count
+    abbr: c
+    valuetype: integer
+    default: 1
+    min: 1
+    description: Number of triggers to send in one burst.
+
+  - name: skip
+    abbr: s
+    valuetype: integer
+    default: 0
+    min: 0
+    description: |
+      Number of time slots to wait before starting the burst. Useful for
+      clocked trigger delays: a trigger at `trigger` is delayed by `skip`
+      clock cycles when `taptempo` is used.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: trigger
+    description: The burst triggers are output here.
+
+examples:
+  - title: Five triggers at 10 Hz on each input trigger
+    code: |
+      ```ini
+      [burst]
+      trigger = I1
+      hz = 10
+      count = 5
+      output = O1
+      ```
+  - title: Clock-synchronized burst of four pulses
+    code: |
+      ```ini
+      [burst]
+      taptempo = I2
+      trigger = I1
+      count = 4
+      output = O1
+      ```
+  - title: Convert a gate to a single short trigger
+    code: |
+      ```ini
+      [burst]
+      trigger = _MIDI_RUNNING
+      output = _RESET
+      ```

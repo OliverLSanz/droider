@@ -1,0 +1,81 @@
+name: notchedpot
+title: Helper circuit for pots (OBSOLETE)
+manual_page: 348
+obsolete: true
+category: controller
+description: |
+  **Obsolete — superseded by `pot`.** This circuit will be removed in a future
+  firmware version. Replace any use of `notchedpot` with `pot`, which provides
+  all the same functionality and more.
+
+  Simulates a potentiometer with a center notch: a dead zone around the center
+  that snaps the output to exactly 0.5 (or 0.0 on the `bipolar` output). The
+  notch size defaults to 10% of the full range.
+
+inputs:
+  - name: pot
+    abbr: p
+    valuetype: fraction
+    min: 0
+    max: 1
+    description: Wire a potentiometer here (e.g. `P1.1`).
+
+  - name: notch
+    abbr: "no"
+    valuetype: fraction
+    default: 0.1
+    min: 0
+    max: 0.5
+    description: |
+      Size of the center notch as a fraction of the full range. Default is 0.1
+      (10%). Values above 0.5 are clamped to 0.5. Set to `0` to disable the
+      notch entirely.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: fraction
+    description: Pot output ranging from 0.0 to 1.0.
+
+  - name: bipolar
+    abbr: b
+    valuetype: bipolar
+    description: |
+      Optional bipolar output ranging from -1.0 to 1.0, with the center notch
+      at 0.0.
+
+  - name: absbipolar
+    abbr: ab
+    valuetype: fraction
+    description: |
+      Absolute value of `bipolar`; always positive. Sweeps
+      1.0 → 0.5 → 0.0 → 0.5 → 1.0 as the pot moves fully left → center →
+      fully right.
+
+  - name: lefthalf
+    abbr: l
+    valuetype: fraction
+    description: |
+      Outputs 1.0 → 0.0 while the pot is in the left half; stays at 0.0 at
+      center and to the right.
+
+  - name: righthalf
+    abbr: r
+    valuetype: fraction
+    description: |
+      Outputs 0.0 → 1.0 from center to the fully right position; stays at 0.0
+      in the left half.
+
+  - name: lefthalfinv
+    abbr: li
+    valuetype: fraction
+    description: |
+      `1.0 - lefthalf`: outputs 0.0 → 1.0 → 1.0 as the pot moves
+      left → center → right.
+
+  - name: righthalfinv
+    abbr: ri
+    valuetype: fraction
+    description: |
+      `1.0 - righthalf`: outputs 1.0 → 1.0 → 0.0 as the pot moves
+      left → center → right.

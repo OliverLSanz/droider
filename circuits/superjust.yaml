@@ -1,0 +1,140 @@
+name: superjust
+title: Perfect intonation of up to eight voices
+manual_page: 392
+obsolete: false
+category: quantizer
+description: |
+  Automatically creates a perfect pure (just) intonation for up to eight pitch
+  voices in real time.
+
+  All output pitches are adjusted so that every pair of frequencies has a
+  rational ratio with small numerator and denominator (e.g. 3/2 for a fifth,
+  5/4 for a major third). The adjustments are made dynamically: whenever one
+  or more notes change, all outputs are retuned to find the best mutual
+  intonation, with the average pitch preserved.
+
+  No configuration is required — no root note, scale, or tuning reference.
+  The inputs need not be quantized or tuned to a specific pitch standard.
+  Simply route your pitch CVs through `superjust`. If you also use a
+  quantizer, place `superjust` **after** quantization.
+
+  **Tuning aid.** The `tuningmode` input mutes normal processing and sends
+  `tuningpitch` to all outputs, letting you tune your VCOs to a common
+  reference pitch. Accurate VCO calibration is crucial for just intonation;
+  the `calibrator` circuit (page 164) is recommended for correcting
+  per-octave tracking deviations.
+
+  The number of patched inputs and outputs should match.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: pitch
+    unit: octave
+    array: 8
+    description: |
+      1st–8th pitch input (1 V/octave). Connect the pitch CVs of the voices
+      to be intonated. Only patch as many inputs as you have active voices;
+      the patched count should match the number of patched outputs.
+
+  - name: tuningmode
+    abbr: tm
+    valuetype: gate
+    default: 0
+    description: |
+      While this is 1, all outputs send the voltage set by `tuningpitch`
+      instead of the just-intonated pitches. Use a toggle button here to
+      hold a reference pitch for tuning your VCOs.
+
+  - name: tuningpitch
+    abbr: tp
+    valuetype: pitch
+    unit: octave
+    default: 0.0
+    description: |
+      The pitch CV output to all voices while `tuningmode` is active.
+      Defaults to 0 V. Use a value closer to your typical playing range
+      for best tuning accuracy (e.g. `2V` for two octaves above C0).
+
+  - name: bypass
+    abbr: b
+    valuetype: gate
+    default: 0
+    description: |
+      While this is 1, all inputs are passed through to the outputs unchanged
+      (no just-intonation correction applied).
+
+  - name: transpose
+    abbr: tr
+    valuetype: pitch
+    unit: octave
+    default: 0.0
+    description: |
+      Offset added to all outputs, but only in normal mode (not in tuning or
+      bypass mode). Can be used to apply a vibrato or pitch shift to an entire
+      chord simultaneously.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: pitch
+    array: 8
+    description: |
+      1st–8th just-intonated pitch output (1 V/octave). Each output
+      corresponds to its matching input, with a small correction applied to
+      achieve pure intervals across all active voices.
+
+examples:
+  - title: Three-voice just intonation
+    code: |
+      ```ini
+      [superjust]
+      input1 = I1
+      input2 = I2
+      input3 = I3
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      ```
+  - title: With tuning mode on a button
+    code: |
+      ```ini
+      [button]
+      button = B1.1
+      led = L1.1
+      [superjust]
+      input1 = I1
+      input2 = I2
+      input3 = I3
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      tuningmode = L1.1
+      tuningpitch = 2V
+      ```
+  - title: Three voices with per-VCO calibration
+    code: |
+      ```ini
+      [superjust]
+      input1 = I1
+      input2 = I2
+      input3 = I3
+      output1 = _O1
+      output2 = _O2
+      output3 = _O3
+      [calibrator]
+      input = _O1
+      output = O1
+      nudgeup = B1.1
+      nudgedown = B1.3
+      [calibrator]
+      input = _O2
+      output = O2
+      nudgeup = B1.2
+      nudgedown = B1.4
+      [calibrator]
+      input = _O3
+      output = O3
+      nudgeup = B1.5
+      nudgedown = B1.7
+      ```

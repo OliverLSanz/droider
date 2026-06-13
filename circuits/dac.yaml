@@ -1,0 +1,69 @@
+name: dac
+title: DA Converter with 12 bits
+manual_page: 193
+obsolete: false
+category: utility
+description: |
+  Converts a binary representation of up to 12 bits into an analog output
+  value within a configurable range. `bit1` is the most significant bit
+  (MSB); the LSB is the highest-indexed bit input you actually patch.
+
+  The output range is 0–1 (0–10 V) by default, adjustable with `minimum`
+  and `maximum`. Using more bit inputs increases resolution: e.g. 8 bits
+  gives 256 possible output values. Adding higher-indexed bits does not
+  change the influence of the already-patched lower-indexed bits.
+
+  The inverse circuit is `adc`.
+
+inputs:
+  - name: bit
+    abbr: b
+    valuetype: gate
+    array: 12
+    description: |
+      12-bit input array. `bit1` is the MSB. Patch only the bits you need;
+      the LSB is the highest-indexed input you actually connect.
+
+  - name: minimum
+    abbr: m
+    valuetype: cv
+    default: 0.0
+    description: |
+      Lower bound of the output range. The bit sequence `000000000000`
+      produces this value.
+
+  - name: maximum
+    abbr: x
+    valuetype: cv
+    default: 1.0
+    description: |
+      Upper bound of the output range. The bit sequence `111111111111`
+      produces this value.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    description: Analog output value corresponding to the binary input.
+
+examples:
+  - title: 3-bit DAC (8 steps) over 0–10 V
+    code: |
+      ```ini
+      [dac]
+      bit1   = I1
+      bit2   = I2
+      bit3   = I3
+      output = O1
+      ```
+  - title: 3 bits mapped to 1 V–5 V range
+    code: |
+      ```ini
+      [dac]
+      bit1    = I1
+      bit2    = I2
+      bit3    = I3
+      minimum = 0.1
+      maximum = 0.5
+      output  = O1
+      ```

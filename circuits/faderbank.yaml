@@ -1,0 +1,162 @@
+name: faderbank
+title: Create multiple virtual faders in M4 controller
+manual_page: 247
+obsolete: false
+category: controller
+description: |
+  Multi-fader companion to the single `motorfader` circuit. Controls up to 16
+  M4 faders with one circuit, reducing boilerplate in patches that use banks or
+  arrays of similar parameters.
+
+  Key differences from `motorfader`:
+  - `firstfader` replaces `fader` to specify the starting fader.
+  - The number of faders is determined automatically by the highest `outputX`
+    index used, not by a separate setting.
+  - `notches` and `ledcolor` apply to all faders equally.
+  - Individual LED brightness can be set per fader with `ledvalue1` … `ledvalue16`.
+  - This circuit has 6 presets (versus 8 in `motorfader`).
+
+  If a DB8E display controller is present, the circuit updates the display
+  automatically whenever a fader is moved.
+
+inputs:
+  - name: firstfader
+    abbr: f
+    valuetype: integer
+    default: 1
+    description: |
+      Index of the first M4 fader in the bank (1-based). Subsequent faders
+      follow in order across controllers.
+
+  - name: notches
+    abbr: "n"
+    valuetype: integer
+    min: 0
+    description: |
+      Number of artificial force-feedback notches (detents). `0` disables
+      notches. `1` creates a pitch-bend style center detent. `2` creates a
+      binary switch with outputs 0 and 1. Higher values create that many
+      positions (e.g. `8` gives values 0–8). Maximum is 201; above 25 the
+      force feedback is disabled as notches would become too small to work.
+
+  - name: startvalue
+    abbr: sv
+    valuetype: cv
+    default: 0.0
+    description: |
+      Value the faders are set to when the circuit starts for the first time
+      or when a `clear` trigger is received.
+
+  - name: ledcolor
+    abbr: lc
+    valuetype: cv
+    description: |
+      Sets the color of the LED below each fader when the circuit is selected.
+      Has no effect when the LED is off.
+
+  - name: ledvalue
+    abbr: lv
+    valuetype: fraction
+    array: 16
+    description: |
+      Overrides the brightness of the LED below each individual fader
+      (ledvalue1 … ledvalue16) when this circuit is selected.
+
+  - name: display
+    abbr: dy
+    valuetype: integer
+    default: 1
+    min: 0
+    description: |
+      Selects which DB8E display controller shows changes from this circuit.
+      `1` = first DB8E; `2` = second DB8E; `0` suppresses display output.
+
+  - name: header
+    abbr: hr
+    valuetype: text
+    description: |
+      Text shown at the top of the DB8E display when this circuit is active.
+      If omitted, an automatic title is used. Set to `""` or `0` to remove the
+      header and show only the value.
+
+  - name: select
+    abbr: s
+    valuetype: gate
+    description: |
+      Overlay control: when this input has a positive gate signal, the circuit
+      processes its buttons and LEDs normally. When absent, those are released
+      for other circuits. All other inputs and outputs remain active regardless.
+
+  - name: selectat
+    abbr: sa
+    valuetype: integer
+    description: |
+      Refines `select`: specifies the exact value of `select` at which this
+      circuit becomes active. E.g. `selectat = 0` activates on `select = 0`.
+
+  - name: preset
+    abbr: pr
+    valuetype: integer
+    min: 0
+    max: 5
+    description: |
+      Preset number to save or load (0-based). This circuit has 6 presets
+      (range 0–5). See the preset documentation (page 21) for the full story.
+
+  - name: loadpreset
+    abbr: lp
+    valuetype: trigger
+    description: A trigger here loads the preset selected by `preset`.
+
+  - name: savepreset
+    abbr: sp
+    valuetype: trigger
+    description: A trigger here saves the current state to the preset selected by `preset`.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: |
+      A trigger here resets the circuit to its default start state. Presets are
+      not affected unless `preset` direct switching is used without triggers.
+
+  - name: clearall
+    abbr: ca
+    valuetype: trigger
+    description: A trigger here resets the circuit and all its presets to the default start state.
+
+  - name: dontsave
+    abbr: dos
+    valuetype: gate
+    default: 0
+    description: |
+      Set to `1` to prevent this circuit's state from being saved to or loaded
+      from the SD card.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: cv
+    array: 16
+    description: Current values of the virtual motor faders (output1 … output16).
+
+  - name: button
+    abbr: b
+    valuetype: gate
+    array: 16
+    description: |
+      Touch button state of each fader (button1 … button16) when the circuit is
+      selected. Outputs 0 when not selected.
+
+examples:
+  - title: Three-fader bank with preset selection via pot
+    code: |
+      ```ini
+      [p2b8]
+      [m4]
+      [faderbank]
+      preset = P1.1 * 6
+      output1 = O1
+      output2 = O2
+      output3 = O3
+      ```

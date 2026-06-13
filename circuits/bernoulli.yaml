@@ -1,0 +1,53 @@
+name: bernoulli
+title: Random gate distributor
+manual_page: 151
+category: random
+description: |
+  Implements a "bernoulli gate". For each gate or trigger received at `input` a
+  random decision is made whether to forward the gate to `output1` or `output2`.
+  The probability can be shifted with `distribution`, which sets the likelihood
+  of routing to `output1`.
+
+  Each time a positive trigger edge is seen at `input`, a new random decision is
+  made. The chosen output receives an exact copy of the input signal (including
+  complex envelopes), while the other output sends 0 V.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: gate
+    default: 0
+    description: Send gate or trigger signals here.
+
+  - name: distribution
+    abbr: di
+    valuetype: fraction
+    default: 0.5
+    min: 0
+    max: 1
+    description: |
+      Controls the probability of routing a gate to `output1`. A value of `0.5`
+      means 50% probability for each output. `0.0` always routes to `output2`,
+      `1.0` always routes to `output1`.
+
+outputs:
+  - name: output1
+    abbr: o1
+    valuetype: gate
+    description: Gates from `input` are forwarded here when the random decision favours output 1.
+
+  - name: output2
+    abbr: o2
+    valuetype: gate
+    description: Gates from `input` are forwarded here when the random decision favours output 2.
+
+examples:
+  - title: Random gate split with pot-controlled probability
+    code: |
+      ```ini
+      [bernoulli]
+      input = G1
+      distribution = P1.1
+      output1 = G2
+      output2 = G4
+      ```

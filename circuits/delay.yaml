@@ -1,0 +1,184 @@
+name: delay
+title: "delay – A tape delay for CVs, gates and numbers"
+manual_page: 195
+obsolete: false
+category: utility
+description: |
+  Tape delay for continuous CVs, gate signals and integer numbers. Feed input
+  signals into the circuit, set a delay time and the signals are output again
+  delayed by that amount.
+
+  **Note:** this circuit is experimental. Its behavior or file format may change
+  in a future firmware version; old SD card recordings may not be compatible.
+
+  The delay is based on a virtual tape with three parallel tracks:
+  1. One continuous CV track (−1…+1, i.e. −10 V…+10 V, 16-bit resolution).
+  2. Eight gate tracks in parallel (values below `0.1` = 0, all others = 1).
+  3. One discrete integer track (0…255).
+
+  When `clock` is patched, all time parameters switch to clock-tick units instead
+  of seconds. In "triggered" mode (`sample` input patched) only one sample is
+  recorded per trigger edge, allowing sequences of up to 256 notes.
+
+  The tape holds a minimum of 5.12 seconds of chaotic CV. Stepped or smooth CVs
+  can be much longer. The tape content can be saved and loaded from the SD card
+  with `save` / `load`; files are named `tapeXXXX.bin` and are shared between
+  `delay` and `recorder` circuits.
+
+inputs:
+  - name: delay
+    abbr: dl
+    valuetype: cv
+    default: 1.0
+    unit: second
+    description: |
+      Delay time in seconds. When `clock` is patched the unit switches to clock
+      ticks (e.g. `delay = 4` means four ticks).
+
+  - name: cvin
+    abbr: ci
+    valuetype: cv
+    default: 0.0
+    min: -1
+    max: 1
+    description: |
+      Continuous input CV in the range −1…+1 (−10 V…+10 V). Signals outside
+      this range are clipped. Internal resolution is 16 bits (1 V ≈ 3200 steps).
+
+  - name: numberin
+    abbr: ni
+    valuetype: integer
+    min: 0
+    max: 255
+    description: |
+      Discrete integer input in the range 0–255. Useful for recording the output
+      of `buttongroup` or S10 switch circuits.
+
+  - name: gatein
+    abbr: gi
+    valuetype: gate
+    array: 8
+    description: |
+      Eight gate inputs (`gatein1`…`gatein8`). Values below `0.1` are treated as
+      0; all others as 1. Appear at the corresponding `gateout` outputs after the
+      configured delay.
+
+  - name: clock
+    abbr: c
+    valuetype: clock
+    description: |
+      When patched, all time parameters (`delay`, `timewindow`) are interpreted
+      in clock ticks instead of seconds.
+
+  - name: sample
+    abbr: sm
+    valuetype: trigger
+    description: |
+      Enables "triggered" mode. In this mode a new CV sample is recorded only on
+      each positive edge of this input, enabling up to 256 steps. The tape no
+      longer tracks continuous slope changes between triggers. Combine with
+      `gatetool` (using `inputgate` and `outputedge`) to capture both note-on and
+      note-off edges.
+
+  - name: timewindow
+    abbr: tw
+    valuetype: cv
+    default: 0.0
+    unit: second
+    description: |
+      In triggered mode, sets a short settling window (in seconds) after each
+      trigger during which the tape continuously adapts the last sample to a
+      changing input CV. Useful when a sequencer's pitch CV takes a few ms to
+      reach its final value after the gate (e.g. `timewindow = 0.005` gives 5 ms).
+
+  - name: bypass
+    abbr: b
+    valuetype: gate
+    default: 0
+    description: |
+      When `on`, copies all input signals directly to the outputs, bypassing the
+      delay entirely.
+
+  - name: save
+    abbr: sv
+    valuetype: trigger
+    description: |
+      A trigger here saves the current tape contents to the SD card as
+      `tapeXXXX.bin`, where XXXX is the value of `filenumber`.
+
+  - name: load
+    abbr: ld
+    valuetype: trigger
+    description: |
+      A trigger here loads a previously saved tape file from the SD card. Use
+      `filenumber` to specify which file to load.
+
+  - name: filenumber
+    abbr: f
+    valuetype: integer
+    default: 1
+    min: 0
+    max: 9999
+    description: |
+      File number for `save` / `load`. If `filenumber = 123` the SD card file
+      is named `tape0123.bin`. These files are shared between all `recorder`
+      and `delay` circuits.
+
+outputs:
+  - name: cvout
+    abbr: co
+    valuetype: cv
+    description: Output of the delayed continuous CV.
+
+  - name: numberout
+    abbr: "no"
+    valuetype: integer
+    description: Output of the delayed discrete integer number.
+
+  - name: gateout
+    abbr: go
+    valuetype: gate
+    array: 8
+    description: |
+      Eight gate outputs (`gateout1`…`gateout8`), each delayed by the configured
+      amount relative to the corresponding `gatein`.
+
+  - name: overflow
+    abbr: ov
+    valuetype: gate
+    description: |
+      Goes high for 0.5 seconds when the internal tape memory is exceeded and
+      data is lost. Wire to an LED to monitor memory status.
+
+examples:
+  - title: Basic half-second CV delay
+    code: |
+      ```ini
+      [delay]
+      cvin = I1
+      cvout = O1
+      delay = 0.5
+      ```
+  - title: Clock-synced delay (4 ticks)
+    code: |
+      ```ini
+      [delay]
+      cvin = I1
+      cvout = O1
+      clock = G1
+      delay = 4
+      ```
+  - title: Gate pattern delay (4 gates shifted by 0.5 s)
+    code: |
+      ```ini
+      [delay]
+      gatein1 = G1
+      gatein2 = G2
+      gatein3 = G3
+      gatein4 = G4
+      gateout1 = G5
+      gateout2 = G6
+      gateout3 = G7
+      gateout4 = G8
+      delay = 0.5
+      ```

@@ -1,0 +1,147 @@
+name: spring
+title: Physical spring simulation
+manual_page: 390
+category: modulation
+description: |
+  A physical simulation of a mass hanging from an ideal spring, producing
+  interesting "bouncing" CV modulation sources.
+
+  Without any parameters the mass starts at position 0.0 with velocity 0.0,
+  accelerates downward until spring force equals gravity, then decelerates back
+  up, resulting in an undamped sine wave. The `position` and `velocity` outputs
+  can be used directly as modulation sources.
+
+  **Friction**: two types are available. `flowresistance` damps proportionally to
+  velocity (like air or liquid resistance — effect decreases as motion slows).
+  `friction` applies a constant damping force independent of speed. Both cause the
+  spring to eventually stop; use `shove` or `reset` to restart it.
+
+  **Shoving**: while `shove` is high, a downward force equal to `shoveforce` is
+  applied to the mass. A negative `shoveforce` lifts the mass upward.
+
+  **Physical model**: all parameters are normalised to 1 (mass = 1 kg,
+  gravity = 1 N/kg, spring constant = 1 N/m). Velocity is clamped to ±10 m/s
+  and position to ±10 m to prevent infinities.
+
+inputs:
+  - name: mass
+    abbr: m
+    valuetype: cv
+    default: 1.0
+    description: |
+      Mass of the object on the spring. A heavier mass stretches the spring further
+      and moves more slowly.
+
+  - name: gravity
+    abbr: g
+    valuetype: cv
+    default: 1.0
+    description: |
+      Gravitational acceleration of the simulated planet. Setting gravity to `0`
+      makes the mass oscillate symmetrically around position 0; you must shove it
+      or set a non-zero `startposition` to get it moving.
+
+  - name: springforce
+    abbr: f
+    valuetype: cv
+    default: 1.0
+    description: |
+      Spring constant: force per metre of elongation. Higher values produce a
+      stiffer spring with faster oscillations.
+
+  - name: flowresistance
+    abbr: fr
+    valuetype: cv
+    default: 0.0
+    description: |
+      Velocity-proportional damping (analogous to air or liquid resistance). A
+      value `> 0` gradually slows the mass; the damping effect decreases as the
+      mass slows down.
+
+  - name: friction
+    abbr: fi
+    valuetype: cv
+    default: 0.0
+    description: |
+      Constant damping force independent of speed. A value `> 0` dampens the
+      oscillation uniformly regardless of how fast the mass is moving.
+
+  - name: speed
+    abbr: sp
+    valuetype: pitch
+    default: 0.0
+    unit: octave
+    description: |
+      Speeds up or slows down perceived time on a 1 V/octave basis. Each `+1V`
+      (`+0.1`) doubles the speed; `-1V` halves it. `0.0` = normal speed.
+
+  - name: shove
+    abbr: sh
+    valuetype: gate
+    default: 0
+    description: |
+      While this gate is high, an extra downward force equal to `shoveforce` is
+      applied to the mass. Useful for periodically re-energising a damped spring.
+
+  - name: shoveforce
+    abbr: sf
+    valuetype: cv
+    default: 1.0
+    description: |
+      Magnitude of the force applied while `shove` is active. Negative values
+      push the mass upward instead of downward.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: |
+      A trigger resets the mass to `startposition` with `startvelocity`, restarting
+      the simulation.
+
+  - name: startvelocity
+    abbr: sv
+    valuetype: cv
+    default: 0.0
+    description: |
+      Initial velocity of the mass at reset or on startup. Positive values move
+      the mass downward; negative values move it upward.
+
+  - name: startposition
+    abbr: spo
+    valuetype: cv
+    default: 0.0
+    description: |
+      Initial position of the mass at reset or on startup. `0.0` is the rest
+      position. A non-zero value is needed to start motion when gravity is `0`.
+
+outputs:
+  - name: velocity
+    abbr: v
+    valuetype: cv
+    description: Current velocity of the mass. Positive = moving downward.
+
+  - name: position
+    abbr: p
+    valuetype: cv
+    description: |
+      Current position (length) of the spring. Negative values indicate that the
+      mass has been pushed above the natural rest position, which is possible under
+      certain modulations.
+
+examples:
+  - title: Undamped spring oscillator
+    code: |
+      ```ini
+      [spring]
+      position = O1
+      velocity = O2
+      ```
+  - title: Decaying sine wave restarted by a trigger
+    code: |
+      ```ini
+      [spring]
+      flowresistance = 0.5
+      reset = I1
+      position = O1
+      velocity = O2
+      ```

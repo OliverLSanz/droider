@@ -1,0 +1,76 @@
+name: flipflop
+title: Simple flip flop
+manual_page: 259
+category: logic
+description: |
+  Implements a flip flop that stores one bit. The state can be manipulated with
+  various triggers: toggle (inverts the state), set (forces 1), reset (forces 0),
+  clear (restores to `startvalue`), and load (sets to `loadvalue`).
+
+  A toggle-only flip flop functions as a clock divider by two.
+
+  Note: the flip flop does not save its state to the SD card and has no presets.
+  For persistent state see `button`.
+
+inputs:
+  - name: toggle
+    abbr: t
+    valuetype: trigger
+    description: A trigger here inverts the state of the flip flop — changes 0 to 1 and 1 to 0.
+
+  - name: set
+    abbr: s
+    valuetype: trigger
+    description: Sets the flip flop to 1.
+
+  - name: reset
+    abbr: r
+    valuetype: trigger
+    description: Sets the flip flop to 0.
+
+  - name: clear
+    abbr: cl
+    valuetype: trigger
+    description: Sets the flip flop to the value defined by `startvalue`.
+
+  - name: startvalue
+    abbr: sv
+    valuetype: gate
+    default: 0
+    description: |
+      The initial value of the flip flop when the patch starts. `clear` also
+      resets the flip flop to this value.
+
+  - name: load
+    abbr: ld
+    valuetype: trigger
+    description: Loads the value defined by `loadvalue` into the flip flop.
+
+  - name: loadvalue
+    abbr: lv
+    valuetype: gate
+    default: 1
+    description: Value to set the flip flop to when `load` is triggered.
+
+outputs:
+  - name: output
+    abbr: o
+    valuetype: gate
+    description: Outputs the current value of the flip flop — either 0 or 1.
+
+examples:
+  - title: Toggle flip flop (clock divider by 2)
+    code: |
+      ```ini
+      [flipflop]
+      toggle = I1
+      output = O1
+      ```
+  - title: SR flip flop (set / reset)
+    code: |
+      ```ini
+      [flipflop]
+      set = I1
+      reset = I2
+      output = O1
+      ```

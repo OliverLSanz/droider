@@ -1,0 +1,185 @@
+name: watch
+title: Watch how a signal evolves
+manual_page: 411
+obsolete: false
+category: utility
+description: |
+  Watches an input signal and outputs various triggers and analysis values
+  reflecting its movements. Four operation modes (usable simultaneously):
+
+  1. **Change detection**: triggers `changed` (or `changedup`/`changeddown`)
+     when the signal moves more than `histeresis` from its last known value.
+
+  2. **Edge detection**: triggers `edge` (or `edgeup`/`edgedown`) when the
+     signal jumps at least `edgesize` in a single loop cycle. Unlike change
+     detection, this does not trigger on slow slopes.
+
+  3. **Strumming / step detection**: triggers `step` (or `stepup`/`stepdown`)
+     each time the signal crosses a `stepsize`-wide compartment boundary.
+     Default `stepsize` of 0.1 corresponds to 1 V/octave semitones.
+
+  4. **Slope analysis**: outputs the current rate of change at `slope` and
+     sets `moving` / `movingup` / `movingdown` when the slope exceeds
+     `threshold`. A slew-limiter (`response`) smooths the slope calculation.
+
+inputs:
+  - name: input
+    abbr: i
+    valuetype: cv
+    default: 0.0
+    description: The signal to watch.
+
+  - name: stepsize
+    abbr: ss
+    valuetype: cv
+    default: 0.1
+    min: 0
+    description: |
+      Width of the compartments used for step detection. E.g. `0.1` slices
+      the CV range into 100 mV compartments. A trigger is sent at `step`
+      each time the input crosses a compartment boundary.
+
+  - name: edgesize
+    abbr: es
+    valuetype: cv
+    default: 0.01
+    min: 0
+    description: |
+      Minimum jump (in one loop cycle) required to detect an edge. Loop
+      cycles are typically 0.1–2.0 ms. Increase to suppress noise-induced
+      spurious edges on external analog signals.
+
+  - name: taptempo
+    abbr: tt
+    valuetype: clock
+    description: |
+      Reference clock. When patched, `slope` is expressed in units per
+      clock tick instead of per second.
+
+  - name: threshold
+    abbr: th
+    valuetype: cv
+    default: 0.01
+    min: 0
+    description: |
+      When the absolute slope exceeds this value, `moving` is set to `1`.
+      `movingup` triggers when slope > `threshold`; `movingdown` when
+      slope < `-threshold`.
+
+  - name: response
+    abbr: r
+    valuetype: fraction
+    default: 0.1
+    min: 0
+    max: 1
+    description: |
+      Controls how quickly the slope filter reacts to changes. Behaves like
+      an exponential slew limiter (same as the `slew` circuit). `0.0` =
+      instant (no filter); `1.0` = infinitely slow (input frozen). Experiment
+      to find the best balance between stability and detection speed.
+
+  - name: histeresis
+    abbr: h
+    valuetype: cv
+    default: 0.01
+    min: 0
+    description: |
+      Minimum difference from the last detected value required to trigger a
+      `changed` event. Increase to avoid spurious triggers from noise on
+      slowly moving signals.
+
+outputs:
+  - name: slope
+    abbr: sl
+    valuetype: cv
+    description: |
+      Current rate of change of the input per second (or per clock tick when
+      `taptempo` is patched). A negative value means the signal is falling.
+
+  - name: moving
+    abbr: m
+    valuetype: gate
+    description: Outputs `1` if the current slope is outside the range `-threshold` … `threshold`.
+
+  - name: movingup
+    abbr: mu
+    valuetype: gate
+    description: Outputs `1` if the current slope is greater than `threshold`.
+
+  - name: movingdown
+    abbr: md
+    valuetype: gate
+    description: Outputs `1` if the current slope is less than `-threshold`.
+
+  - name: step
+    abbr: s
+    valuetype: trigger
+    description: Sends a trigger when the input moves into a different `stepsize` compartment.
+
+  - name: stepup
+    abbr: su
+    valuetype: trigger
+    description: Sends a trigger when the input moves into a higher compartment.
+
+  - name: stepdown
+    abbr: sd
+    valuetype: trigger
+    description: Sends a trigger when the input moves into a lower compartment.
+
+  - name: edge
+    abbr: e
+    valuetype: trigger
+    description: Sends a trigger when an edge (sudden jump) has been detected in the input signal.
+
+  - name: edgeup
+    abbr: eu
+    valuetype: trigger
+    description: Sends a trigger when a positive (upward) edge has been detected.
+
+  - name: edgedown
+    abbr: ed
+    valuetype: trigger
+    description: Sends a trigger when a negative (downward) edge has been detected.
+
+  - name: changed
+    abbr: c
+    valuetype: trigger
+    description: Sends a trigger when the input signal has changed by more than `histeresis`.
+
+  - name: changedup
+    abbr: cu
+    valuetype: trigger
+    description: Sends a trigger when the input signal has changed upwards.
+
+  - name: changeddown
+    abbr: cd
+    valuetype: trigger
+    description: Sends a trigger when the input signal has changed downwards.
+
+examples:
+  - title: Change detection with 10 mV hysteresis
+    code: |
+      ```ini
+      [watch]
+      input      = I1
+      histeresis = 0.01V
+      changed    = G1
+      ```
+  - title: Up/down edge triggers
+    code: |
+      ```ini
+      [watch]
+      input    = _SOME_CV
+      edgesize = 0.01V
+      edgeup   = G1
+      edgedown = G2
+      ```
+  - title: Moving detection with slope threshold
+    code: |
+      ```ini
+      [watch]
+      input      = I1
+      threshold  = 0.1V
+      movingup   = G1
+      movingdown = G2
+      ```
