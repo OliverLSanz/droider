@@ -79,7 +79,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // Auto-indent after [circuit] headers and trigger suggestions after Enter.
     vscode.languages.registerOnTypeFormattingEditProvider(
       DROID_SELECTOR,
-      new DroidEnterProvider(),
+      new DroidEnterProvider(data),
       "\n"
     )
   );
@@ -236,39 +236,72 @@ async function resolveUploadContent(
 }
 
 class DroidEnterProvider implements vscode.OnTypeFormattingEditProvider {
+  constructor(private readonly data: DroidData) {}
+
   provideOnTypeFormattingEdits(
     doc: vscode.TextDocument,
-    pos: vscode.Position
+    pos: vscode.Position,
+    _ch: string,
+    options: vscode.FormattingOptions
   ): vscode.TextEdit[] {
     if (pos.line === 0) return [];
     const prevText = doc.lineAt(pos.line - 1).text;
     const prevTrimmed = prevText.trim();
 
-    const isHeader = /^\[[a-z0-9]+\]$/.test(prevTrimmed);
-    // Incomplete header: [circuit without closing ]
-    const isIncompleteHeader = /^\[[a-z][a-z0-9]*$/.test(prevTrimmed);
-    // Parameter line: starts with whitespace followed by a param assignment
+    // A header names a circuit, megacircuit, or hardware controller. Only
+    // circuits/megacircuits carry an indented parameter body; controller
+    // declarations like [p2b8] stand alone at column 0.
+    const headerMatch = /^\[([a-z][a-z0-9]*)\]?$/.exec(prevTrimmed);
+    const isIncompleteHeader = headerMatch !== null && !prevTrimmed.endsWith("]");
+    const isController =
+      headerMatch !== null && this.data.controllers.has(headerMatch[1]);
+    const indentsBody = headerMatch !== null && !isController;
+
+    // Parameter line: leading whitespace followed by a param assignment.
     const isParam = /^\s+[a-z][a-z0-9_]*\d*\s*=/.test(prevText);
 
-    if (!isHeader && !isIncompleteHeader && !isParam) return [];
+    if (headerMatch === null && !isParam) return [];
 
-    setTimeout(
-      () => vscode.commands.executeCommand("editor.action.triggerSuggest"),
-      100
-    );
+    // Compute the exact indentation the new line should have, then *replace*
+    // whatever the editor's own auto-indent produced. Doing a replace (not an
+    // insert) keeps the result deterministic regardless of how VSCode guessed
+    // the indent from surrounding lines — so no double-indent when a parameter
+    // already sits below the header.
+    const unit = options.insertSpaces ? " ".repeat(options.tabSize) : "\t";
+    let desiredIndent: string;
+    if (indentsBody) {
+      desiredIndent = unit; // first parameter under a circuit/megacircuit
+    } else if (isParam) {
+      desiredIndent = /^\s*/.exec(prevText)![0]; // align with previous parameter
+    } else {
+      desiredIndent = ""; // controller declaration → next line at column 0
+    }
 
     const edits: vscode.TextEdit[] = [];
 
-    // If the header is incomplete, close it by adding ]
+    // If the header is incomplete (no closing ]), close it.
     if (isIncompleteHeader) {
-      const prevLine = pos.line - 1;
-      const endOfPrevLine = doc.lineAt(prevLine).range.end;
-      edits.push(vscode.TextEdit.insert(endOfPrevLine, "]"));
+      edits.push(
+        vscode.TextEdit.insert(doc.lineAt(pos.line - 1).range.end, "]")
+      );
     }
 
-    // After a circuit header (complete or incomplete): insert 4-space indent
-    if (isHeader || isIncompleteHeader) {
-      edits.push(vscode.TextEdit.insert(pos, "    "));
+    // Replace the current line's leading whitespace with the desired indent.
+    const curText = doc.lineAt(pos.line).text;
+    const curIndentLen = /^[ \t]*/.exec(curText)![0].length;
+    edits.push(
+      vscode.TextEdit.replace(
+        new vscode.Range(pos.line, 0, pos.line, curIndentLen),
+        desiredIndent
+      )
+    );
+
+    // Offer completions next, except after a controller (it has no parameters).
+    if (indentsBody || isParam) {
+      setTimeout(
+        () => vscode.commands.executeCommand("editor.action.triggerSuggest"),
+        100
+      );
     }
 
     return edits;

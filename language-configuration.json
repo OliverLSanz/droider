@@ -8,13 +8,5 @@
   "autoClosingPairs": [
     ["[", "]"],
     ["\"", "\""]
-  ],
-  "onEnterRules": [
-    {
-      "beforeText": "^\\s*\\[[a-z][a-z0-9]*$",
-      "action": {
-        "indentAction": "indent"
-      }
-    }
   ]
 }

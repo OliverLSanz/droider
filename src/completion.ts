@@ -175,19 +175,16 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
       const it = new vscode.CompletionItem(c.type, vscode.CompletionItemKind.Module);
       it.detail = `Controller · ${c.title}`;
       it.documentation = new vscode.MarkdownString(c.description);
-      it.insertText = new vscode.SnippetString(`${c.type}]\n    $0`);
-      
+      // Controllers/hardware declarations have no indented parameter body, so we
+      // just close the bracket and drop to a fresh column-0 line.
+      it.insertText = new vscode.SnippetString(`${c.type}]\n$0`);
+
       // If there's an auto-closing bracket, extend the range to replace it
       if (hasClosingBracket) {
         const endPos = pos.translate(0, closingBracketMatch![0].length);
         it.range = new vscode.Range(pos, endPos);
       }
-      
-      // Trigger suggestions after insertion
-      it.command = {
-        command: "editor.action.triggerSuggest",
-        title: "Trigger Suggestions"
-      };
+
       items.push(it);
     }
     return items;
