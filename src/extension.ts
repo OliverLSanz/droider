@@ -154,19 +154,31 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Hardware view: visual representation of controllers
+  // Hardware view: visual representation of controllers. The serializer revives
+  // an open hardware pane after a window reload (otherwise it comes back blank).
   hardwareView = new HardwareViewProvider(context, data);
   context.subscriptions.push(
     vscode.commands.registerCommand("droid.showHardwareView", () => {
       hardwareView?.show();
+    }),
+    vscode.window.registerWebviewPanelSerializer(HardwareViewProvider.viewType, {
+      async deserializeWebviewPanel(panel, state) {
+        await hardwareView?.restore(panel, state);
+      },
     })
   );
 
-  // Circuit graph: force-directed view of the interconnected circuits.
+  // Circuit graph: force-directed view of the interconnected circuits. The
+  // serializer revives an open graph pane after a window reload.
   circuitGraph = new CircuitGraphProvider(context, data, registry);
   context.subscriptions.push(
     vscode.commands.registerCommand("droid.showCircuitGraph", () => {
       circuitGraph?.show();
+    }),
+    vscode.window.registerWebviewPanelSerializer(CircuitGraphProvider.viewType, {
+      async deserializeWebviewPanel(panel, state) {
+        await circuitGraph?.restore(panel, state);
+      },
     })
   );
 }

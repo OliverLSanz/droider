@@ -3,7 +3,7 @@
 - [x] BUG: The labels with capsule appear on top of tooltips, hiding them. Tooltips should be on top of everything.
 - [x] BUG: Certain elements like number labels of buttons to the right of the button triggerting the tooltip show on top of the tooltip.
 - [x] BUG: Tooltips at the left elements of the master droid appear partly outside of the window and thus cannot be read.
-- [ ] IMPROVEMENT: I want open panes (hardware and grapth view) to load on a vindow reload: now it only shows a empty pane.
+- [x] IMPROVEMENT: I want open panes (hardware and grapth view) to load on a vindow reload: now it only shows a empty pane.
 - [x] Infraestructura de azúcar sintáctico: 3 tipos de fichero — `.ini` (sin azúcar, rechaza el azúcar
   como errores), `.droider` (acepta azúcar), `.blueprint` (define megacircuitos). Linter, autocompletado,
   hover, semantic y rainbow-cables son conscientes del modo. Al pulsar "subir a droid" desde un `.droider`

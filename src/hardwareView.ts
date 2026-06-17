@@ -198,7 +198,11 @@ export class PatchParser {
  * Manages the hardware view webview panel.
  */
 export class HardwareViewProvider {
+  static readonly viewType = "droidHardwareView";
+
   private panel: vscode.WebviewPanel | undefined;
+  private document: vscode.TextDocument | undefined;
+  private changeSub: vscode.Disposable | undefined;
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -215,37 +219,80 @@ export class HardwareViewProvider {
     if (this.panel) {
       this.panel.reveal(vscode.ViewColumn.Beside);
     } else {
-      this.panel = vscode.window.createWebviewPanel(
-        "droidHardwareView",
-        "DROID Hardware",
-        vscode.ViewColumn.Beside,
-        { enableScripts: true }
-      );
-
-      this.panel.onDidDispose(() => {
-        this.panel = undefined;
-      });
-
-      // Handle messages from the webview
-      this.panel.webview.onDidReceiveMessage(
-        async (message) => {
-          if (message.command === 'copy') {
-            await vscode.env.clipboard.writeText(message.text);
-          }
-        }
+      this.adopt(
+        vscode.window.createWebviewPanel(
+          HardwareViewProvider.viewType,
+          "DROID Hardware",
+          vscode.ViewColumn.Beside,
+          { enableScripts: true, retainContextWhenHidden: true }
+        )
       );
     }
 
-    this.updateContent(editor.document);
+    this.setDocument(editor.document);
+  }
 
-    // Update when the document changes
-    const disposable = vscode.workspace.onDidChangeTextDocument((e) => {
-      if (e.document === editor.document && this.panel) {
-        this.updateContent(e.document);
+  /**
+   * Revive a panel restored by VSCode after a window reload. The originating
+   * document is recovered from the persisted webview state (its URI); if that
+   * fails we fall back to any open DROID patch so the pane is never left blank.
+   */
+  async restore(panel: vscode.WebviewPanel, state: unknown) {
+    this.adopt(panel);
+    const document = await this.documentFromState(state);
+    if (document) this.setDocument(document);
+  }
+
+  /** Wire up a (new or revived) panel: lifecycle, messages, live updates. */
+  private adopt(panel: vscode.WebviewPanel) {
+    this.panel = panel;
+    // A revived panel comes back with scripts disabled; re-enable them.
+    panel.webview.options = { enableScripts: true };
+
+    panel.onDidDispose(() => {
+      this.panel = undefined;
+      this.document = undefined;
+      this.changeSub?.dispose();
+      this.changeSub = undefined;
+    });
+
+    // Handle messages from the webview
+    panel.webview.onDidReceiveMessage(async (message) => {
+      if (message.command === "copy") {
+        await vscode.env.clipboard.writeText(message.text);
       }
     });
 
-    this.panel.onDidDispose(() => disposable.dispose());
+    // Update when the source document changes
+    this.changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
+      if (this.document && e.document === this.document && this.panel) {
+        this.updateContent(e.document);
+      }
+    });
+  }
+
+  private setDocument(document: vscode.TextDocument) {
+    this.document = document;
+    this.updateContent(document);
+  }
+
+  private async documentFromState(
+    state: unknown
+  ): Promise<vscode.TextDocument | undefined> {
+    const uri =
+      state && typeof (state as { uri?: unknown }).uri === "string"
+        ? (state as { uri: string }).uri
+        : undefined;
+    if (uri) {
+      try {
+        return await vscode.workspace.openTextDocument(vscode.Uri.parse(uri));
+      } catch {
+        /* fall through to a sensible default */
+      }
+    }
+    const active = vscode.window.activeTextEditor;
+    if (active && active.document.languageId === "droid") return active.document;
+    return vscode.workspace.textDocuments.find((d) => d.languageId === "droid");
   }
 
   private updateContent(document: vscode.TextDocument) {
@@ -254,7 +301,14 @@ export class HardwareViewProvider {
     const parser = new PatchParser(this.data);
     const { controllers, master, masterLabels, g8, x7 } = parser.parse(document.getText());
 
-    this.panel.webview.html = this.generateHTML(controllers, master, masterLabels, g8, x7);
+    this.panel.webview.html = this.generateHTML(
+      controllers,
+      master,
+      masterLabels,
+      g8,
+      x7,
+      document.uri.toString()
+    );
   }
 
   private generateHTML(
@@ -262,7 +316,8 @@ export class HardwareViewProvider {
     masterType: string,
     masterLabels: LabelInfo[],
     g8: G8Instance[],
-    x7: X7Info | null
+    x7: X7Info | null,
+    docUri: string
   ): string {
     const masterHTML =
       masterType === "master18"
@@ -1465,6 +1520,9 @@ export class HardwareViewProvider {
     <script>
         (function() {
             const vscode = acquireVsCodeApi();
+            // Persist the source document URI so the pane can be revived with
+            // its content after a window reload (WebviewPanelSerializer).
+            vscode.setState(${JSON.stringify({ uri: docUri })});
             const notification = document.getElementById('copyNotification');
             let hideTimeout;
 

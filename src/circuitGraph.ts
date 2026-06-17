@@ -443,8 +443,11 @@ function push<T>(map: Map<string, T[]>, key: string, value: T): void {
  * Manages the circuit graph webview panel (mirrors HardwareViewProvider).
  */
 export class CircuitGraphProvider {
+  static readonly viewType = "droidCircuitGraph";
+
   private panel: vscode.WebviewPanel | undefined;
   private document: vscode.TextDocument | undefined;
+  private subs: vscode.Disposable[] = [];
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -460,45 +463,99 @@ export class CircuitGraphProvider {
       vscode.window.showInformationMessage("Open a DROID patch (.ini or .droider) first");
       return;
     }
-    this.document = editor.document;
 
     if (this.panel) {
       this.panel.reveal(vscode.ViewColumn.Beside);
     } else {
-      this.panel = vscode.window.createWebviewPanel(
-        "droidCircuitGraph",
-        "DROID Circuit Graph",
-        vscode.ViewColumn.Beside,
-        { enableScripts: true }
+      this.adopt(
+        vscode.window.createWebviewPanel(
+          CircuitGraphProvider.viewType,
+          "DROID Circuit Graph",
+          vscode.ViewColumn.Beside,
+          { enableScripts: true, retainContextWhenHidden: true }
+        )
       );
+    }
 
-      this.panel.onDidDispose(() => {
-        this.panel = undefined;
-      });
+    this.setDocument(editor.document);
+  }
 
-      this.panel.webview.onDidReceiveMessage((message) => {
+  /**
+   * Revive a panel restored by VSCode after a window reload. The originating
+   * document is recovered from the persisted webview state (its URI); if that
+   * fails we fall back to any open DROID patch so the pane is never left blank.
+   */
+  async restore(panel: vscode.WebviewPanel, state: unknown) {
+    this.adopt(panel);
+    const document = await this.documentFromState(state);
+    if (document) this.setDocument(document);
+  }
+
+  /** Wire up a (new or revived) panel: lifecycle, messages, live updates. */
+  private adopt(panel: vscode.WebviewPanel) {
+    this.panel = panel;
+    // A revived panel comes back with scripts disabled; re-enable them.
+    panel.webview.options = { enableScripts: true };
+
+    panel.onDidDispose(() => {
+      this.panel = undefined;
+      this.document = undefined;
+      this.subs.forEach((s) => s.dispose());
+      this.subs = [];
+    });
+
+    this.subs.push(
+      panel.webview.onDidReceiveMessage((message) => {
         if (message.command === "reveal" && typeof message.line === "number") {
           this.revealLine(message.line);
         }
-      });
+      })
+    );
 
-      const sub = vscode.workspace.onDidChangeTextDocument((e) => {
-        if (e.document === this.document && this.panel) {
+    this.subs.push(
+      vscode.workspace.onDidChangeTextDocument((e) => {
+        if (this.document && e.document === this.document && this.panel) {
           this.updateContent(e.document);
         }
-      });
-      this.panel.onDidDispose(() => sub.dispose());
+      })
+    );
 
-      // A megacircuit edit changes how instances render: rebuild on registry change.
-      if (this.registry) {
-        const bpSub = this.registry.onDidChange(() => {
+    // A megacircuit edit changes how instances render: rebuild on registry change.
+    if (this.registry) {
+      this.subs.push(
+        this.registry.onDidChange(() => {
           if (this.document && this.panel) this.updateContent(this.document);
-        });
-        this.panel.onDidDispose(() => bpSub.dispose());
+        })
+      );
+    }
+  }
+
+  private setDocument(document: vscode.TextDocument) {
+    this.document = document;
+    this.updateContent(document);
+  }
+
+  private async documentFromState(
+    state: unknown
+  ): Promise<vscode.TextDocument | undefined> {
+    const uri =
+      state && typeof (state as { uri?: unknown }).uri === "string"
+        ? (state as { uri: string }).uri
+        : undefined;
+    if (uri) {
+      try {
+        return await vscode.workspace.openTextDocument(vscode.Uri.parse(uri));
+      } catch {
+        /* fall through to a sensible default */
       }
     }
-
-    this.updateContent(editor.document);
+    const active = vscode.window.activeTextEditor;
+    if (active && ["droid", "droider"].includes(active.document.languageId)) {
+      return active.document;
+    }
+    return vscode.workspace.textDocuments.find((d) =>
+      ["droid", "droider"].includes(d.languageId)
+    );
   }
 
   private revealLine(line: number) {
@@ -520,15 +577,18 @@ export class CircuitGraphProvider {
       this.data,
       this.registry?.all()
     ).build(document.getText());
-    this.panel.webview.html = this.generateHTML(graph);
+    this.panel.webview.html = this.generateHTML(graph, document.uri.toString());
   }
 
-  private generateHTML(graph: Graph): string {
+  private generateHTML(graph: Graph, docUri: string): string {
     const json = JSON.stringify(graph).replace(/</g, "\\u003c");
+    const uri = JSON.stringify(docUri).replace(/</g, "\\u003c");
     return (
       HTML_HEAD +
       "<script>window.__GRAPH__=" +
       json +
+      ";window.__DOC_URI__=" +
+      uri +
       ";</script>\n<script>" +
       CLIENT_JS +
       "</script>\n" +
@@ -629,6 +689,9 @@ const HTML_TAIL = `</body>
 const CLIENT_JS = `
 (function(){
   var vscode = acquireVsCodeApi();
+  // Persist the source document URI so the pane can be revived with its
+  // content after a window reload (WebviewPanelSerializer).
+  try { vscode.setState({ uri: window.__DOC_URI__ }); } catch (e) {}
   var DATA = window.__GRAPH__ || { nodes: [], edges: [] };
   var SVG_NS = "http://www.w3.org/2000/svg";
   var svg = document.getElementById("graph");

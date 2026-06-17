@@ -14,7 +14,9 @@
   "activationEvents": [
     "onLanguage:droid",
     "onLanguage:droider",
-    "onLanguage:droid-blueprint"
+    "onLanguage:droid-blueprint",
+    "onWebviewPanel:droidHardwareView",
+    "onWebviewPanel:droidCircuitGraph"
   ],
   "main": "./out/extension.js",
   "bin": {
