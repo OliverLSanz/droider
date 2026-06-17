@@ -31,6 +31,39 @@ export interface LabelSection {
   controller?: number;
 }
 
+/** Forge label legend for one register: short [label] and/or long description. */
+export interface LabelInfo {
+  label?: string;
+  description?: string;
+}
+
+/**
+ * Parses the Droid Forge label legend at the top of a patch into a map from
+ * register (I1, O2, P3.1...) to its short label and/or description. Empty if
+ * the patch has no `# LABELS:` header. Pure (VSCode-free).
+ */
+export function parseLabelLegend(text: string): Map<string, LabelInfo> {
+  const lines = text.split(/\r?\n/);
+  const end = labelRegion(lines);
+  const out = new Map<string, LabelInfo>();
+  if (end < 0) return out;
+  for (let i = 0; i < end; i++) {
+    const raw = lines[i];
+    // Skip section headers (they would otherwise match ENTRY, e.g. "INPUTS:").
+    if (
+      SEC_LABELS.test(raw) ||
+      SEC_INPUTS.test(raw) ||
+      SEC_OUTPUTS.test(raw) ||
+      SEC_CONTROLLER.test(raw)
+    )
+      continue;
+    const m = raw.match(ENTRY);
+    if (!m) continue;
+    out.set(m[1], { label: m[2] || undefined, description: m[3] || undefined });
+  }
+  return out;
+}
+
 /**
  * End (exclusive) of the label region: the leading block of comments and blank
  * lines. -1 if there is no `# LABELS:` header (then there is no legend).

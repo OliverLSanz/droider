@@ -163,7 +163,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   // Circuit graph: force-directed view of the interconnected circuits.
-  circuitGraph = new CircuitGraphProvider(context, data);
+  circuitGraph = new CircuitGraphProvider(context, data, registry);
   context.subscriptions.push(
     vscode.commands.registerCommand("droid.showCircuitGraph", () => {
       circuitGraph?.show();

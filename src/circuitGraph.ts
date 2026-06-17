@@ -11,6 +11,9 @@
 import * as vscode from "vscode";
 import { DroidData } from "./data";
 import { colorForCable } from "./cables";
+import { Blueprint } from "./blueprints";
+import { parseLabelLegend } from "./labels";
+import { BlueprintRegistry } from "./blueprintRegistry";
 
 const HEADER_RE = /^\[([a-z0-9]+)\]$/;
 
@@ -59,6 +62,8 @@ interface GraphNode {
   // hardware nodes
   label?: string; // register name (I1, O2, P3.1...)
   hwColor?: string;
+  flabel?: string; // Forge short label from the file's legend (e.g. "TRIG")
+  fdesc?: string; // Forge long description from the file's legend
 }
 
 interface GraphEdge {
@@ -182,7 +187,11 @@ function classifyOperand(
  * can be unit-tested independently of the webview.
  */
 export class CircuitGraphBuilder {
-  constructor(private data: DroidData) {}
+  private blueprints: Map<string, Blueprint>;
+
+  constructor(private data: DroidData, blueprints?: Map<string, Blueprint>) {
+    this.blueprints = blueprints ?? new Map();
+  }
 
   build(text: string): Graph {
     const lines = text.split(/\r?\n/);
@@ -191,6 +200,7 @@ export class CircuitGraphBuilder {
       string,
       { direction: string; description?: string }
     >;
+    const legend = parseLabelLegend(text);
     const instances = this.parseCircuits(lines);
 
     const nodes: GraphNode[] = [];
@@ -288,11 +298,17 @@ export class CircuitGraphBuilder {
       }
 
       const circuit = this.data.circuits.get(inst.name);
+      const bp = this.blueprints.get(inst.name);
+      const title = circuit
+        ? circuit.title
+        : bp
+        ? bp.doc?.split("\n")[0] ?? "Megacircuit"
+        : "Unknown circuit";
       addNode({
         id: nid,
         kind: "circuit",
         name: inst.name,
-        title: circuit ? circuit.title : "Unknown circuit",
+        title,
         color: colorForCircuit(inst.name),
         line: inst.headerLine,
         inputs,
@@ -300,14 +316,18 @@ export class CircuitGraphBuilder {
       });
     }
 
-    // Hardware nodes (one per referenced register).
+    // Hardware nodes (one per referenced register), enriched with the file's
+    // Forge label legend so a hover can show the documented label/description.
     for (const [reg, kind] of hwUsed) {
+      const li = legend.get(reg);
       addNode({
         id: "hw_" + reg,
         kind,
         label: reg,
         hwColor: kind === "hwout" ? HW_OUT_COLOR : HW_IN_COLOR,
-        title: validRegs.get(reg)?.description ?? "Hardware register",
+        title: li?.description ?? validRegs.get(reg)?.description ?? "Hardware register",
+        flabel: li?.label,
+        fdesc: li?.description,
       });
     }
 
@@ -366,7 +386,7 @@ export class CircuitGraphBuilder {
         current = {
           index,
           name,
-          known: this.data.circuits.has(name),
+          known: this.data.circuits.has(name) || this.blueprints.has(name),
           headerLine: i,
           params: [],
         };
@@ -389,15 +409,24 @@ export class CircuitGraphBuilder {
   }
 
   /**
-   * Role of a parameter (input/output). For known circuits this comes from the
-   * YAML data; for unknown circuits we fall back to the DROID naming convention
-   * (parameters named "input..." or "output..." behave accordingly).
+   * Role of a parameter (input/output). Documented circuits use the YAML data;
+   * megacircuit instances use their blueprint's port interface (so they render
+   * as ordinary nodes); unknown circuits fall back to the DROID naming
+   * convention (parameters named "input..." / "output..." behave accordingly).
    */
   private roleOf(
     inst: CircuitInstance,
     param: string
   ): "input" | "output" | undefined {
-    if (inst.known) return this.data.paramRole(inst.name, param);
+    if (this.data.circuits.has(inst.name)) {
+      return this.data.paramRole(inst.name, param);
+    }
+    const bp = this.blueprints.get(inst.name);
+    if (bp) {
+      if (bp.inputs.some((p) => p.name.toLowerCase() === param)) return "input";
+      if (bp.outputs.some((p) => p.name.toLowerCase() === param)) return "output";
+      return undefined;
+    }
     if (/^output/.test(param)) return "output";
     if (/^input/.test(param)) return "input";
     return undefined;
@@ -419,13 +448,16 @@ export class CircuitGraphProvider {
 
   constructor(
     private context: vscode.ExtensionContext,
-    private data: DroidData
+    private data: DroidData,
+    private registry?: BlueprintRegistry
   ) {}
 
   show() {
     const editor = vscode.window.activeTextEditor;
-    if (!editor || editor.document.languageId !== "droid") {
-      vscode.window.showInformationMessage("Open a DROID patch file first");
+    // .ini patches and .droider patches (which may use megacircuits) are both
+    // shown; megacircuit instances render as ordinary circuit nodes.
+    if (!editor || !["droid", "droider"].includes(editor.document.languageId)) {
+      vscode.window.showInformationMessage("Open a DROID patch (.ini or .droider) first");
       return;
     }
     this.document = editor.document;
@@ -456,6 +488,14 @@ export class CircuitGraphProvider {
         }
       });
       this.panel.onDidDispose(() => sub.dispose());
+
+      // A megacircuit edit changes how instances render: rebuild on registry change.
+      if (this.registry) {
+        const bpSub = this.registry.onDidChange(() => {
+          if (this.document && this.panel) this.updateContent(this.document);
+        });
+        this.panel.onDidDispose(() => bpSub.dispose());
+      }
     }
 
     this.updateContent(editor.document);
@@ -476,7 +516,10 @@ export class CircuitGraphProvider {
 
   private updateContent(document: vscode.TextDocument) {
     if (!this.panel) return;
-    const graph = new CircuitGraphBuilder(this.data).build(document.getText());
+    const graph = new CircuitGraphBuilder(
+      this.data,
+      this.registry?.all()
+    ).build(document.getText());
     this.panel.webview.html = this.generateHTML(graph);
   }
 
@@ -547,6 +590,18 @@ const HTML_HEAD = `<!DOCTYPE html>
   .hw-label { font-size: 11.5px; font-weight: 600; pointer-events: none; dominant-baseline: middle; text-anchor: middle; }
   .edge-path { fill: none; pointer-events: stroke; cursor: pointer; }
   .wire-label { font-size: 10.5px; font-weight: 600; dominant-baseline: middle; text-anchor: middle; pointer-events: none; }
+  #tooltip {
+    position: fixed; z-index: 20; max-width: 280px; display: none;
+    background: #0c0c0e; border: 1px solid #555; border-radius: 6px;
+    padding: 7px 9px; font-size: 12px; color: #ddd; pointer-events: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5); line-height: 1.35;
+  }
+  #tooltip .tt-label {
+    display: inline-block; font-weight: 700; color: #161616;
+    background: #d4b896; border-radius: 3px; padding: 1px 6px; margin-bottom: 4px;
+  }
+  #tooltip .tt-reg { color: #888; font-weight: 600; margin-left: 6px; }
+  #tooltip .tt-desc { color: #cfcfcf; }
 </style>
 </head>
 <body>
@@ -562,6 +617,7 @@ const HTML_HEAD = `<!DOCTYPE html>
   <span id="count" style="margin-left:auto; opacity:0.6"></span>
 </div>
 <div id="empty" style="display:none">No circuits found in this patch.</div>
+<div id="tooltip"></div>
 <svg id="graph"><g id="viewport"></g></svg>
 `;
 
@@ -579,6 +635,7 @@ const CLIENT_JS = `
   var viewport = document.getElementById("viewport");
   var toggleHw = document.getElementById("toggle-hw");
   var toggleNames = document.getElementById("toggle-names");
+  var tooltip = document.getElementById("tooltip");
 
   document.getElementById("empty").style.display =
     DATA.nodes.length ? "none" : "block";
@@ -905,6 +962,34 @@ const CLIENT_JS = `
   function clearLabels(){
     if (labelLayer) while (labelLayer.firstChild) labelLayer.removeChild(labelLayer.firstChild);
   }
+
+  // ---- hover tooltip: documented label + description of an I/O/control jack,
+  //      taken from the file's Forge label legend (only when present) ----
+  function esc(s){
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+  function showTooltip(n, ev){
+    if (!n.flabel && !n.fdesc) return;
+    var html = "";
+    if (n.flabel)
+      html += '<span class="tt-label">' + esc(n.flabel) + '</span>' +
+              '<span class="tt-reg">' + esc(n.label) + '</span>';
+    else
+      html += '<span class="tt-reg" style="margin-left:0">' + esc(n.label) + '</span>';
+    if (n.fdesc) html += '<div class="tt-desc">' + esc(n.fdesc) + '</div>';
+    tooltip.innerHTML = html;
+    tooltip.style.display = "block";
+    moveTooltip(ev);
+  }
+  function moveTooltip(ev){
+    var r = tooltip.getBoundingClientRect();
+    var x = ev.clientX + 14, y = ev.clientY + 14;
+    if (x + r.width > window.innerWidth) x = ev.clientX - r.width - 14;
+    if (y + r.height > window.innerHeight) y = ev.clientY - r.height - 14;
+    tooltip.style.left = x + "px";
+    tooltip.style.top = y + "px";
+  }
+  function hideTooltip(){ tooltip.style.display = "none"; }
   // Reveal the names of every cable touching a circuit, placed just outside the
   // relevant pin (in the gutter where the wire runs, so nothing overlaps).
   function labelNode(n){
@@ -947,9 +1032,13 @@ const CLIENT_JS = `
     viewport.appendChild(nodeLayer);
     nodes.forEach(function(n){
       var g = el("g", { "class": "node" });
-      var title = el("title", {});
-      title.textContent = n.title || n.label || n.name;
-      g.appendChild(title);
+      // Native <title> as a fallback, except where a richer custom tooltip
+      // (the documented label/description) will take over, to avoid doubling.
+      if (!n.flabel && !n.fdesc){
+        var title = el("title", {});
+        title.textContent = n.title || n.label || n.name;
+        g.appendChild(title);
+      }
       if (n.kind === "circuit") renderCircuit(g, n);
       else renderHardware(g, n);
       attachInteraction(g, n);
@@ -1137,11 +1226,14 @@ const CLIENT_JS = `
 
   // ---- interaction: hover, drag, click-to-reveal ----
   function attachInteraction(g, n){
-    g.addEventListener("mouseenter", function(){ highlight(n); labelNode(n); });
-    g.addEventListener("mouseleave", function(){ clearHighlight(); clearLabels(); });
+    g.addEventListener("mouseenter", function(ev){ highlight(n); labelNode(n); showTooltip(n, ev); });
+    g.addEventListener("mousemove", function(ev){
+      if (tooltip.style.display === "block") moveTooltip(ev);
+    });
+    g.addEventListener("mouseleave", function(){ clearHighlight(); clearLabels(); hideTooltip(); });
     g.addEventListener("pointerdown", function(ev){
       ev.stopPropagation();
-      clearLabels();
+      clearLabels(); hideTooltip();
       g.setPointerCapture(ev.pointerId);
       var moved = false;
       function move(e){
@@ -1175,6 +1267,7 @@ const CLIENT_JS = `
   var panning = false, panStart = null;
   svg.addEventListener("pointerdown", function(ev){
     panning = true;
+    hideTooltip();
     panStart = { x: ev.clientX - tx, y: ev.clientY - ty };
   });
   svg.addEventListener("pointermove", function(ev){
@@ -1186,16 +1279,22 @@ const CLIENT_JS = `
   svg.addEventListener("pointerup", function(){ panning = false; });
   svg.addEventListener("pointerleave", function(){ panning = false; });
 
-  // zoom with wheel, centered on the cursor
+  // Trackpad/wheel: pinch (reported as ctrl+wheel) zooms centered on the
+  // cursor; a plain two-finger scroll pans, following the gesture in both axes.
   svg.addEventListener("wheel", function(ev){
     ev.preventDefault();
-    var rect = svg.getBoundingClientRect();
-    var mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
-    var factor = ev.deltaY < 0 ? 1.1 : 1/1.1;
-    var ns = Math.min(4, Math.max(0.1, scale * factor));
-    tx = mx - (mx - tx) * (ns / scale);
-    ty = my - (my - ty) * (ns / scale);
-    scale = ns;
+    if (ev.ctrlKey){
+      var rect = svg.getBoundingClientRect();
+      var mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+      var factor = Math.pow(1.01, -ev.deltaY);
+      var ns = Math.min(4, Math.max(0.1, scale * factor));
+      tx = mx - (mx - tx) * (ns / scale);
+      ty = my - (my - ty) * (ns / scale);
+      scale = ns;
+    } else {
+      tx -= ev.deltaX;
+      ty -= ev.deltaY;
+    }
     applyTransform();
   }, { passive: false });
 
