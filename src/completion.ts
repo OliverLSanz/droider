@@ -4,7 +4,7 @@
 //   - right-hand side of '=' -> registers (master + controllers) and cables in use
 
 import * as vscode from "vscode";
-import { DroidData } from "./data";
+import { DroidData, ParamSpec } from "./data";
 import { cablesInDocument, cablesUsedAsOutputs, contextAtLine, currentBlockHeader, paramsUsedInBlock } from "./context";
 import { LabelSection, labelSectionAtLine } from "./labels";
 import { BlueprintRegistry } from "./blueprintRegistry";
@@ -201,19 +201,9 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
     if (!circuit) return [];
     const items: vscode.CompletionItem[] = [];
     const make = (params: typeof circuit.inputs, role: "input" | "output") => {
-      for (const p of params ?? []) {
-        if (!p.array) {
-          if (used.has(p.name)) continue;
-        } else {
-          // Array param: only hide if every numbered slot is already used.
-          const allUsed = Array.from(
-            { length: p.array },
-            (_, i) => `${p.name}${i + 1}`
-          ).every((slot) => used.has(slot));
-          if (allUsed) continue;
-        }
+      const emit = (label: string, p: ParamSpec) => {
         const it = new vscode.CompletionItem(
-          p.name,
+          label,
           role === "input"
             ? vscode.CompletionItemKind.Field
             : vscode.CompletionItemKind.Property
@@ -222,8 +212,24 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
         const def = p.default !== undefined ? ` · def: ${p.default}` : "";
         it.detail = `${role}${p.valuetype ? " " + p.valuetype : ""}${abbr}${def}`;
         it.documentation = new vscode.MarkdownString(p.description);
-        it.insertText = `${p.name} = `;
+        it.insertText = `${label} = `;
         items.push(it);
+      };
+      for (const p of params ?? []) {
+        if (!p.array) {
+          if (used.has(p.name)) continue;
+          emit(p.name, p);
+        } else {
+          // Array param: offer each numbered slot (input1..inputN) that isn't
+          // already used. The linter accepts both the numbered slots and the
+          // bare base name (an alias for slot 1), so offer the base name too.
+          if (!used.has(p.name)) emit(p.name, p);
+          for (let i = 1; i <= p.array; i++) {
+            const slot = `${p.name}${i}`;
+            if (used.has(slot)) continue;
+            emit(slot, p);
+          }
+        }
       }
     };
     make(circuit.inputs, "input");
