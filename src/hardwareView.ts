@@ -1467,7 +1467,34 @@ export class HardwareViewProvider {
             const vscode = acquireVsCodeApi();
             const notification = document.getElementById('copyNotification');
             let hideTimeout;
-            
+
+            // Tooltips are centered over their element (left: 50%; translateX(-50%)).
+            // For elements near the window edges that centred position overflows the
+            // viewport and the tooltip gets clipped. On hover, measure the tooltip and
+            // shift it horizontally so it stays fully inside the visible window.
+            const MARGIN = 6;
+            function positionTooltip(tooltip) {
+                // Reset to the default centred position before measuring.
+                tooltip.style.transform = 'translateX(-50%)';
+                const rect = tooltip.getBoundingClientRect();
+                let shift = 0;
+                if (rect.left < MARGIN) {
+                    shift = MARGIN - rect.left;
+                } else if (rect.right > window.innerWidth - MARGIN) {
+                    shift = (window.innerWidth - MARGIN) - rect.right;
+                }
+                if (shift !== 0) {
+                    tooltip.style.transform = 'translateX(-50%) translateX(' + shift + 'px)';
+                }
+            }
+
+            document.addEventListener('mouseover', function(e) {
+                const element = e.target.closest('.element, .pot-container');
+                if (!element) return;
+                const tooltip = element.querySelector(':scope > .tooltip');
+                if (tooltip) positionTooltip(tooltip);
+            });
+
             document.addEventListener('click', function(e) {
                 const element = e.target.closest('.element');
                 if (element && element.dataset.register) {
