@@ -1,0 +1,28 @@
+# Demo .droider patch using megacircuits.
+# Build it with "DROID: Build .droider to dist/*.ini" -> dist/demo.ini
+
+# Two independent mix2 instances (their private cables must not collide).
+[mix2]
+    a     = I1
+    b     = I2
+    level = 0.5
+    out   = O1
+
+# "level" omitted -> uses its default (1).
+[mix2]
+    a   = I3
+    b   = I4
+    out = O2
+
+# A compound expression on an input is materialized into its own copy.
+[mix2]
+    a     = I5 + I6
+    b     = I7
+    level = 0.3
+    out   = O3
+
+# A nested megacircuit (nested -> mix2) expands recursively.
+[nested]
+    x = I8
+    y = 2V
+    z = O4

@@ -8,12 +8,22 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
+// Languages whose documents can be written to a DROID card. `.droider` is
+// expanded to plain `.ini` first (see resolveContent).
+const UPLOADABLE_LANGS = new Set(["droid", "droider"]);
+
 export class DroidCardManager {
   private statusBarItem: vscode.StatusBarItem;
   private watcher: fs.FSWatcher | undefined;
   private detectedCardPath: string | undefined;
 
-  constructor() {
+  /**
+   * @param resolveContent Produces the exact text to write to the card for a
+   * document (expanding megacircuits for `.droider`).
+   */
+  constructor(
+    private resolveContent: (doc: vscode.TextDocument) => Promise<string>
+  ) {
     // Create status bar item (on the right side)
     this.statusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Right,
@@ -137,13 +147,27 @@ export class DroidCardManager {
 
   private updateStatusBar(found: boolean, cardPath: string | undefined) {
     const editor = vscode.window.activeTextEditor;
-    const isDroidFile = editor?.document.languageId === "droid";
+    const lang = editor?.document.languageId ?? "";
+    const isUploadable = UPLOADABLE_LANGS.has(lang);
+    const isDroider = lang === "droider";
 
-    if (found && isDroidFile && cardPath) {
+    if (found && isUploadable && cardPath) {
+      // Card present + a patch open: write (expanding .droider) and eject.
+      this.statusBarItem.command = "droid.writeAndEject";
       this.statusBarItem.text = "$(cloud-upload) Write to DROID";
-      this.statusBarItem.tooltip = `Write patch to ${path.basename(cardPath)} and eject`;
+      this.statusBarItem.tooltip = isDroider
+        ? `Build dist/ and write the expanded patch to ${path.basename(cardPath)}, then eject`
+        : `Write patch to ${path.basename(cardPath)} and eject`;
       this.statusBarItem.show();
-    } else if (found && !isDroidFile) {
+    } else if (!found && isDroider) {
+      // No card, but a .droider is open: let the user generate dist/ to validate.
+      this.statusBarItem.command = "droid.buildDist";
+      this.statusBarItem.text = "$(package) Build to dist";
+      this.statusBarItem.tooltip =
+        "Expand megacircuits and write dist/<name>.ini (no DROID card needed)";
+      this.statusBarItem.show();
+    } else if (found && !isUploadable) {
+      this.statusBarItem.command = "droid.writeAndEject";
       this.statusBarItem.text = "$(debug-disconnect) DROID Card";
       this.statusBarItem.tooltip = `DROID card detected: ${path.basename(cardPath || "")}`;
       this.statusBarItem.show();
@@ -160,12 +184,11 @@ export class DroidCardManager {
     }
 
     const editor = vscode.window.activeTextEditor;
-    if (!editor || editor.document.languageId !== "droid") {
+    if (!editor || !UPLOADABLE_LANGS.has(editor.document.languageId)) {
       vscode.window.showErrorMessage("No DROID patch file is currently open");
       return;
     }
 
-    const content = editor.document.getText();
     const droidIniPath = path.join(this.detectedCardPath, "droid.ini");
     const cardName = path.basename(this.detectedCardPath);
 
@@ -174,6 +197,9 @@ export class DroidCardManager {
       if (editor.document.isDirty) {
         await editor.document.save();
       }
+
+      // Resolve the content to write (expanding megacircuits for .droider).
+      const content = await this.resolveContent(editor.document);
 
       // Write to droid.ini
       await vscode.window.withProgress(

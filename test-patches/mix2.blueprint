@@ -1,0 +1,22 @@
+# Sums two signals (a + b) and attenuates the result by "level".
+# The megacircuit name ("mix2") comes from this file's name.
+
+[input]
+    # the first signal to mix
+    a
+    # the second signal to mix
+    b
+    # attenuation applied to the sum; full level if omitted
+    level = 1
+
+[output]
+    # the mixed, attenuated signal
+    out
+
+[copy]
+    input  = a + b
+    output = _MIX
+
+[copy]
+    input  = _MIX * level
+    output = out

@@ -57,6 +57,23 @@ export function contextAtLine(
   return { chain, circuit, unknownCircuit };
 }
 
+/**
+ * Name of the block header governing `line` (the nearest `[name]` at or above
+ * it), or null. Unlike contextAtLine this does not care whether the header is a
+ * known circuit, so it also finds megacircuit (blueprint) instances.
+ */
+export function currentBlockHeader(
+  doc: vscode.TextDocument,
+  line: number
+): string | null {
+  for (let i = Math.min(line, doc.lineCount - 1); i >= 0; i--) {
+    const code = doc.lineAt(i).text.split("#")[0].trim();
+    const m = code.match(HEADER_RE);
+    if (m) return m[1];
+  }
+  return null;
+}
+
 /** Internal cables (_NAME) present anywhere in the document, deduplicated. */
 export function cablesInDocument(doc: vscode.TextDocument): string[] {
   const set = new Set<string>();

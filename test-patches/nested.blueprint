@@ -1,0 +1,17 @@
+# A megacircuit that reuses the mix2 megacircuit internally,
+# to exercise recursive expansion.
+
+[input]
+    # first signal
+    x
+    # second signal
+    y
+
+[output]
+    # x and y mixed at full level
+    z
+
+[mix2]
+    a   = x
+    b   = y
+    out = z

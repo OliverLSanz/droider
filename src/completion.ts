@@ -5,21 +5,25 @@
 
 import * as vscode from "vscode";
 import { DroidData } from "./data";
-import { cablesInDocument, cablesUsedAsOutputs, contextAtLine, paramsUsedInBlock } from "./context";
+import { cablesInDocument, cablesUsedAsOutputs, contextAtLine, currentBlockHeader, paramsUsedInBlock } from "./context";
 import { LabelSection, labelSectionAtLine } from "./labels";
+import { BlueprintRegistry } from "./blueprintRegistry";
+import { Blueprint, parseBlueprint } from "./blueprints";
+import { modeForLanguageId, PatchMode } from "./linter";
 
 const HEADER_TYPING_RE = /^\s*\[[a-z0-9]*$/;
 // We are typing the register of a label entry: "#  I", "#  S1." ...
 const LABEL_ENTRY_TYPING_RE = /^#\s+[A-Za-z0-9.]*$/;
 
 export class DroidCompletionProvider implements vscode.CompletionItemProvider {
-  constructor(private data: DroidData) {}
+  constructor(private data: DroidData, private registry: BlueprintRegistry) {}
 
   provideCompletionItems(
     doc: vscode.TextDocument,
     pos: vscode.Position
   ): vscode.CompletionItem[] | undefined {
     const before = doc.lineAt(pos.line).text.slice(0, pos.character);
+    const mode = modeForLanguageId(doc.languageId);
 
     // --- Label entry inside a legend section ---
     if (LABEL_ENTRY_TYPING_RE.test(before)) {
@@ -33,12 +37,15 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
       }
     }
 
-    // --- Header: [circuit] / [controller] ---
+    // --- Header: [circuit] / [controller] / [megacircuit] ---
     if (HEADER_TYPING_RE.test(before)) {
-      return this.headerCompletions(doc, pos);
+      return this.headerCompletions(doc, pos, mode);
     }
 
     const ctx = contextAtLine(doc, pos.line, this.data);
+    const header = currentBlockHeader(doc, pos.line);
+    const bp =
+      mode !== "ini" && header ? this.registry.all().get(header) : undefined;
     const eq = doc.lineAt(pos.line).text.indexOf("=");
 
     // --- Right-hand side of '=': registers and cables ---
@@ -48,15 +55,34 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
 
       const rawParam = before.slice(0, eq).trim().toLowerCase();
       const base = rawParam.replace(/\d+$/, "");
-      const circuit = ctx.circuit ? this.data.circuits.get(ctx.circuit) : null;
-      const isOutputParam =
-        circuit?.outputs?.some((o) => o.name === rawParam || o.name === base) ??
-        false;
+      let isOutputParam: boolean;
+      if (bp) {
+        isOutputParam = bp.outputs.some((o) => o.name === rawParam);
+      } else {
+        const circuit = ctx.circuit ? this.data.circuits.get(ctx.circuit) : null;
+        isOutputParam =
+          circuit?.outputs?.some((o) => o.name === rawParam || o.name === base) ??
+          false;
+      }
 
-      return this.valueCompletions(doc, pos, ctx.chain, isOutputParam, typingCable);
+      const items = this.valueCompletions(doc, pos, ctx.chain, isOutputParam, typingCable);
+      // In a blueprint body, ports are referenced by name directly in values.
+      if (mode === "blueprint" && !typingCable) {
+        const def = parseBlueprint(doc.getText(), "");
+        for (const p of [...def.inputs, ...def.outputs]) {
+          const it = new vscode.CompletionItem(p.name, vscode.CompletionItemKind.Variable);
+          it.detail = "megacircuit port";
+          if (p.doc) it.documentation = new vscode.MarkdownString(p.doc);
+          items.push(it);
+        }
+      }
+      return items;
     }
 
-    // --- Parameter name inside a known circuit ---
+    // --- Parameter / port name inside a known block ---
+    if (bp) {
+      return this.blueprintPortCompletions(bp, paramsUsedInBlock(doc, pos.line));
+    }
     if (ctx.circuit) {
       return this.parameterCompletions(ctx.circuit, paramsUsedInBlock(doc, pos.line));
     }
@@ -65,7 +91,8 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
 
   private headerCompletions(
     doc: vscode.TextDocument,
-    pos: vscode.Position
+    pos: vscode.Position,
+    mode: PatchMode
   ): vscode.CompletionItem[] {
     const items: vscode.CompletionItem[] = [];
     const line = doc.lineAt(pos.line).text;
@@ -73,6 +100,57 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
     // Check if there's already a closing bracket (from autoClosingPairs)
     const closingBracketMatch = after.match(/^(\s*)\]/);
     const hasClosingBracket = closingBracketMatch !== null;
+
+    const extendRange = (it: vscode.CompletionItem) => {
+      if (hasClosingBracket) {
+        const endPos = pos.translate(0, closingBracketMatch![0].length);
+        it.range = new vscode.Range(pos, endPos);
+      }
+      it.command = {
+        command: "editor.action.triggerSuggest",
+        title: "Trigger Suggestions",
+      };
+    };
+
+    // Megacircuits (blueprints): only in .droider / .blueprint files.
+    if (mode !== "ini") {
+      for (const bp of this.registry.all().values()) {
+        const it = new vscode.CompletionItem(bp.name, vscode.CompletionItemKind.Interface);
+        it.detail = "megacircuit";
+        const doc = bp.doc ? `${bp.doc}\n\n` : "";
+        const io =
+          `**inputs:** ${bp.inputs.map((p) => p.name).join(", ") || "—"}\n\n` +
+          `**outputs:** ${bp.outputs.map((p) => p.name).join(", ") || "—"}`;
+        it.documentation = new vscode.MarkdownString(doc + io);
+        // Only required inputs (no default) and outputs go into the snippet;
+        // optional inputs can be added by hand.
+        const wires = [
+          ...bp.inputs.filter((p) => p.default === undefined),
+          ...bp.outputs,
+        ]
+          .map((p, idx) => `    ${p.name} = $${idx + 1}`)
+          .join("\n");
+        it.insertText = new vscode.SnippetString(`${bp.name}]\n${wires}\n    $0`);
+        extendRange(it);
+        items.push(it);
+      }
+    }
+
+    // [input]/[output] sections: only when authoring a blueprint.
+    if (mode === "blueprint") {
+      for (const section of ["input", "output"] as const) {
+        const it = new vscode.CompletionItem(section, vscode.CompletionItemKind.Keyword);
+        it.detail = `megacircuit ${section} ports`;
+        const hint =
+          section === "input"
+            ? "Declares input ports, one per line: `name` (required) or `name = default` (optional)."
+            : "Declares output ports, one per line: `name`.";
+        it.documentation = new vscode.MarkdownString(hint);
+        it.insertText = new vscode.SnippetString(`${section}]\n    $0`);
+        extendRange(it);
+        items.push(it);
+      }
+    }
 
     for (const c of this.data.circuits.values()) {
       const it = new vscode.CompletionItem(c.name, vscode.CompletionItemKind.Class);
@@ -150,6 +228,35 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
     };
     make(circuit.inputs, "input");
     make(circuit.outputs, "output");
+    return items;
+  }
+
+  private blueprintPortCompletions(
+    bp: Blueprint,
+    used: Set<string>
+  ): vscode.CompletionItem[] {
+    const items: vscode.CompletionItem[] = [];
+    const make = (
+      ports: typeof bp.inputs,
+      role: "input" | "output"
+    ) => {
+      for (const p of ports) {
+        if (used.has(p.name)) continue;
+        const it = new vscode.CompletionItem(
+          p.name,
+          role === "input"
+            ? vscode.CompletionItemKind.Field
+            : vscode.CompletionItemKind.Property
+        );
+        const def = p.default !== undefined ? ` · default: ${p.default}` : "";
+        it.detail = `megacircuit ${role}${def}`;
+        if (p.doc) it.documentation = new vscode.MarkdownString(p.doc);
+        it.insertText = `${p.name} = `;
+        items.push(it);
+      }
+    };
+    make(bp.inputs, "input");
+    make(bp.outputs, "output");
     return items;
   }
 

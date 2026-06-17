@@ -6,27 +6,34 @@
 
 import * as vscode from "vscode";
 import { DroidData, ParamSpec } from "./data";
-import { contextAtLine } from "./context";
+import { contextAtLine, currentBlockHeader } from "./context";
+import { BlueprintRegistry } from "./blueprintRegistry";
+import { Blueprint } from "./blueprints";
+import { modeForLanguageId } from "./linter";
 
 // Captures register/cable/identifier-like tokens, including dots (P3.2).
 const WORD_RE = /[A-Za-z_][A-Za-z0-9_.]*/;
 const HEADER_RE = /^(\s*\[)([a-z0-9]+)(\])\s*$/;
 
 export class DroidHoverProvider implements vscode.HoverProvider {
-  constructor(private data: DroidData) {}
+  constructor(private data: DroidData, private registry: BlueprintRegistry) {}
 
   provideHover(
     doc: vscode.TextDocument,
     pos: vscode.Position
   ): vscode.Hover | undefined {
     const lineText = doc.lineAt(pos.line).text;
+    const mode = modeForLanguageId(doc.languageId);
+    const sugar = mode !== "ini";
 
-    // --- Circuit / controller header ---
+    // --- Circuit / controller / megacircuit header ---
     const hm = lineText.match(HEADER_RE);
     if (hm) {
       const name = hm[2];
       const nameStart = hm[1].length;
       if (pos.character >= nameStart && pos.character <= nameStart + name.length) {
+        const bp = sugar ? this.registry.all().get(name) : undefined;
+        if (bp) return this.blueprintHover(bp);
         return this.headerHover(name);
       }
     }
@@ -39,6 +46,25 @@ export class DroidHoverProvider implements vscode.HoverProvider {
     const onName = eq < 0 || range.end.character <= eq;
 
     const ctx = contextAtLine(doc, pos.line, this.data);
+
+    // --- Megacircuit instance port (left of '=') ---
+    if (sugar) {
+      const header = currentBlockHeader(doc, pos.line);
+      const bp = header ? this.registry.all().get(header) : undefined;
+      if (bp && onName) {
+        const port =
+          bp.inputs.find((p) => p.name === word) ??
+          bp.outputs.find((p) => p.name === word);
+        if (port) {
+          const role = bp.inputs.includes(port) ? "input" : "output";
+          const md = new vscode.MarkdownString();
+          md.appendMarkdown(`**${port.name}** · megacircuit _${role}_ of \`${bp.name}\``);
+          if (port.default !== undefined) md.appendMarkdown(` · default \`${port.default}\``);
+          if (port.doc) md.appendMarkdown(`\n\n${port.doc}`);
+          return new vscode.Hover(md, range);
+        }
+      }
+    }
 
     // --- Parameter name (left of '=') ---
     if (onName && ctx.circuit) {
@@ -62,6 +88,17 @@ export class DroidHoverProvider implements vscode.HoverProvider {
       }
     }
     return undefined;
+  }
+
+  private blueprintHover(bp: Blueprint): vscode.Hover {
+    const md = new vscode.MarkdownString();
+    md.appendMarkdown(`**[${bp.name}]** — megacircuit (blueprint)\n\n`);
+    if (bp.doc) md.appendMarkdown(`${bp.doc}\n\n`);
+    const fmt = (p: { name: string; default?: string }) =>
+      p.default !== undefined ? `${p.name} (=${p.default})` : p.name;
+    md.appendMarkdown(`**inputs:** ${bp.inputs.map(fmt).join(", ") || "—"}\n\n`);
+    md.appendMarkdown(`**outputs:** ${bp.outputs.map((p) => p.name).join(", ") || "—"}`);
+    return new vscode.Hover(md);
   }
 
   private headerHover(name: string): vscode.Hover {

@@ -8,9 +8,13 @@
 
 import * as vscode from "vscode";
 import { DroidData } from "./data";
+import { BlueprintRegistry } from "./blueprintRegistry";
+import { modeForLanguageId } from "./linter";
 
 const HEADER_RE = /^\[([a-z0-9]+)\]$/;
 const CABLE_RE = /_[A-Za-z0-9_]+/g;
+
+const SUPPORTED_LANGS = new Set(["droid", "droider", "droid-blueprint"]);
 
 interface Occurrence {
   name: string;
@@ -19,11 +23,13 @@ interface Occurrence {
 
 /**
  * Cable occurrences on the value side of parameters, ignoring unknown circuits
- * (whose content is shown dimmed and unverified).
+ * (whose content is shown dimmed and unverified). `isKnownHeader` decides which
+ * headers count as known (circuits, and — with sugar — megacircuits/sections).
  */
 export function findCableOccurrences(
   doc: vscode.TextDocument,
-  data: DroidData
+  data: DroidData,
+  isKnownHeader: (name: string) => boolean
 ): Occurrence[] {
   const out: Occurrence[] = [];
   let declaring = true;
@@ -40,7 +46,7 @@ export function findCableOccurrences(
       const name = hm[1];
       if (data.controllers.has(name) && declaring) return;
       declaring = false;
-      inUnknownCircuit = !data.circuits.has(name);
+      inUnknownCircuit = !isKnownHeader(name);
       return;
     }
     declaring = false;
@@ -95,7 +101,18 @@ function hslToHex(h: number, s: number, l: number): string {
 export class CableDecorator {
   private cache = new Map<string, vscode.TextEditorDecorationType>();
 
-  constructor(private data: DroidData) {}
+  constructor(private data: DroidData, private registry: BlueprintRegistry) {}
+
+  /** Which headers count as "known" for the document's language/mode. */
+  private knownHeaderPredicate(languageId: string): (name: string) => boolean {
+    const mode = modeForLanguageId(languageId);
+    return (name: string) => {
+      if (this.data.circuits.has(name)) return true;
+      if (mode !== "ini" && this.registry.all().has(name)) return true;
+      if (mode === "blueprint" && (name === "input" || name === "output")) return true;
+      return false;
+    };
+  }
 
   private typeFor(color: string): vscode.TextEditorDecorationType {
     let t = this.cache.get(color);
@@ -107,10 +124,11 @@ export class CableDecorator {
   }
 
   decorate(editor: vscode.TextEditor): void {
-    if (editor.document.languageId !== "droid") return;
+    if (!SUPPORTED_LANGS.has(editor.document.languageId)) return;
 
+    const isKnown = this.knownHeaderPredicate(editor.document.languageId);
     const byColor = new Map<string, vscode.Range[]>();
-    for (const occ of findCableOccurrences(editor.document, this.data)) {
+    for (const occ of findCableOccurrences(editor.document, this.data, isKnown)) {
       const color = colorForCable(occ.name);
       let ranges = byColor.get(color);
       if (!ranges) {

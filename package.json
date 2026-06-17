@@ -12,7 +12,9 @@
     "Linters"
   ],
   "activationEvents": [
-    "onLanguage:droid"
+    "onLanguage:droid",
+    "onLanguage:droider",
+    "onLanguage:droid-blueprint"
   ],
   "main": "./out/extension.js",
   "bin": {
@@ -36,18 +38,29 @@
         "title": "Show Circuit Graph",
         "category": "DROID",
         "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "droid.buildDist",
+        "title": "Build .droider to dist/*.ini (expand megacircuits)",
+        "category": "DROID",
+        "icon": "$(package)"
       }
     ],
     "menus": {
       "editor/title": [
         {
           "command": "droid.showHardwareView",
-          "when": "resourceLangId == droid",
+          "when": "resourceLangId == droid || resourceLangId == droider || resourceLangId == droid-blueprint",
           "group": "navigation"
         },
         {
           "command": "droid.showCircuitGraph",
-          "when": "resourceLangId == droid",
+          "when": "resourceLangId == droid || resourceLangId == droider || resourceLangId == droid-blueprint",
+          "group": "navigation"
+        },
+        {
+          "command": "droid.buildDist",
+          "when": "resourceLangId == droider",
           "group": "navigation"
         }
       ]
@@ -62,11 +75,41 @@
           ".ini"
         ],
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "droider",
+        "aliases": [
+          "DROID Patch (with sugar)"
+        ],
+        "extensions": [
+          ".droider"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "droid-blueprint",
+        "aliases": [
+          "DROID Megacircuit Blueprint"
+        ],
+        "extensions": [
+          ".blueprint"
+        ],
+        "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
         "language": "droid",
+        "scopeName": "source.droid",
+        "path": "./syntaxes/droid.tmLanguage.json"
+      },
+      {
+        "language": "droider",
+        "scopeName": "source.droid",
+        "path": "./syntaxes/droid.tmLanguage.json"
+      },
+      {
+        "language": "droid-blueprint",
         "scopeName": "source.droid",
         "path": "./syntaxes/droid.tmLanguage.json"
       }
@@ -106,6 +149,16 @@
         }
       },
       "[droid]": {
+        "editor.quickSuggestions": { "other": "on", "comments": "off", "strings": "off" },
+        "editor.suggestOnTriggerCharacters": true,
+        "editor.formatOnType": true
+      },
+      "[droider]": {
+        "editor.quickSuggestions": { "other": "on", "comments": "off", "strings": "off" },
+        "editor.suggestOnTriggerCharacters": true,
+        "editor.formatOnType": true
+      },
+      "[droid-blueprint]": {
         "editor.quickSuggestions": { "other": "on", "comments": "off", "strings": "off" },
         "editor.suggestOnTriggerCharacters": true,
         "editor.formatOnType": true

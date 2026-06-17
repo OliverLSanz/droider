@@ -7,11 +7,16 @@
 //   node out/cli.js <patch.ini> [...]      human-readable output
 //   node out/cli.js --json <patch.ini>     JSON output (for agents/tools)
 //
+// The mode is inferred from each file's extension (.ini / .droider / .blueprint),
+// and megacircuit definitions are loaded from every *.blueprint under the cwd.
+//
 // Exit code: 0 if no errors, 1 if there is any error, 2 on misuse.
 
 import * as fs from "fs";
+import * as path from "path";
 import { DroidData } from "./data";
-import { lint, Problem } from "./linter";
+import { lint, modeForFile, Problem } from "./linter";
+import { Blueprint, parseBlueprint } from "./blueprints";
 
 interface FileResult {
   file: string;
@@ -49,6 +54,7 @@ function main(): void {
 
   // Locate the YAML files by walking up from the cwd or from the CLI's own path.
   const data = DroidData.load([process.cwd(), __dirname]);
+  const blueprints = loadBlueprints(process.cwd());
 
   const results: FileResult[] = [];
   let errorCount = 0;
@@ -61,7 +67,7 @@ function main(): void {
       console.error(`could not read: ${file}`);
       process.exit(2);
     }
-    const problems = lint(text, data);
+    const problems = lint(text, data, { mode: modeForFile(file), blueprints });
     errorCount += problems.filter((p) => p.severity === "error").length;
     results.push(toResult(file, problems));
   }
@@ -72,6 +78,35 @@ function main(): void {
     printHuman(results);
   }
   process.exit(errorCount > 0 ? 1 : 0);
+}
+
+/** Loads every *.blueprint under `root` into a name -> Blueprint map. */
+function loadBlueprints(root: string): Map<string, Blueprint> {
+  const map = new Map<string, Blueprint>();
+  const SKIP = new Set(["node_modules", ".git", "out", "dist"]);
+  const walk = (dir: string) => {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (!SKIP.has(e.name)) walk(full);
+      } else if (e.name.endsWith(".blueprint")) {
+        const name = path.basename(e.name, ".blueprint");
+        try {
+          map.set(name, parseBlueprint(fs.readFileSync(full, "utf8"), name));
+        } catch {
+          // ignore unreadable blueprint
+        }
+      }
+    }
+  };
+  walk(root);
+  return map;
 }
 
 function printHuman(results: FileResult[]): void {

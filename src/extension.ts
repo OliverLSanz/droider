@@ -5,8 +5,11 @@
 //   - turn each Problem into a vscode.Diagnostic (the red underline).
 
 import * as vscode from "vscode";
+import * as path from "path";
 import { DroidData } from "./data";
-import { lint } from "./linter";
+import { lint, modeForLanguageId } from "./linter";
+import { expandToIni } from "./blueprints";
+import { BlueprintRegistry } from "./blueprintRegistry";
 import { DroidSemanticTokensProvider, SEMANTIC_LEGEND } from "./semantic";
 import { CableDecorator } from "./cables";
 import { DroidCompletionProvider } from "./completion";
@@ -15,13 +18,21 @@ import { DroidCardManager } from "./droidCard";
 import { HardwareViewProvider } from "./hardwareView";
 import { CircuitGraphProvider } from "./circuitGraph";
 
+// Every language this extension serves; `droid` is plain .ini, `droider` allows
+// the syntactic sugar, `droid-blueprint` defines megacircuits.
+const DROID_LANGS = ["droid", "droider", "droid-blueprint"];
+const DROID_SELECTOR: vscode.DocumentSelector = DROID_LANGS.map((language) => ({
+  language,
+}));
+
 let data: DroidData | undefined;
+let registry: BlueprintRegistry | undefined;
 let collection: vscode.DiagnosticCollection;
 let cardManager: DroidCardManager | undefined;
 let hardwareView: HardwareViewProvider | undefined;
 let circuitGraph: CircuitGraphProvider | undefined;
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   collection = vscode.languages.createDiagnosticCollection("droid");
   context.subscriptions.push(collection);
 
@@ -39,11 +50,15 @@ export function activate(context: vscode.ExtensionContext) {
     return;
   }
 
+  // Megacircuit (blueprint) registry: scans **/*.blueprint and watches changes.
+  registry = new BlueprintRegistry();
+  await registry.initialize(context);
+
   // Semantic highlighting: colors inputs vs outputs of each circuit.
   context.subscriptions.push(
     vscode.languages.registerDocumentSemanticTokensProvider(
-      { language: "droid" },
-      new DroidSemanticTokensProvider(data),
+      DROID_SELECTOR,
+      new DroidSemanticTokensProvider(data, registry),
       SEMANTIC_LEGEND
     )
   );
@@ -51,26 +66,26 @@ export function activate(context: vscode.ExtensionContext) {
   // Autocompletion (circuits, parameters, registers, cables) and hover.
   context.subscriptions.push(
     vscode.languages.registerCompletionItemProvider(
-      { language: "droid" },
-      new DroidCompletionProvider(data),
+      DROID_SELECTOR,
+      new DroidCompletionProvider(data, registry),
       "[",
       "=",
       "_"
     ),
     vscode.languages.registerHoverProvider(
-      { language: "droid" },
-      new DroidHoverProvider(data)
+      DROID_SELECTOR,
+      new DroidHoverProvider(data, registry)
     ),
     // Auto-indent after [circuit] headers and trigger suggestions after Enter.
     vscode.languages.registerOnTypeFormattingEditProvider(
-      { language: "droid" },
+      DROID_SELECTOR,
       new DroidEnterProvider(),
       "\n"
     )
   );
 
   // "Rainbow" decoration of internal cables: one color per cable.
-  const decorator = new CableDecorator(data);
+  const decorator = new CableDecorator(data, registry);
   context.subscriptions.push(decorator);
   const decorateAll = () =>
     vscode.window.visibleTextEditors.forEach((ed) => decorator.decorate(ed));
@@ -92,12 +107,45 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidCloseTextDocument((doc) => collection.delete(doc.uri))
   );
 
-  // DROID card detection and write/eject functionality
-  cardManager = new DroidCardManager();
+  // When a blueprint changes, megacircuit usages elsewhere may become (in)valid:
+  // re-lint and recolor every open DROID document.
+  context.subscriptions.push(
+    registry.onDidChange(() => {
+      for (const doc of vscode.workspace.textDocuments) refresh(doc);
+      decorateAll();
+    })
+  );
+
+  // DROID card detection and write/eject functionality. For .droider files the
+  // content uploaded to the card is the expanded .ini (also saved to dist/).
+  cardManager = new DroidCardManager((doc) => resolveUploadContent(doc));
   context.subscriptions.push(cardManager);
   context.subscriptions.push(
     vscode.commands.registerCommand("droid.writeAndEject", () => {
       cardManager?.writeAndEject();
+    })
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand("droid.buildDist", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor || editor.document.languageId !== "droider") {
+        vscode.window.showErrorMessage("Open a .droider file to build it.");
+        return;
+      }
+      try {
+        const { distUri, problems } = await buildDroiderToDist(editor.document);
+        const errs = problems.filter((p) => p.severity === "error").length;
+        const rel = vscode.workspace.asRelativePath(distUri);
+        if (errs > 0) {
+          vscode.window.showWarningMessage(
+            `Built ${rel} with ${errs} expansion error(s) — check the patch.`
+          );
+        } else {
+          vscode.window.showInformationMessage(`Built ${rel}`);
+        }
+      } catch (e) {
+        vscode.window.showErrorMessage("Build failed: " + (e as Error).message);
+      }
     })
   );
   context.subscriptions.push(
@@ -124,9 +172,13 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function refresh(doc: vscode.TextDocument) {
-  if (!data || doc.languageId !== "droid") return;
+  if (!data || !DROID_LANGS.includes(doc.languageId)) return;
 
-  const diagnostics = lint(doc.getText(), data).map((p) => {
+  const mode = modeForLanguageId(doc.languageId);
+  const diagnostics = lint(doc.getText(), data, {
+    mode,
+    blueprints: registry?.all(),
+  }).map((p) => {
     const range = new vscode.Range(p.line, p.startCol, p.line, p.endCol);
     const severity =
       p.severity === "warning"
@@ -137,6 +189,38 @@ function refresh(doc: vscode.TextDocument) {
     return d;
   });
   collection.set(doc.uri, diagnostics);
+}
+
+/**
+ * Expands a .droider document and writes the result to `<workspace>/dist/<name>.ini`.
+ * Returns the dist URI, the expanded text and any expansion problems.
+ */
+async function buildDroiderToDist(
+  doc: vscode.TextDocument
+): Promise<{ distUri: vscode.Uri; iniText: string; problems: ReturnType<typeof expandToIni>["problems"] }> {
+  const { ini, problems } = expandToIni(doc.getText(), registry?.all() ?? new Map());
+  const folder = vscode.workspace.getWorkspaceFolder(doc.uri);
+  const baseDir = folder ? folder.uri : vscode.Uri.file(path.dirname(doc.uri.fsPath));
+  const name = path.basename(doc.uri.fsPath).replace(/\.droider$/, "");
+  const distDir = vscode.Uri.joinPath(baseDir, "dist");
+  await vscode.workspace.fs.createDirectory(distDir);
+  const distUri = vscode.Uri.joinPath(distDir, `${name}.ini`);
+  await vscode.workspace.fs.writeFile(distUri, Buffer.from(ini, "utf8"));
+  return { distUri, iniText: ini, problems };
+}
+
+/**
+ * Content to write to the DROID card for the given document: plain text for
+ * .ini, or the expanded (and dist-saved) .ini for .droider.
+ */
+async function resolveUploadContent(
+  doc: vscode.TextDocument
+): Promise<string> {
+  if (doc.languageId === "droider") {
+    const { iniText } = await buildDroiderToDist(doc);
+    return iniText;
+  }
+  return doc.getText();
 }
 
 class DroidEnterProvider implements vscode.OnTypeFormattingEditProvider {
