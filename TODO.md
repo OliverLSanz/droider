@@ -1,6 +1,6 @@
 - [x] BUG: The math module autocompletion finds input, but not input1 or input2. Though they are correctly validated by the linter.
 - [x] VISUAL IMPROVEMENT: Add the same capsule to the back of labels in every control: small and big pots, buttons, etc.
-- [ ] BUG: The labels with capsule appear on top of tooltips, hiding them. Tooltips should be on top of everything.
+- [x] BUG: The labels with capsule appear on top of tooltips, hiding them. Tooltips should be on top of everything.
 - [ ] BUG: Certain elements like number labels of buttons to the right of the button triggerting the tooltip show on top of the tooltip.
 - [ ] BUG: Tooltips at the left elements of the master droid appear partly outside of the window and thus cannot be read.
 - [ ] IMPROVEMENT: I want open panes (hardware and grapth view) to load on a vindow reload: now it only shows a empty pane.

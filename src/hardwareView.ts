@@ -1377,7 +1377,7 @@ export class HardwareViewProvider {
             border-radius: 4px;
             padding: 8px 10px;
             position: absolute;
-            z-index: 1000;
+            z-index: 99999;
             max-width: 400px;
             min-width: 100px;
             font-size: 12px;
@@ -1386,11 +1386,25 @@ export class HardwareViewProvider {
             white-space: normal;
             line-height: 1.4;
         }
-        
+
+        /*
+         * Capsule labels (e.g. .pot-label, .button-label) use transform,
+         * which makes each one its own stacking context painted at the same
+         * level as its sibling elements. A tooltip's high z-index only wins
+         * inside its OWN element's stacking context, so a neighbouring
+         * element's capsule could still paint on top of it. Lifting the whole
+         * hovered element above its siblings guarantees its tooltip (and the
+         * tooltip's z-index) outrank every other element's capsule label.
+         */
+        .element:hover,
+        .pot-container:hover {
+            z-index: 99999;
+        }
+
         .element:hover .tooltip {
             visibility: visible;
         }
-        
+
         .pot-container:hover .tooltip {
             visibility: visible;
         }
