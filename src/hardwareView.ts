@@ -504,12 +504,12 @@ export class HardwareViewProvider {
         
         .button:hover, .pot:hover {
             transform: scale(1.05);
-            transition: all 0.2s;
+            transition: transform 0.2s;
         }
         
         .mini-pot:hover {
             transform: scale(1.05);
-            transition: all 0.2s;
+            transition: transform 0.2s;
         }
         
         /* S10 Rotary Switches */
@@ -590,7 +590,7 @@ export class HardwareViewProvider {
         
         .rotary-switch:hover {
             transform: scale(1.05);
-            transition: all 0.2s;
+            transition: transform 0.2s;
         }
         
         /* S10 Small Toggle Switches */
@@ -669,7 +669,7 @@ export class HardwareViewProvider {
         
         .mini-switch:hover {
             transform: scale(1.05);
-            transition: all 0.2s;
+            transition: transform 0.2s;
         }
 
         /* P8S8 Faders */
@@ -750,7 +750,7 @@ export class HardwareViewProvider {
 
         .fader-track:hover {
             transform: scale(1.05);
-            transition: all 0.2s;
+            transition: transform 0.2s;
         }
 
         /* P8S8 switches: 4-column variant of the S10 toggle grid */
@@ -830,7 +830,7 @@ export class HardwareViewProvider {
 
         .encoder-knob:hover {
             transform: scale(1.05);
-            transition: all 0.2s;
+            transition: transform 0.2s;
         }
 
         /* M4 motorized faders */
@@ -916,7 +916,7 @@ export class HardwareViewProvider {
 
         .m4-fader-track:hover {
             transform: scaleX(1.4);
-            transition: all 0.2s;
+            transition: transform 0.2s;
         }
 
         /* DB8E */
@@ -1080,7 +1080,7 @@ export class HardwareViewProvider {
         
         .master-io-jack:hover {
             transform: scale(1.05);
-            transition: all 0.2s;
+            transition: transform 0.2s;
         }
         
         .master-io-label {
@@ -1224,7 +1224,7 @@ export class HardwareViewProvider {
 
         .g8-led:hover {
             transform: scale(1.05);
-            transition: all 0.2s;
+            transition: transform 0.2s;
         }
 
         .g8-led-number {
@@ -1395,6 +1395,15 @@ export class HardwareViewProvider {
          * element's capsule could still paint on top of it. Lifting the whole
          * hovered element above its siblings guarantees its tooltip (and the
          * tooltip's z-index) outrank every other element's capsule label.
+         *
+         * NOTE: hover transitions must animate transform only, never "all".
+         * On controls where this lift lands on the same node that scales on
+         * hover (e.g. .element.button), a "transition: all" would also animate
+         * z-index — a discrete auto-to-99999 flip that only takes effect at the
+         * midpoint of the transition. During that delay the scale transform has
+         * already created a stacking context but the dominating z-index has not
+         * applied yet, so neighbouring controls' number labels paint over the
+         * tooltip.
          */
         .element:hover,
         .pot-container:hover {
