@@ -1,44 +1,73 @@
-// Circuit graph webview panel: shows every circuit declared in the patch as a
-// node and draws the connections between them. Two circuits are connected when
-// one writes an internal cable (_NAME) that the other reads, or when a circuit
-// reads/writes a hardware register (I/O/P...). Nodes are laid out left-to-right
-// following the signal flow (sources/inputs on the left, sinks/outputs on the
-// right), rendered as SVG with no external dependencies.
+// Circuit graph webview panel, rendered as a read-only Unreal-Engine-style
+// "blueprint" graph. Every circuit instance becomes a node with a colored
+// header (the circuit type) and a body listing only the inputs and outputs
+// that are actually used in the patch. Input pins decompose the DROID
+// `A * B + C` value form into stacked rows: the base operand sits on the pin
+// row, the multiplier on a `×`/`÷` row and the offset on a `+`/`−` row (see §6
+// of reference.md). Internal cables (_NAME) are drawn as wires from the
+// producing output pin to the consuming input row; hardware registers
+// (I/O/P...) and constants are kept as separate little nodes / inline text.
 
 import * as vscode from "vscode";
 import { DroidData } from "./data";
 import { colorForCable } from "./cables";
 
 const HEADER_RE = /^\[([a-z0-9]+)\]$/;
-// Identifier candidates on the value side. A cable starts with "_" and may
-// contain interior underscores (_ENV1_ATTACK); a register/word does not
-// (I1, O2, P3.1). The cable alternative comes first so it wins greedily.
-const TOKEN_RE = /_[A-Za-z0-9_]+|[A-Za-z][A-Za-z0-9]*(?:\.\d+)?/g;
 
 interface CircuitInstance {
   index: number; // 1-based position among circuits in the patch
   name: string; // circuit type (e.g. "copy")
   known: boolean; // is it a documented circuit?
   headerLine: number; // line of the [header], for "reveal in editor"
-  params: { param: string; value: string }[];
+  params: { param: string; name: string; value: string }[];
 }
 
 type NodeKind = "circuit" | "hwin" | "hwout";
 
+/** One stacked row of an input pin (base operand, or a `×`/`+`/... modifier). */
+interface PinRow {
+  op: "" | "*" | "/" | "+" | "-"; // operator preceding the operand ("" = base)
+  text: string; // operand as written (cable, register or constant)
+  conn: boolean; // is the operand a connectable signal (cable/register)?
+  color: string; // wire/pin color (cable color or hardware color)
+}
+
+interface InputPin {
+  key: string; // parameter key (lowercased), used to build pin ids
+  name: string; // display name, as written
+  rows: PinRow[];
+}
+
+interface OutputPin {
+  key: string;
+  name: string;
+  text: string; // value, as written
+  conn: boolean;
+  color: string;
+}
+
 interface GraphNode {
   id: string;
-  label: string;
   kind: NodeKind;
-  color: string;
-  title: string;
-  line?: number;
+  // circuit nodes
+  name?: string; // circuit type
+  title?: string; // human title for the tooltip
+  color?: string; // header color
+  line?: number; // header line, for reveal-in-editor
+  inputs?: InputPin[];
+  outputs?: OutputPin[];
+  // hardware nodes
+  label?: string; // register name (I1, O2, P3.1...)
+  hwColor?: string;
 }
 
 interface GraphEdge {
-  from: string;
-  to: string;
-  label: string;
+  from: string; // source node id
+  fromPin: string; // pin id within the source node
+  to: string; // target node id
+  toPin: string; // pin id within the target node
   color: string;
+  label: string; // signal name (cable like _FOO, or register like I1)
 }
 
 interface Graph {
@@ -48,6 +77,8 @@ interface Graph {
 
 const HW_IN_COLOR = "#6ec06e";
 const HW_OUT_COLOR = "#d98c6a";
+const CONST_NUM_COLOR = "#caa24a"; // numbers, voltages, percentages
+const CONST_GATE_COLOR = "#569cd6"; // gates (on/off)
 
 /** Stable color for a circuit type name (distinct palette from cables). */
 function colorForCircuit(name: string): string {
@@ -69,9 +100,86 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
 }
 
+/** A single operand parsed out of an input expression, plus its operator. */
+interface ExprToken {
+  op: "" | "*" | "/" | "+" | "-";
+  operand: string;
+}
+
 /**
- * Builds the circuit-connection graph for a patch. Pure logic (no VSCode), so
- * it can be unit-tested independently of the webview.
+ * Tokenizes a DROID input expression into operand tokens, each tagged with the
+ * operator that precedes it. The DROID value grammar is the restricted
+ * `A * B + C` form (one multiplication, one addition, shorthands for negation,
+ * division-by-constant and subtraction), so a flat left-to-right scan is
+ * enough — no need for precedence. A leading `-`/`+` is treated as part of the
+ * following operand (a sign) rather than as a binary operator.
+ */
+function tokenizeExpr(value: string): ExprToken[] {
+  const s = value.trim();
+  const out: ExprToken[] = [];
+  let i = 0;
+  let pendingOp: ExprToken["op"] = "";
+  let expectOperand = true;
+  const isOp = (c: string) =>
+    c === "*" || c === "/" || c === "+" || c === "-";
+
+  while (i < s.length) {
+    const c = s[i];
+    if (c === " " || c === "\t") {
+      i++;
+      continue;
+    }
+    if (!expectOperand && isOp(c)) {
+      pendingOp = c as ExprToken["op"];
+      i++;
+      expectOperand = true;
+      continue;
+    }
+    // Read an operand. When an operand is expected a leading +/- is its sign.
+    let j = i;
+    if (s[j] === "-" || s[j] === "+") j++;
+    while (j < s.length) {
+      const d = s[j];
+      if (d === " " || d === "\t" || isOp(d)) break;
+      j++;
+    }
+    const operand = s.slice(i, j);
+    if (operand) out.push({ op: pendingOp, operand });
+    pendingOp = "";
+    expectOperand = false;
+    i = j;
+  }
+  return out;
+}
+
+/**
+ * Classifies an operand as a connectable signal (cable or hardware register)
+ * or a plain constant, and gives it a wire color. The optional leading sign is
+ * ignored for classification but kept in the displayed text by the caller.
+ */
+function classifyOperand(
+  raw: string,
+  validRegs: Map<string, { direction: string }>
+): { conn: boolean; cable?: string; reg?: string; color: string } {
+  let t = raw;
+  if (t[0] === "-" || t[0] === "+") t = t.slice(1);
+  if (t.startsWith("_")) {
+    return { conn: true, cable: t, color: colorForCable(t) };
+  }
+  const info = validRegs.get(t);
+  if (info) {
+    const color = info.direction === "output" ? HW_OUT_COLOR : HW_IN_COLOR;
+    return { conn: true, reg: t, color };
+  }
+  // Plain constant: gates (on/off) get their own color so they read as boolean.
+  const lower = t.toLowerCase();
+  const isGate = lower === "on" || lower === "off";
+  return { conn: false, color: isGate ? CONST_GATE_COLOR : CONST_NUM_COLOR };
+}
+
+/**
+ * Builds the blueprint-style graph for a patch. Pure logic (no VSCode), so it
+ * can be unit-tested independently of the webview.
  */
 export class CircuitGraphBuilder {
   constructor(private data: DroidData) {}
@@ -79,7 +187,10 @@ export class CircuitGraphBuilder {
   build(text: string): Graph {
     const lines = text.split(/\r?\n/);
     const chain = this.data.controllerChain(lines);
-    const validRegs = this.data.validRegisters(chain);
+    const validRegs = this.data.validRegisters(chain) as Map<
+      string,
+      { direction: string; description?: string }
+    >;
     const instances = this.parseCircuits(lines);
 
     const nodes: GraphNode[] = [];
@@ -91,85 +202,145 @@ export class CircuitGraphBuilder {
       }
     };
 
-    // One node per circuit instance.
-    for (const inst of instances) {
-      const circuit = this.data.circuits.get(inst.name);
-      addNode({
-        id: "c" + inst.index,
-        label: inst.name,
-        kind: "circuit",
-        color: colorForCircuit(inst.name),
-        title: circuit ? circuit.title : "Unknown circuit",
-        line: inst.headerLine,
-      });
-    }
-
-    // Collect, per signal, which circuits produce it and which consume it.
-    const cableProducers = new Map<string, string[]>();
-    const cableConsumers = new Map<string, string[]>();
-    const regUses: { reg: string; nodeId: string; dir: "in" | "out" }[] = [];
+    // Per cable: which output pins produce it and which input rows consume it.
+    const cableProducers = new Map<string, { node: string; pin: string }[]>();
+    const cableConsumers = new Map<string, { node: string; pin: string }[]>();
+    // Hardware registers actually referenced, with the kind they render as.
+    const hwUsed = new Map<string, NodeKind>();
+    const hwEdges: GraphEdge[] = [];
 
     for (const inst of instances) {
       const nid = "c" + inst.index;
-      for (const p of inst.params) {
-        const role = this.roleOf(inst, p.param);
-        const { cables, regs } = this.extractSignals(p.value, validRegs);
+      const inputs: InputPin[] = [];
+      const outputs: OutputPin[] = [];
 
-        for (const cable of cables) {
-          const map = role === "output" ? cableProducers : cableConsumers;
-          push(map, cable, nid);
-        }
-        for (const reg of regs) {
-          const info = validRegs.get(reg);
-          const isOut =
-            role === "output" ||
-            (!role && info?.direction === "output");
-          regUses.push({ reg, nodeId: nid, dir: isOut ? "out" : "in" });
+      for (const p of inst.params) {
+        if (!p.value.trim()) continue;
+        const role = this.roleOf(inst, p.param);
+
+        if (role === "output") {
+          const tokens = tokenizeExpr(p.value);
+          const first = tokens[0];
+          const cls = first
+            ? classifyOperand(first.operand, validRegs)
+            : { conn: false, color: "#777" as string };
+          const pinId = "o:" + p.param;
+          outputs.push({
+            key: p.param,
+            name: p.name,
+            text: p.value.trim(),
+            conn: cls.conn,
+            color: cls.color,
+          });
+          if (cls.cable) {
+            push(cableProducers, cls.cable, { node: nid, pin: pinId });
+          } else if (cls.reg) {
+            const kind: NodeKind =
+              validRegs.get(cls.reg)!.direction === "output"
+                ? "hwout"
+                : "hwin";
+            hwUsed.set(cls.reg, kind);
+            hwEdges.push({
+              from: nid,
+              fromPin: pinId,
+              to: "hw_" + cls.reg,
+              toPin: "p",
+              color: cls.color,
+              label: cls.reg,
+            });
+          }
+        } else {
+          // Treat input role and unknown role alike (most params are inputs).
+          const tokens = tokenizeExpr(p.value);
+          const rows: PinRow[] = tokens.map((t) => {
+            const cls = classifyOperand(t.operand, validRegs);
+            return {
+              op: t.op,
+              text: t.operand,
+              conn: cls.conn,
+              color: cls.color,
+            };
+          });
+          inputs.push({ key: p.param, name: p.name, rows });
+
+          tokens.forEach((t, idx) => {
+            const cls = classifyOperand(t.operand, validRegs);
+            const pin = "i:" + p.param + ":" + idx;
+            if (cls.cable) {
+              push(cableConsumers, cls.cable, { node: nid, pin });
+            } else if (cls.reg) {
+              const kind: NodeKind =
+                validRegs.get(cls.reg)!.direction === "output"
+                  ? "hwout"
+                  : "hwin";
+              hwUsed.set(cls.reg, kind);
+              hwEdges.push({
+                from: "hw_" + cls.reg,
+                fromPin: "p",
+                to: nid,
+                toPin: pin,
+                color: cls.color,
+                label: cls.reg,
+              });
+            }
+          });
         }
       }
+
+      const circuit = this.data.circuits.get(inst.name);
+      addNode({
+        id: nid,
+        kind: "circuit",
+        name: inst.name,
+        title: circuit ? circuit.title : "Unknown circuit",
+        color: colorForCircuit(inst.name),
+        line: inst.headerLine,
+        inputs,
+        outputs,
+      });
+    }
+
+    // Hardware nodes (one per referenced register).
+    for (const [reg, kind] of hwUsed) {
+      addNode({
+        id: "hw_" + reg,
+        kind,
+        label: reg,
+        hwColor: kind === "hwout" ? HW_OUT_COLOR : HW_IN_COLOR,
+        title: validRegs.get(reg)?.description ?? "Hardware register",
+      });
     }
 
     const edges: GraphEdge[] = [];
     const seenEdge = new Set<string>();
     const addEdge = (e: GraphEdge) => {
-      const key = e.from + "->" + e.to + "|" + e.label;
+      const key = e.from + "/" + e.fromPin + "->" + e.to + "/" + e.toPin;
       if (!seenEdge.has(key)) {
         seenEdge.add(key);
         edges.push(e);
       }
     };
 
-    // Cable edges: producer circuit -> each consumer circuit.
+    // Cable wires: every producing output pin -> every consuming input row.
     for (const [cable, producers] of cableProducers) {
       const consumers = cableConsumers.get(cable) ?? [];
-      for (const from of producers) {
-        for (const to of consumers) {
-          if (from !== to) {
-            addEdge({ from, to, label: cable.slice(1), color: colorForCable(cable) });
+      const color = colorForCable(cable);
+      for (const prod of producers) {
+        for (const cons of consumers) {
+          if (prod.node !== cons.node) {
+            addEdge({
+              from: prod.node,
+              fromPin: prod.pin,
+              to: cons.node,
+              toPin: cons.pin,
+              color,
+              label: cable,
+            });
           }
         }
       }
     }
-
-    // Hardware-register edges, with one node per referenced register.
-    for (const u of regUses) {
-      const info = validRegs.get(u.reg);
-      const hid = "hw_" + u.reg;
-      const kind: NodeKind = info?.direction === "output" ? "hwout" : "hwin";
-      addNode({
-        id: hid,
-        label: u.reg,
-        kind,
-        color: kind === "hwout" ? HW_OUT_COLOR : HW_IN_COLOR,
-        title: info?.description ?? "Hardware register",
-      });
-      const color = kind === "hwout" ? HW_OUT_COLOR : HW_IN_COLOR;
-      if (u.dir === "out") {
-        addEdge({ from: u.nodeId, to: hid, label: u.reg, color });
-      } else {
-        addEdge({ from: hid, to: u.nodeId, label: u.reg, color });
-      }
-    }
+    for (const e of hwEdges) addEdge(e);
 
     return { nodes, edges };
   }
@@ -207,9 +378,11 @@ export class CircuitGraphBuilder {
       if (!current) return;
       const eq = code.indexOf("=");
       if (eq < 0) return;
-      const param = code.slice(0, eq).trim().toLowerCase();
+      const name = code.slice(0, eq).trim();
       const value = code.slice(eq + 1);
-      if (param) current.params.push({ param, value });
+      if (name) {
+        current.params.push({ param: name.toLowerCase(), name, value });
+      }
     });
 
     return instances;
@@ -228,23 +401,6 @@ export class CircuitGraphBuilder {
     if (/^output/.test(param)) return "output";
     if (/^input/.test(param)) return "input";
     return undefined;
-  }
-
-  /** Cables (_FOO) and known registers referenced on a value. */
-  private extractSignals(
-    value: string,
-    validRegs: Map<string, unknown>
-  ): { cables: string[]; regs: string[] } {
-    const cables: string[] = [];
-    const regs: string[] = [];
-    let m: RegExpExecArray | null;
-    TOKEN_RE.lastIndex = 0;
-    while ((m = TOKEN_RE.exec(value)) !== null) {
-      const tok = m[0];
-      if (tok.startsWith("_")) cables.push(tok);
-      else if (validRegs.has(tok)) regs.push(tok);
-    }
-    return { cables, regs };
   }
 }
 
@@ -347,9 +503,9 @@ const HTML_HEAD = `<!DOCTYPE html>
 <style>
   html, body { height: 100%; margin: 0; padding: 0; }
   body {
-    font-family: 'Arial', sans-serif;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
     color: #d4b896;
-    background-color: #161616;
+    background-color: #0f0f10;
     overflow: hidden;
   }
   #toolbar {
@@ -371,12 +527,26 @@ const HTML_HEAD = `<!DOCTYPE html>
     position: fixed; top: 50%; left: 0; right: 0; text-align: center;
     transform: translateY(-50%); opacity: 0.5; font-size: 14px;
   }
-  svg { position: fixed; top: 38px; left: 0; width: 100vw; height: calc(100vh - 38px); display: block; }
-  .node-box { cursor: pointer; }
-  .node-box:hover .node-shape { stroke: #fff; }
-  .node-label { font-size: 11px; fill: #fff; pointer-events: none; dominant-baseline: middle; text-anchor: middle; }
-  .edge-path { fill: none; pointer-events: stroke; }
-  .edge-label { font-size: 9px; fill: #cfcfcf; pointer-events: none; text-anchor: middle; }
+  svg {
+    position: fixed; top: 38px; left: 0; width: 100vw; height: calc(100vh - 38px);
+    display: block;
+    background-image: radial-gradient(#1d1d20 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .node { cursor: grab; }
+  .node:active { cursor: grabbing; }
+  .node-body { stroke: #050505; stroke-width: 1; }
+  .node:hover .node-body { stroke: #fff; }
+  .hw-body { stroke-width: 2; }
+  .header-text { font-size: 11.5px; font-weight: 600; fill: #0c0c0c; pointer-events: none; dominant-baseline: middle; }
+  .pin-name { font-size: 11px; fill: #ededed; pointer-events: none; dominant-baseline: middle; }
+  .pin-base { font-weight: 600; }
+  .pin-sub { fill: #b7b7b7; }
+  .pin-op { fill: #f0c674; font-weight: 700; }
+  .chip-text { font-size: 10px; font-weight: 700; fill: #161616; pointer-events: none; dominant-baseline: middle; text-anchor: middle; }
+  .hw-label { font-size: 11.5px; font-weight: 600; pointer-events: none; dominant-baseline: middle; text-anchor: middle; }
+  .edge-path { fill: none; pointer-events: stroke; cursor: pointer; }
+  .wire-label { font-size: 10.5px; font-weight: 600; dominant-baseline: middle; text-anchor: middle; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -384,11 +554,11 @@ const HTML_HEAD = `<!DOCTYPE html>
   <strong style="color:#d4b896">Circuit Graph</strong>
   <span style="opacity:0.55">signal flow &rarr;</span>
   <label><input type="checkbox" id="toggle-hw" checked> Hardware I/O</label>
-  <label><input type="checkbox" id="toggle-labels"> Cable labels</label>
+  <label><input type="checkbox" id="toggle-names"> Cable names</label>
   <button id="relayout">Re-layout</button>
   <button id="fit">Fit</button>
-  <span class="legend"><span class="swatch" style="background:#6ec06e"></span>input</span>
-  <span class="legend"><span class="swatch" style="background:#d98c6a"></span>output</span>
+  <span class="legend"><span class="swatch" style="background:#6ec06e"></span>input reg</span>
+  <span class="legend"><span class="swatch" style="background:#d98c6a"></span>output reg</span>
   <span id="count" style="margin-left:auto; opacity:0.6"></span>
 </div>
 <div id="empty" style="display:none">No circuits found in this patch.</div>
@@ -398,9 +568,8 @@ const HTML_HEAD = `<!DOCTYPE html>
 const HTML_TAIL = `</body>
 </html>`;
 
-// Self-contained layered (left-to-right) graph renderer. Written without
-// template literals or ${ } so it can live safely inside this TS template
-// string.
+// Self-contained blueprint-style renderer. Written without template literals or
+// ${ } so it can live safely inside this TS template string.
 const CLIENT_JS = `
 (function(){
   var vscode = acquireVsCodeApi();
@@ -409,12 +578,29 @@ const CLIENT_JS = `
   var svg = document.getElementById("graph");
   var viewport = document.getElementById("viewport");
   var toggleHw = document.getElementById("toggle-hw");
-  var toggleLabels = document.getElementById("toggle-labels");
+  var toggleNames = document.getElementById("toggle-names");
 
   document.getElementById("empty").style.display =
     DATA.nodes.length ? "none" : "block";
-  document.getElementById("count").textContent =
-    DATA.nodes.length + " nodes, " + DATA.edges.length + " edges";
+
+  // ---- geometry constants ----
+  var HEADER_H = 24, ROW_H = 17, PAD_X = 9, PAD_BOTTOM = 8;
+  var COL_GAP = 22, PIN_R = 4.5;
+  var LAYER_GAP = 70, NODE_VGAP = 26, COMPONENT_GAP = 60, DUMMY_H = 14;
+
+  // Connectable operands (cables/registers) show their name only when this is
+  // on; the wire already conveys the connection, so names are off by default.
+  var showNames = false;
+
+  // Accurate text width via an offscreen canvas (a fixed char width can't cope
+  // with bold names + proportional fonts, which left chips mis-placed).
+  var _ctx = document.createElement("canvas").getContext("2d");
+  var FONT_FAMILY = "'Segoe UI', Arial, sans-serif";
+  function tw(text, weight, size){
+    _ctx.font = (weight || "400") + " " + (size || 11) + "px " + FONT_FAMILY;
+    return _ctx.measureText(text).width;
+  }
+  var HEAD_GAP = 6; // space between a pin label and its operand/chip
 
   // View transform (pan + zoom).
   var tx = 0, ty = 0, scale = 1;
@@ -423,17 +609,76 @@ const CLIENT_JS = `
       "translate(" + tx + "," + ty + ") scale(" + scale + ")");
   }
 
-  // Active scene (depends on the toolbar toggles).
-  var nodes = [], edges = [], nodeById = {}, routes = [];
-  var LAYER_GAP = 240, ROW_GAP = 62, COMPONENT_GAP = 110;
+  var nodes = [], edges = [], routes = [], nodeById = {}, incident = {};
 
-  function measure(n){
-    if (n.kind === "circuit"){
-      n.w = Math.max(64, n.label.length * 7.2 + 22); n.h = 32;
-    } else {
-      n.w = n.label.length * 8 + 22; n.h = 30;
+  // Operand text to display for a row/pin: hidden for connectable signals when
+  // names are off (constants are always shown).
+  function operandText(text, conn){
+    return (conn && !showNames) ? "" : text;
+  }
+
+  // Build the displayed rows for a node and measure its box + pin offsets.
+  function prepare(n){
+    n.pins = {};
+    if (n.kind !== "circuit"){
+      n.w = Math.max(46, tw(n.label, "600") + 22);
+      n.h = 26;
+      var px = (n.kind === "hwout") ? -n.w/2 : n.w/2;
+      n.pins["p"] = { x: px, y: 0 };
+      return;
     }
-    n.rx = n.w / 2; n.ry = n.h / 2;
+
+    var left = [], right = [];
+    (n.inputs || []).forEach(function(pin){
+      pin.rows.forEach(function(r, idx){
+        var base = r.op === "";
+        var glyph = base ? "" :
+          (r.op === "*" ? "\\u00d7" : r.op === "/" ? "\\u00f7"
+           : r.op === "-" ? "\\u2212" : "+");
+        var head = base ? pin.name : glyph;
+        var headW = tw(head, base ? "600" : "700");
+        var operand = operandText(r.text, r.conn);
+        var opW = 0;
+        if (operand) opW = r.conn ? tw(operand, "400") : chipWidth(operand);
+        left.push({
+          pinId: "i:" + pin.key + ":" + idx,
+          head: head, headW: headW, operand: operand,
+          base: base, conn: r.conn, color: r.color,
+          width: headW + (operand ? HEAD_GAP + opW : 0)
+        });
+      });
+    });
+    (n.outputs || []).forEach(function(pin){
+      var operand = operandText(pin.text, pin.conn);
+      var nameW = tw(pin.name, "600");
+      var opW = 0;
+      if (operand) opW = pin.conn ? tw(operand, "400") : chipWidth(operand);
+      right.push({
+        pinId: "o:" + pin.key, name: pin.name, nameW: nameW, operand: operand,
+        conn: pin.conn, color: pin.color,
+        width: nameW + (operand ? HEAD_GAP + opW : 0)
+      });
+    });
+    n._left = left; n._right = right;
+
+    var leftW = 0, rightW = 0;
+    left.forEach(function(r){ if (r.width > leftW) leftW = r.width; });
+    right.forEach(function(r){ if (r.width > rightW) rightW = r.width; });
+    var bodyW = PAD_X * 2 + leftW + ((leftW && rightW) ? COL_GAP : 0) + rightW;
+    var headW = tw(n.name, "600", 11.5) + PAD_X * 2;
+    n.w = Math.max(96, bodyW, headW);
+    var rowCount = Math.max(left.length, right.length, 1);
+    n.h = HEADER_H + rowCount * ROW_H + PAD_BOTTOM;
+
+    function rowY(k){ return -n.h/2 + HEADER_H + k * ROW_H + ROW_H/2; }
+    left.forEach(function(r, k){
+      r.y = rowY(k);
+      n.pins[r.pinId] = { x: -n.w/2, y: r.y };
+    });
+    right.forEach(function(r, k){
+      r.y = rowY(k);
+      n.pins[r.pinId] = { x: n.w/2, y: r.y };
+    });
   }
 
   function buildScene(){
@@ -442,11 +687,9 @@ const CLIENT_JS = `
     nodes = DATA.nodes.filter(function(n){
       return showHw || n.kind === "circuit";
     }).map(function(n){
-      var copy = {
-        id: n.id, label: n.label, kind: n.kind, color: n.color,
-        title: n.title, line: n.line, x: 0, y: 0
-      };
-      measure(copy);
+      var copy = JSON.parse(JSON.stringify(n));
+      copy.x = 0; copy.y = 0;
+      prepare(copy);
       nodeById[n.id] = copy;
       return copy;
     });
@@ -455,15 +698,26 @@ const CLIENT_JS = `
     });
     layout();
     render();
+    setTimeout(fit, 0);
   }
 
-  // ---- Layered left-to-right layout with component separation and edge
-  //      routing through dummy waypoints (Sugiyama-style) ----
+  // ---- Sugiyama-style layered layout: longest-path layers, ghost waypoints
+  //      for long edges, barycenter ordering and component bands. The ghost
+  //      nodes let multi-column wires bend through the gaps between real nodes
+  //      instead of crossing over them, which also reduces wire crossings. ----
   function layout(){
-    // Undirected adjacency -> connected components (each gets its own band).
+    // drop ghost nodes left over from a previous layout pass
+    for (var gk in nodeById){ if (nodeById[gk].virtual) delete nodeById[gk]; }
+
+    // node-level adjacency for components/layering
     var adjU = {};
     nodes.forEach(function(n){ adjU[n.id] = []; });
-    edges.forEach(function(e){ adjU[e.from].push(e.to); adjU[e.to].push(e.from); });
+    edges.forEach(function(e){
+      if (e.from === e.to) return;
+      adjU[e.from].push(e.to); adjU[e.to].push(e.from);
+    });
+
+    // connected components
     var comp = {}, compCount = 0;
     nodes.forEach(function(n){
       if (comp[n.id] != null) return;
@@ -477,32 +731,32 @@ const CLIENT_JS = `
       compCount++;
     });
 
-    // Longest-path layering: column = longest producer chain feeding the node.
+    // longest-path layering
     var layer = {};
     nodes.forEach(function(n){ layer[n.id] = 0; });
     for (var it = 0; it < nodes.length; it++){
       var changed = false;
-      for (var e = 0; e < edges.length; e++){
-        var ed = edges[e];
-        if (layer[ed.to] < layer[ed.from] + 1){
-          layer[ed.to] = layer[ed.from] + 1; changed = true;
+      edges.forEach(function(e){
+        if (e.from === e.to) return;
+        if (layer[e.to] < layer[e.from] + 1){
+          layer[e.to] = layer[e.from] + 1; changed = true;
         }
-      }
+      });
       if (!changed) break;
     }
 
-    // Dummy waypoints: an edge spanning N columns gets N-1 invisible nodes so
-    // it bends through the gaps between real nodes instead of crossing them.
-    var virtuals = [], vc = 0;
+    // ghost waypoints: an edge spanning N columns gets N-1 invisible nodes so
+    // it bends through the gaps between real nodes of each intermediate column.
+    var ghosts = [], vc = 0;
     routes = edges.map(function(e){
       var l1 = layer[e.from], l2 = layer[e.to], through = [];
       if (l2 - l1 > 1){
         for (var L = l1 + 1; L < l2; L++){
-          var vid = "_v" + (vc++);
-          var vn = { id: vid, virtual: true, comp: comp[e.from], vlayer: L,
-                     x: 0, y: 0, rx: 0, ry: 0 };
-          virtuals.push(vn); nodeById[vid] = vn;
-          through.push(vid);
+          var id = "_v" + (vc++);
+          var gn = { id: id, virtual: true, comp: comp[e.from], vlayer: L,
+                     w: 0, h: DUMMY_H, x: 0, y: 0 };
+          ghosts.push(gn); nodeById[id] = gn;
+          through.push(id);
         }
       }
       return [e.from].concat(through, [e.to]);
@@ -511,19 +765,19 @@ const CLIENT_JS = `
     function lOf(n){ return n.virtual ? n.vlayer : layer[n.id]; }
     function cOf(n){ return n.virtual ? n.comp : comp[n.id]; }
 
-    // Segment adjacency over the expanded graph (real + dummy nodes).
+    // segment adjacency over the expanded graph (real + ghost nodes)
     var segIn = {}, segOut = {};
     function ensure(id){ if (!segIn[id]) segIn[id] = []; if (!segOut[id]) segOut[id] = []; }
     nodes.forEach(function(n){ ensure(n.id); });
-    virtuals.forEach(function(n){ ensure(n.id); });
+    ghosts.forEach(function(n){ ensure(n.id); });
     routes.forEach(function(r){
       for (var i = 0; i < r.length - 1; i++){
         segOut[r[i]].push(r[i+1]); segIn[r[i+1]].push(r[i]);
       }
     });
 
-    // Group every item by column.
-    var items = nodes.concat(virtuals);
+    // group every item (real + ghost) by column
+    var items = nodes.concat(ghosts);
     var layers = {}, maxL = 0;
     items.forEach(function(n){
       var L = lOf(n);
@@ -531,9 +785,8 @@ const CLIENT_JS = `
       if (L > maxL) maxL = L;
     });
 
-    // Crossing reduction: order each column by the barycenter of its
-    // neighbours, keeping components grouped together.
-    function posIndex(arr){ var m = {}; arr.forEach(function(n,i){ m[n.id] = i; }); return m; }
+    // barycenter ordering to reduce crossings (keep components grouped)
+    function posIndex(arr){ var m={}; arr.forEach(function(n,i){ m[n.id]=i; }); return m; }
     function orderBy(arr, adj, pm){
       arr.forEach(function(n){
         var ns = adj[n.id] || [], s = 0, c = 0;
@@ -545,20 +798,30 @@ const CLIENT_JS = `
       });
     }
     for (var L0 = 0; L0 <= maxL; L0++)
-      (layers[L0] || []).sort(function(a, b){ return cOf(a) - cOf(b); });
+      (layers[L0] || []).sort(function(a,b){ return cOf(a) - cOf(b); });
     for (var pass = 0; pass < 6; pass++){
       for (var L = 1; L <= maxL; L++)
         orderBy(layers[L] || [], segIn, posIndex(layers[L-1] || []));
       for (var L2 = maxL - 1; L2 >= 0; L2--)
         orderBy(layers[L2] || [], segOut, posIndex(layers[L2+1] || []));
     }
-
-    // Record each item's order within its column.
     for (var L3 = 0; L3 <= maxL; L3++)
-      (layers[L3] || []).forEach(function(n, i){ n._oi = i; });
+      (layers[L3] || []).forEach(function(n,i){ n._oi = i; });
 
-    // Coordinates: x by column (shared across components so inputs stay left),
-    // y stacked per component, each component placed in its own vertical band.
+    // column x positions: cumulative, respecting the widest node per column
+    var colW = [];
+    for (var L4 = 0; L4 <= maxL; L4++){
+      var w = 0;
+      (layers[L4] || []).forEach(function(n){ if (n.w > w) w = n.w; });
+      colW[L4] = w || 60;
+    }
+    var colX = [], acc = 0;
+    for (var L5 = 0; L5 <= maxL; L5++){
+      colX[L5] = acc + colW[L5] / 2;
+      acc += colW[L5] + LAYER_GAP;
+    }
+
+    // y positions: stack each component's columns (real + ghost) within a band
     var byComp = {};
     items.forEach(function(n){
       var c = cOf(n), L = lOf(n);
@@ -568,28 +831,97 @@ const CLIENT_JS = `
     var compIds = Object.keys(byComp).map(Number).sort(function(a,b){ return a-b; });
     var cursorY = 0;
     compIds.forEach(function(c){
-      var cl = byComp[c], maxCount = 0;
-      for (var L in cl){ cl[L].sort(function(a,b){ return a._oi - b._oi; });
-        if (cl[L].length > maxCount) maxCount = cl[L].length; }
-      var bandH = Math.max(1, maxCount) * ROW_GAP;
+      var cl = byComp[c], bandH = 0;
+      for (var L in cl){
+        cl[L].sort(function(a,b){ return a._oi - b._oi; });
+        var hsum = 0;
+        cl[L].forEach(function(n){ hsum += n.h; });
+        hsum += (cl[L].length - 1) * NODE_VGAP;
+        if (hsum > bandH) bandH = hsum;
+      }
       var center = cursorY + bandH / 2;
-      for (var L4 in cl){
-        var arr = cl[L4], totalH = (arr.length - 1) * ROW_GAP;
-        arr.forEach(function(n, i){
-          n.x = Number(L4) * LAYER_GAP;
-          n.y = center - totalH / 2 + i * ROW_GAP;
+      for (var L6 in cl){
+        var arr = cl[L6], total = 0;
+        arr.forEach(function(n){ total += n.h; });
+        total += (arr.length - 1) * NODE_VGAP;
+        var y = center - total / 2;
+        arr.forEach(function(n){
+          n.x = colX[Number(L6)];
+          n.y = y + n.h / 2;
+          y += n.h + NODE_VGAP;
         });
       }
       cursorY += bandH + COMPONENT_GAP;
     });
   }
 
-  // ---- SVG rendering ----
-  var edgeEls = [], nodeEls = [], incident = {};
+  // ---- SVG helpers ----
   function el(name, attrs){
     var e = document.createElementNS(SVG_NS, name);
     for (var k in attrs) e.setAttribute(k, attrs[k]);
     return e;
+  }
+  function headerPath(w, h, hh, r){
+    var x = -w/2, y = -h/2;
+    return "M " + (x+r) + " " + y +
+      " h " + (w-2*r) + " a " + r + " " + r + " 0 0 1 " + r + " " + r +
+      " v " + (hh-r) + " h " + (-w) + " v " + (-(hh-r)) +
+      " a " + r + " " + r + " 0 0 1 " + r + " " + (-r) + " z";
+  }
+  // Width of the chip pill around a constant (text measured at its own size).
+  function chipWidth(text){ return tw(text, "700", 10) + 12; }
+
+  // A colored pill around a fixed value, so constants stand out from names.
+  function drawChip(g, x, cy, text, color){
+    var w = chipWidth(text), h = 14;
+    g.appendChild(el("rect", {
+      x: x, y: cy - h/2, width: w, height: h, rx: 4, ry: 4, fill: color
+    }));
+    var t = el("text", { "class": "chip-text", x: x + w/2, y: cy });
+    t.textContent = text;
+    g.appendChild(t);
+    return w;
+  }
+
+  var edgeEls = [], nodeEls = [], labelLayer = null;
+
+  // A floating pill (dark bg, colored text) used to reveal a signal name on
+  // hover. Lives in the top label layer, never intercepts pointer events.
+  function makeLabel(x, y, text, color, anchor){
+    var pad = 6, h = 16, w = tw(text, "600", 10.5) + pad * 2;
+    var lx = anchor === "end" ? x - w : anchor === "start" ? x : x - w/2;
+    var g = el("g", {});
+    g.setAttribute("pointer-events", "none");
+    g.appendChild(el("rect", {
+      x: lx, y: y - h/2, width: w, height: h, rx: 5, ry: 5,
+      fill: "#0c0c0e", "fill-opacity": 0.94, stroke: color,
+      "stroke-opacity": 0.85, "stroke-width": 1
+    }));
+    var t = el("text", { "class": "wire-label", x: lx + w/2, y: y, fill: color });
+    t.textContent = text;
+    g.appendChild(t);
+    return g;
+  }
+  function clearLabels(){
+    if (labelLayer) while (labelLayer.firstChild) labelLayer.removeChild(labelLayer.firstChild);
+  }
+  // Reveal the names of every cable touching a circuit, placed just outside the
+  // relevant pin (in the gutter where the wire runs, so nothing overlaps).
+  function labelNode(n){
+    if (n.kind !== "circuit" || !labelLayer) return;
+    (incident[n.id] || []).forEach(function(ee){
+      var e = ee.data;
+      if (e.to === n.id){
+        var p = n.pins[e.toPin]; if (!p) return;
+        labelLayer.appendChild(
+          makeLabel(n.x + p.x - PIN_R - 4, n.y + p.y, e.label, e.color, "end"));
+      }
+      if (e.from === n.id){
+        var q = n.pins[e.fromPin]; if (!q) return;
+        labelLayer.appendChild(
+          makeLabel(n.x + q.x + PIN_R + 4, n.y + q.y, e.label, e.color, "start"));
+      }
+    });
   }
 
   function render(){
@@ -602,124 +934,214 @@ const CLIENT_JS = `
     edges.forEach(function(e, i){
       var path = el("path", {
         "class": "edge-path", stroke: e.color,
-        "stroke-width": 1.8, "stroke-opacity": 0.5
+        "stroke-width": 2, "stroke-opacity": 0.7
       });
-      var head = el("polygon", { fill: e.color, "fill-opacity": 0.8 });
-      var label = el("text", { "class": "edge-label" });
-      label.textContent = e.label;
-      label.style.display = toggleLabels.checked ? "" : "none";
       edgeLayer.appendChild(path);
-      edgeLayer.appendChild(head);
-      edgeLayer.appendChild(label);
-      var rec = { data: e, route: routes[i], path: path, head: head, label: label };
+      var rec = { data: e, path: path, route: routes[i] };
       edgeEls.push(rec);
       incident[e.from].push(rec); incident[e.to].push(rec);
+      attachWireHover(rec);
     });
 
     var nodeLayer = el("g", {});
     viewport.appendChild(nodeLayer);
     nodes.forEach(function(n){
-      var g = el("g", { "class": "node-box" });
+      var g = el("g", { "class": "node" });
       var title = el("title", {});
-      title.textContent = n.title || n.label;
+      title.textContent = n.title || n.label || n.name;
       g.appendChild(title);
-
-      var shape = el("rect", {
-        "class": "node-shape", x: -n.rx, y: -n.ry, width: n.w, height: n.h,
-        rx: (n.kind === "circuit") ? 7 : 15, ry: (n.kind === "circuit") ? 7 : 15,
-        fill: (n.kind === "circuit") ? n.color : "#222",
-        stroke: (n.kind === "circuit") ? "#000" : n.color,
-        "stroke-width": (n.kind === "circuit") ? 1.5 : 2
-      });
-      g.appendChild(shape);
-
-      var text = el("text", { "class": "node-label" });
-      text.textContent = n.label;
-      if (n.kind !== "circuit") text.setAttribute("fill", n.color);
-      g.appendChild(text);
-
+      if (n.kind === "circuit") renderCircuit(g, n);
+      else renderHardware(g, n);
       attachInteraction(g, n);
       nodeLayer.appendChild(g);
       var rec = { data: n, g: g };
       nodeEls.push(rec);
       n._el = rec;
     });
+
+    labelLayer = el("g", {}); // on-hover signal names, always on top
+    viewport.appendChild(labelLayer);
+
     paint();
-    setTimeout(fit, 0);
+    document.getElementById("count").textContent =
+      nodes.length + " nodes, " + edges.length + " wires";
   }
 
-  // Build a smooth left-to-right path through the route's waypoints.
-  function edgeGeom(route){
-    var pts = route.map(function(id){ var n = nodeById[id]; return { x: n.x, y: n.y }; });
-    var s = nodeById[route[0]], t = nodeById[route[route.length - 1]];
-    var dirS = (pts[1].x >= s.x) ? 1 : -1;
-    var dirE = (t.x >= pts[pts.length - 2].x) ? 1 : -1;
-    var P = [{ x: s.x + dirS * s.rx, y: s.y }];
-    for (var i = 1; i < pts.length - 1; i++) P.push(pts[i]);
-    P.push({ x: t.x - dirE * t.rx, y: t.y });
-    var d = "M " + P[0].x + " " + P[0].y;
-    for (var j = 1; j < P.length; j++){
-      var a = P[j-1], b = P[j], mx = (a.x + b.x) / 2;
-      d += " C " + mx + " " + a.y + " " + mx + " " + b.y + " " + b.x + " " + b.y;
-    }
-    var mid = P[Math.floor(P.length / 2)];
-    if (P.length % 2 === 0){
-      var m1 = P[P.length/2 - 1], m2 = P[P.length/2];
-      mid = { x: (m1.x + m2.x) / 2, y: (m1.y + m2.y) / 2 };
-    }
-    return { d: d, end: P[P.length - 1], dirE: dirE, mid: mid };
+  function renderCircuit(g, n){
+    g.appendChild(el("rect", {
+      "class": "node-body", x: -n.w/2, y: -n.h/2, width: n.w, height: n.h,
+      rx: 6, ry: 6, fill: "#1b1b1d"
+    }));
+    g.appendChild(el("path", {
+      d: headerPath(n.w, n.h, HEADER_H, 6), fill: n.color, "fill-opacity": 0.95
+    }));
+    var ht = el("text", { "class": "header-text", x: -n.w/2 + PAD_X, y: -n.h/2 + HEADER_H/2 });
+    ht.textContent = n.name;
+    g.appendChild(ht);
+
+    n._left.forEach(function(r){
+      if (r.conn){
+        g.appendChild(el("circle", {
+          cx: -n.w/2, cy: r.y, r: PIN_R, fill: r.color,
+          stroke: "#0a0a0a", "stroke-width": 1
+        }));
+      }
+      var x = -n.w/2 + PAD_X;
+      // head: the pin name (base row) or the operator glyph (modifier row)
+      var head = el("text", {
+        "class": r.base ? "pin-name pin-base" : "pin-name pin-op",
+        x: x, y: r.y, "text-anchor": "start"
+      });
+      head.textContent = r.head;
+      g.appendChild(head);
+      // operand: a colored chip for constants, plain text for shown signals
+      if (r.operand){
+        x += r.headW + HEAD_GAP;
+        if (r.conn){
+          var ot = el("text", {
+            "class": "pin-name pin-sub", x: x, y: r.y, "text-anchor": "start"
+          });
+          ot.textContent = r.operand;
+          g.appendChild(ot);
+        } else {
+          drawChip(g, x, r.y, r.operand, r.color);
+        }
+      }
+    });
+
+    n._right.forEach(function(r){
+      if (r.conn){
+        g.appendChild(el("circle", {
+          cx: n.w/2, cy: r.y, r: PIN_R, fill: r.color,
+          stroke: "#0a0a0a", "stroke-width": 1
+        }));
+      }
+      // right-align the whole name(+operand) group against the output pin
+      var x = n.w/2 - PAD_X - r.width;
+      var nm = el("text", {
+        "class": "pin-name pin-base", x: x, y: r.y, "text-anchor": "start"
+      });
+      nm.textContent = r.name;
+      g.appendChild(nm);
+      if (r.operand){
+        x += r.nameW + HEAD_GAP;
+        if (r.conn){
+          var ot = el("text", {
+            "class": "pin-name pin-sub", x: x, y: r.y, "text-anchor": "start"
+          });
+          ot.textContent = r.operand;
+          g.appendChild(ot);
+        } else {
+          drawChip(g, x, r.y, r.operand, r.color);
+        }
+      }
+    });
   }
 
-  // Update SVG geometry from the model.
+  function renderHardware(g, n){
+    g.appendChild(el("rect", {
+      "class": "node-body hw-body", x: -n.w/2, y: -n.h/2,
+      width: n.w, height: n.h, rx: n.h/2, ry: n.h/2,
+      fill: "#202022", stroke: n.hwColor
+    }));
+    var t = el("text", { "class": "hw-label", x: 0, y: 0, fill: n.hwColor });
+    t.textContent = n.label;
+    g.appendChild(t);
+    var p = n.pins["p"];
+    g.appendChild(el("circle", {
+      cx: p.x, cy: p.y, r: PIN_R, fill: n.hwColor,
+      stroke: "#0a0a0a", "stroke-width": 1
+    }));
+  }
+
+  // Absolute points of a cable: its two pin endpoints plus the ghost waypoints.
+  function edgePoints(e, route){
+    var first = nodeById[route[0]], last = nodeById[route[route.length - 1]];
+    var pa = first.pins && first.pins[e.fromPin];
+    var pb = last.pins && last.pins[e.toPin];
+    if (!pa || !pb) return null;
+    var pts = [{ x: first.x + pa.x, y: first.y + pa.y }];
+    for (var i = 1; i < route.length - 1; i++){
+      var d = nodeById[route[i]];
+      pts.push({ x: d.x, y: d.y });
+    }
+    pts.push({ x: last.x + pb.x, y: last.y + pb.y });
+    return pts;
+  }
+  // Smooth left-to-right path through the points; horizontal tangents at each
+  // give the flowing Unreal-style cable through the ghost waypoints.
+  function edgePath(pts){
+    var path = "M " + pts[0].x + " " + pts[0].y;
+    for (var j = 1; j < pts.length; j++){
+      var A = pts[j-1], B = pts[j], mx = (A.x + B.x) / 2;
+      path += " C " + mx + " " + A.y + " " + mx + " " + B.y + " " +
+              B.x + " " + B.y;
+    }
+    return path;
+  }
+  // Midpoint along the route, for placing a hovered cable's label.
+  function edgeMid(pts){
+    if (pts.length % 2 === 1) return pts[(pts.length - 1) / 2];
+    var a = pts[pts.length/2 - 1], b = pts[pts.length/2];
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+
   function paint(){
     nodeEls.forEach(function(ne){
       ne.g.setAttribute("transform",
         "translate(" + ne.data.x + "," + ne.data.y + ")");
     });
     edgeEls.forEach(function(ee){
-      var r = edgeGeom(ee.route);
-      ee.path.setAttribute("d", r.d);
-      var ux = r.dirE, uy = 0, sz = 7, px = -uy, py = ux;
-      var ex = r.end.x, ey = r.end.y;
-      ee.head.setAttribute("points",
-        ex + "," + ey + " " +
-        (ex - ux*sz + px*sz*0.6) + "," + (ey - uy*sz + py*sz*0.6) + " " +
-        (ex - ux*sz - px*sz*0.6) + "," + (ey - uy*sz - py*sz*0.6));
-      ee.label.setAttribute("x", r.mid.x);
-      ee.label.setAttribute("y", r.mid.y - 4);
+      var pts = edgePoints(ee.data, ee.route);
+      if (pts) ee.path.setAttribute("d", edgePath(pts));
     });
   }
 
-  // ---- Hover highlight: focus a node and its direct connections ----
+  // ---- hover highlight ----
   function highlight(node){
     var keep = {}; keep[node.id] = true;
-    var inc = incident[node.id];
+    var inc = incident[node.id] || [];
     inc.forEach(function(ee){ keep[ee.data.from] = true; keep[ee.data.to] = true; });
     edgeEls.forEach(function(ee){
       var on = inc.indexOf(ee) >= 0;
-      ee.path.setAttribute("stroke-opacity", on ? 0.95 : 0.04);
-      ee.path.setAttribute("stroke-width", on ? 2.6 : 1.8);
-      ee.head.setAttribute("fill-opacity", on ? 1 : 0.04);
-      ee.label.style.display = on ? "" : (toggleLabels.checked ? "" : "none");
+      ee.path.setAttribute("stroke-opacity", on ? 1 : 0.06);
+      ee.path.setAttribute("stroke-width", on ? 3 : 2);
     });
-    nodeEls.forEach(function(ne){ ne.g.style.opacity = keep[ne.data.id] ? 1 : 0.2; });
+    nodeEls.forEach(function(ne){ ne.g.style.opacity = keep[ne.data.id] ? 1 : 0.25; });
   }
   function clearHighlight(){
     edgeEls.forEach(function(ee){
-      ee.path.setAttribute("stroke-opacity", 0.5);
-      ee.path.setAttribute("stroke-width", 1.8);
-      ee.head.setAttribute("fill-opacity", 0.8);
-      ee.label.style.display = toggleLabels.checked ? "" : "none";
+      ee.path.setAttribute("stroke-opacity", 0.7);
+      ee.path.setAttribute("stroke-width", 2);
     });
     nodeEls.forEach(function(ne){ ne.g.style.opacity = 1; });
   }
 
-  // ---- Interaction: hover, drag, click-to-reveal ----
+  // Emphasize a single cable and float its name at the route midpoint.
+  function attachWireHover(rec){
+    rec.path.addEventListener("mouseenter", function(){
+      rec.path.setAttribute("stroke-opacity", 1);
+      rec.path.setAttribute("stroke-width", 3.5);
+      var pts = edgePoints(rec.data, rec.route);
+      if (pts && labelLayer){
+        var m = edgeMid(pts);
+        labelLayer.appendChild(makeLabel(m.x, m.y, rec.data.label, rec.data.color, "mid"));
+      }
+    });
+    rec.path.addEventListener("mouseleave", function(){
+      rec.path.setAttribute("stroke-opacity", 0.7);
+      rec.path.setAttribute("stroke-width", 2);
+      clearLabels();
+    });
+  }
+
+  // ---- interaction: hover, drag, click-to-reveal ----
   function attachInteraction(g, n){
-    g.addEventListener("mouseenter", function(){ highlight(n); });
-    g.addEventListener("mouseleave", function(){ clearHighlight(); });
+    g.addEventListener("mouseenter", function(){ highlight(n); labelNode(n); });
+    g.addEventListener("mouseleave", function(){ clearHighlight(); clearLabels(); });
     g.addEventListener("pointerdown", function(ev){
       ev.stopPropagation();
+      clearLabels();
       g.setPointerCapture(ev.pointerId);
       var moved = false;
       function move(e){
@@ -749,7 +1171,7 @@ const CLIENT_JS = `
     };
   }
 
-  // Pan with background drag.
+  // pan with background drag
   var panning = false, panStart = null;
   svg.addEventListener("pointerdown", function(ev){
     panning = true;
@@ -764,7 +1186,7 @@ const CLIENT_JS = `
   svg.addEventListener("pointerup", function(){ panning = false; });
   svg.addEventListener("pointerleave", function(){ panning = false; });
 
-  // Zoom with wheel, centered on the cursor.
+  // zoom with wheel, centered on the cursor
   svg.addEventListener("wheel", function(ev){
     ev.preventDefault();
     var rect = svg.getBoundingClientRect();
@@ -781,26 +1203,24 @@ const CLIENT_JS = `
     if (!nodes.length) return;
     var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     nodes.forEach(function(n){
-      minX = Math.min(minX, n.x - n.rx); maxX = Math.max(maxX, n.x + n.rx);
-      minY = Math.min(minY, n.y - n.ry); maxY = Math.max(maxY, n.y + n.ry);
+      minX = Math.min(minX, n.x - n.w/2); maxX = Math.max(maxX, n.x + n.w/2);
+      minY = Math.min(minY, n.y - n.h/2); maxY = Math.max(maxY, n.y + n.h/2);
     });
     var w = maxX - minX, h = maxY - minY;
     var vw = svg.clientWidth, vh = svg.clientHeight;
-    scale = Math.min(2, Math.max(0.1, Math.min(vw/(w+100), vh/(h+100))));
+    scale = Math.min(1.5, Math.max(0.1, Math.min(vw/(w+120), vh/(h+120))));
     tx = (vw - w*scale)/2 - minX*scale;
     ty = (vh - h*scale)/2 - minY*scale;
     applyTransform();
   }
 
-  // ---- Toolbar ----
   toggleHw.addEventListener("change", buildScene);
-  toggleLabels.addEventListener("change", function(){
-    edgeEls.forEach(function(ee){
-      ee.label.style.display = toggleLabels.checked ? "" : "none";
-    });
+  toggleNames.addEventListener("change", function(){
+    showNames = toggleNames.checked;
+    buildScene();
   });
   document.getElementById("relayout").addEventListener("click", function(){
-    layout(); paint(); fit();
+    layout(); render(); fit();
   });
   document.getElementById("fit").addEventListener("click", fit);
 
