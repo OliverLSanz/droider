@@ -444,7 +444,12 @@ export class HardwareViewProvider {
             text-align: center;
             max-width: 40px;
             white-space: nowrap;
-            text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+            background: rgba(212, 184, 150, 0.95);
+            padding: 2px 4px;
+            border-radius: 2px;
+            border: 1px solid rgba(180, 154, 120, 0.8);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            line-height: 1;
         }
         
         .buttons-section {
@@ -575,7 +580,12 @@ export class HardwareViewProvider {
             text-align: center;
             max-width: 40px;
             white-space: nowrap;
-            text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+            background: rgba(212, 184, 150, 0.95);
+            padding: 2px 4px;
+            border-radius: 2px;
+            border: 1px solid rgba(180, 154, 120, 0.8);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            line-height: 1;
         }
         
         .rotary-switch:hover {
@@ -727,9 +737,15 @@ export class HardwareViewProvider {
             transform: translateX(-50%);
             font-size: 8px;
             font-weight: bold;
-            color: #d4b896;
+            color: #1a1a1a;
             white-space: nowrap;
             text-align: center;
+            background: rgba(212, 184, 150, 0.95);
+            padding: 2px 4px;
+            border-radius: 2px;
+            border: 1px solid rgba(180, 154, 120, 0.8);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            line-height: 1;
         }
 
         .fader-track:hover {
@@ -890,7 +906,12 @@ export class HardwareViewProvider {
             font-weight: bold;
             color: #1a1a1a;
             white-space: nowrap;
-            text-shadow: 0 0 1px rgba(255, 255, 255, 0.6);
+            background: rgba(212, 184, 150, 0.95);
+            padding: 2px 4px;
+            border-radius: 2px;
+            border: 1px solid rgba(180, 154, 120, 0.8);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            line-height: 1;
         }
 
         .m4-fader-track:hover {
@@ -1090,7 +1111,12 @@ export class HardwareViewProvider {
             max-width: 24px;
             white-space: nowrap;
             z-index: 1;
-            text-shadow: 0 0 1px rgba(255, 255, 255, 0.3);
+            background: rgba(212, 184, 150, 0.95);
+            padding: 2px 4px;
+            border-radius: 2px;
+            border: 1px solid rgba(180, 154, 120, 0.8);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            line-height: 1;
         }
         
         /* Master 18 */
@@ -1322,7 +1348,12 @@ export class HardwareViewProvider {
             text-align: center;
             max-width: 16px;
             white-space: nowrap;
-            text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+            background: rgba(212, 184, 150, 0.95);
+            padding: 2px 4px;
+            border-radius: 2px;
+            border: 1px solid rgba(180, 154, 120, 0.8);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            line-height: 1;
         }
         
         .mini-pot-number {
