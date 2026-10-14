@@ -211,6 +211,10 @@ export function lint(text: string, data: DroidData, opts: LintOptions = {}): Pro
       } else if (m[2] !== undefined) {
         // Validate the default value's registers (defaults are usually constants).
         const def = m[3] ?? "";
+        if (!def.trim()) {
+          add(i, code.indexOf("="), code.length, `missing value after '=' for input port '${portName}'`);
+          return;
+        }
         const validRegs = data.validRegisters(chain);
         for (const part of splitTokens(def)) {
           const cls = classify(part);
@@ -233,6 +237,13 @@ export function lint(text: string, data: DroidData, opts: LintOptions = {}): Pro
     const pStart = code.indexOf(pname);
     if (!PNAME_RE.test(pname)) {
       add(i, pStart, pStart + pname.length, `invalid parameter name: '${pname}'`);
+      return;
+    }
+
+    // An explicit assignment needs a value, even if the parameter has a
+    // default. Comments have already been stripped, so '= # TODO' is empty too.
+    if (!code.slice(eq + 1).trim()) {
+      add(i, eq, code.length, `missing value after '=' for parameter '${pname}'`);
       return;
     }
 

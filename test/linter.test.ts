@@ -8,6 +8,58 @@ const data = DroidData.load([process.cwd(), __dirname]);
 const modes: PatchMode[] = ["ini", "droider", "blueprint"];
 const destinationError = /output.*single destination/i;
 
+test("assignments require a value, including when only whitespace or a comment follows", () => {
+  for (const mode of modes) {
+    for (const param of ["input", "i", "output", "o"]) {
+      for (const suffix of ["", " ", "\t", " # pending", "\t# pending"]) {
+        const line = `    ${param} =${suffix}`;
+        const problems = lint(`[copy]\n${line}`, data, { mode });
+        assert.equal(problems.length, 1, `${mode}: ${line}`);
+        const [problem] = problems;
+        assert.match(problem.message, /missing value after '='/);
+        assert.equal(problem.severity, "error");
+        assert.equal(problem.line, 1);
+        assert.equal(problem.startCol, line.indexOf("="));
+        assert.equal(problem.endCol, line.split("#")[0].length);
+        assert.ok(problem.endCol > problem.startCol);
+      }
+    }
+  }
+});
+
+test("zero, explicit empty strings, blank lines and comments still have their usual meaning", () => {
+  for (const mode of modes) {
+    for (const value of ["0", "0.0", "off", '\"\"']) {
+      const patch = `[copy]\n\n# comment\ninput = ${value} # assigned\noutput = O1`;
+      assert.deepEqual(lint(patch, data, { mode }), [], `${mode}: ${value}`);
+    }
+  }
+});
+
+test("blueprint defaults cannot be empty, but required input declarations need no assignment", () => {
+  for (const suffix of ["", " ", "\t", " # pending"]) {
+    const definition = `[input]\nsource =${suffix}\n[copy]\ninput = source\noutput = O1`;
+    const problems = lint(definition, data, { mode: "blueprint" });
+    assert.equal(problems.length, 1);
+    assert.match(problems[0].message, /missing value after '='/);
+    assert.equal(problems[0].line, 1);
+  }
+  for (const declaration of ["source", "source = 0", 'source = \"\"']) {
+    const definition = `[input]\n${declaration}\n[copy]\ninput = source\noutput = O1`;
+    assert.deepEqual(lint(definition, data, { mode: "blueprint" }), []);
+  }
+});
+
+test("an empty megacircuit input does not satisfy a required port", () => {
+  const definition = "[input]\nsource\n[output]\nresult\n[copy]\ninput = source\noutput = result";
+  const blueprints = new Map([["passthru", parseBlueprint(definition, "passthru")]]);
+  const problems = lint("[passthru]\nsource = # pending\nresult = O1", data, {
+    mode: "droider", blueprints,
+  });
+  assert.ok(problems.some((p) => /missing value after '='/.test(p.message)));
+  assert.ok(problems.some((p) => /missing input 'source'/.test(p.message)));
+});
+
 test("outputs reject expressions and literal values in every patch mode", () => {
   for (const mode of modes) {
     for (const value of [
