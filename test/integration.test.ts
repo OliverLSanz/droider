@@ -81,6 +81,15 @@ test("linter allows complex math in .droider mode", () => {
   );
 });
 
+test("linter rejects output arithmetic in both source and generated patches", () => {
+  const source = "[copy]\n    input = I1\n    output = O1 * 0.5";
+  const { ini, problems } = expandToIni(source, new Map());
+  assert.deepEqual(problems, []);
+  for (const [text, mode] of [[source, "droider"], [ini, "ini"]] as const) {
+    assert.ok(lint(text, data, { mode }).some((p) => /output.*single destination/.test(p.message)));
+  }
+});
+
 test("linter validates operands inside parenthesized expressions", () => {
   // `_FOO` has no producer -> still detected as a cable consumer (no false
   // 'unknown register' from the surrounding parentheses).

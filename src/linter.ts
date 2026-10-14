@@ -54,6 +54,7 @@ const HEADER_RE = /^\[([a-z0-9]+)\]$/;
 const PNAME_RE = /^[a-zA-Z][a-zA-Z0-9]*$/;
 const ARRAY_RE = /^([a-zA-Z]+)(\d+)$/;
 const TOKEN_SPLIT = /[*+\-/()]/;
+const OUTPUT_DESTINATION_RE = /^(?:_[A-Za-z0-9_]+|[A-Za-z][A-Za-z0-9_.]*)$/;
 
 type BlockKind = "circuit" | "blueprint" | "section-input" | "section-output" | "unknown" | "none";
 
@@ -269,6 +270,20 @@ export function lint(text: string, data: DroidData, opts: LintOptions = {}): Pro
     const valueStart = eq + 1;
     const value = code.slice(valueStart);
     const validRegs = data.validRegisters(chain);
+
+    // Outputs name a writable destination, never a value to evaluate. Reject
+    // expressions before tokenizing so their operands cannot be recorded as
+    // cable/port producers. Register existence and direction are checked below.
+    if (role === "output") {
+      const destination = value.trim();
+      if (!OUTPUT_DESTINATION_RE.test(destination) || classify(destination)?.kind === "number") {
+        const col = firstNonSpace(value) + valueStart;
+        add(i, col, code.length,
+          `output '${pname}' must be a single destination (register, internal cable or blueprint port); ` +
+          `math expressions are only allowed on inputs`);
+        return;
+      }
+    }
 
     // A malformed math expression (bad operators/parens) is an error in any
     // mode — otherwise it would slip through unchanged into an invalid .ini.
