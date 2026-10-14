@@ -717,7 +717,6 @@ const HTML_HEAD = `<!DOCTYPE html>
   <strong style="color:#d4b896">Circuit Graph</strong>
   <span style="opacity:0.55">signal flow &rarr;</span>
   <label><input type="checkbox" id="toggle-hw" checked> Hardware I/O</label>
-  <label><input type="checkbox" id="toggle-names"> Cable names</label>
   <button id="relayout">Re-layout</button>
   <button id="fit">Fit</button>
   <span class="legend"><span class="swatch" style="background:#6ec06e"></span>input reg</span>
@@ -745,7 +744,6 @@ const CLIENT_JS = `
   var svg = document.getElementById("graph");
   var viewport = document.getElementById("viewport");
   var toggleHw = document.getElementById("toggle-hw");
-  var toggleNames = document.getElementById("toggle-names");
   var tooltip = document.getElementById("tooltip");
 
   document.getElementById("empty").style.display =
@@ -755,10 +753,6 @@ const CLIENT_JS = `
   var HEADER_H = 24, ROW_H = 17, PAD_X = 9, PAD_BOTTOM = 8;
   var COL_GAP = 22, PIN_R = 4.5;
   var LAYER_GAP = 70, NODE_VGAP = 26, COMPONENT_GAP = 60, DUMMY_H = 14;
-
-  // Connectable operands (cables/registers) show their name only when this is
-  // on; the wire already conveys the connection, so names are off by default.
-  var showNames = false;
 
   // Accurate text width via an offscreen canvas (a fixed char width can't cope
   // with bold names + proportional fonts, which left chips mis-placed).
@@ -780,10 +774,9 @@ const CLIENT_JS = `
 
   var nodes = [], edges = [], routes = [], nodeById = {}, incident = {};
 
-  // Operand text to display for a row/pin: hidden for connectable signals when
-  // names are off (constants are always shown).
+  // Signal names are revealed on hover; constants are always shown.
   function operandText(text, conn){
-    return (conn && !showNames) ? "" : text;
+    return conn ? "" : text;
   }
 
   // Glyph shown for a row's leading operator ("" for the base/first operand).
@@ -1568,10 +1561,6 @@ const CLIENT_JS = `
   }
 
   toggleHw.addEventListener("change", buildScene);
-  toggleNames.addEventListener("change", function(){
-    showNames = toggleNames.checked;
-    buildScene();
-  });
   document.getElementById("relayout").addEventListener("click", function(){
     layout(); render(); fit();
   });
