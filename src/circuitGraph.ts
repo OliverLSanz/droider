@@ -34,7 +34,7 @@ interface PinRow {
   text: string; // operand as written (cable, register or constant)
   conn: boolean; // is the operand a connectable signal (cable/register)?
   color: string; // wire/pin color (cable color or hardware color)
-  // Formula rows (parenthesized expression split across rows): signals are
+  // Formula rows (arithmetic expression split across rows): signals are
   // drawn as a colored dot (name on hover), with parentheses around them.
   formula?: boolean;
   open?: number; // parentheses opening before the operand
@@ -306,6 +306,9 @@ export class CircuitGraphBuilder {
         } else {
           // Treat input role and unknown role alike (most params are inputs).
           const tokens = tokenizeExpr(p.value);
+          // Even without parentheses, place signal dots after their operator
+          // inside the card so every formula reads in expression order.
+          const formula = tokens.length > 1;
           const rows: PinRow[] = tokens.map((t) => {
             const cls = classifyOperand(t.operand, validRegs);
             return {
@@ -313,6 +316,7 @@ export class CircuitGraphBuilder {
               text: t.operand,
               conn: cls.conn,
               color: cls.color,
+              formula,
             };
           });
           inputs.push({ key: p.param, name: p.name, rows });
@@ -801,9 +805,10 @@ const CLIENT_JS = `
 
     var left = [], right = [];
     (n.inputs || []).forEach(function(pin){
-      // Formula pins reserve a fixed operator column (so the operands line up)
-      // and show the parameter name to the right of the base row.
+      // Formulas start with "parameter ="; continuation operators return to
+      // the left margin rather than indenting under the right-hand side.
       var isFormula = pin.rows.some(function(r){ return r.formula; });
+      var formulaStart = isFormula ? tw(pin.name + " =", "600") + HEAD_GAP : 0;
       var glyphCol = 0;
       if (isFormula) pin.rows.forEach(function(r){
         if (r.op !== "") glyphCol = Math.max(glyphCol, tw(glyphFor(r.op), "700"));
@@ -818,12 +823,9 @@ const CLIENT_JS = `
         if (r.formula){
           // A formula operand: the operator (fixed column), optional parens
           // (neutral, bold), then a colored dot for a signal or a chip for a
-          // constant. The parameter name sits to the right of the base row.
-          lrow.head = base ? "" : glyphFor(r.op);
-          // The base row has no operator, so its content starts flush at PAD_X
-          // (aligned with the operators of the other rows); the rest reserve the
-          // operator column.
-          var headSpace = base ? 0 : glyphCol + HEAD_GAP;
+          // constant. Keep the assignment label before the first operand.
+          lrow.head = base ? pin.name + " =" : glyphFor(r.op);
+          var headSpace = base ? formulaStart : glyphCol + HEAD_GAP;
           lrow.headSpace = headSpace;
           var parts = [];
           if (r.open) { var ops = "(".repeat(r.open); parts.push({ t: "paren", s: ops, w: tw(ops, "800") }); }
@@ -832,10 +834,7 @@ const CLIENT_JS = `
           if (r.close) { var cps = ")".repeat(r.close); parts.push({ t: "paren", s: cps, w: tw(cps, "800") }); }
           var pw = 0; parts.forEach(function(p){ pw += p.w; });
           lrow.parts = parts;
-          lrow.nameRight = base ? pin.name : null;
-          var nameW = base ? tw(pin.name, "600") : 0;
-          lrow.width = headSpace + pw + Math.max(0, parts.length - 1) * PART_GAP
-            + (base ? HEAD_GAP + nameW : 0);
+          lrow.width = headSpace + pw + Math.max(0, parts.length - 1) * PART_GAP;
           // Center x of the signal dot (offset from the node's left border), so
           // the incoming wire can run all the way into it (no separate pin).
           var ox = PAD_X + headSpace;
@@ -1297,6 +1296,14 @@ const CLIENT_JS = `
         }));
       }
       var x = -n.w/2 + PAD_X;
+      // Keep the wire lead from striking through the assignment label.
+      if (r.parts && r.base){
+        g.appendChild(el("rect", {
+          x: x - PART_GAP, y: r.y - ROW_H/2,
+          width: r.headSpace - HEAD_GAP/2 + PART_GAP, height: ROW_H,
+          fill: "#1b1b1d"
+        }));
+      }
       // head: the pin name (base row) or the operator glyph (modifier row)
       var head = el("text", {
         "class": r.base ? "pin-name pin-base" : "pin-name pin-op",
@@ -1306,8 +1313,8 @@ const CLIENT_JS = `
       g.appendChild(head);
       if (r.parts){
         // Formula row: parens (neutral), a colored dot per signal, chip per
-        // constant. The signal name itself only shows on hover. The base row
-        // starts flush at PAD_X; the rest after the reserved operator column.
+        // constant. Start after the assignment label on the base row, or after
+        // the aligned operator on continuation rows.
         x = -n.w/2 + PAD_X + r.headSpace;
         r.parts.forEach(function(p, i){
           if (i) x += PART_GAP;
@@ -1330,15 +1337,6 @@ const CLIENT_JS = `
             x += drawChip(g, x, r.y, p.s, p.color);
           }
         });
-        // The parameter name, to the right of the base row's formula part.
-        if (r.nameRight){
-          x += HEAD_GAP;
-          var nm = el("text", {
-            "class": "pin-name pin-base", x: x, y: r.y, "text-anchor": "start"
-          });
-          nm.textContent = r.nameRight;
-          g.appendChild(nm);
-        }
       } else if (r.operand){
         // operand: a colored chip for constants, plain text for shown signals
         x += r.headW + HEAD_GAP;
