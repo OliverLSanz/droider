@@ -99,13 +99,16 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
     const after = line.slice(pos.character);
     // Check if there's already a closing bracket (from autoClosingPairs)
     const closingBracketMatch = after.match(/^(\s*)\]/);
-    const hasClosingBracket = closingBracketMatch !== null;
+    // Include the typed name: VS Code also uses the text from range.start to
+    // the cursor to filter suggestions. Starting at the cursor would disable
+    // filtering and leave that prefix in place when accepting a completion.
+    const range = new vscode.Range(
+      new vscode.Position(pos.line, line.indexOf("[") + 1),
+      pos.translate(0, closingBracketMatch?.[0].length ?? 0)
+    );
 
     const extendRange = (it: vscode.CompletionItem) => {
-      if (hasClosingBracket) {
-        const endPos = pos.translate(0, closingBracketMatch![0].length);
-        it.range = new vscode.Range(pos, endPos);
-      }
+      it.range = range;
       it.command = {
         command: "editor.action.triggerSuggest",
         title: "Trigger Suggestions",
@@ -157,18 +160,7 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
       it.detail = c.title;
       it.documentation = new vscode.MarkdownString(c.description);
       it.insertText = new vscode.SnippetString(`${c.name}]\n    $0`);
-      
-      // If there's an auto-closing bracket, extend the range to replace it
-      if (hasClosingBracket) {
-        const endPos = pos.translate(0, closingBracketMatch![0].length);
-        it.range = new vscode.Range(pos, endPos);
-      }
-      
-      // Trigger suggestions after insertion
-      it.command = {
-        command: "editor.action.triggerSuggest",
-        title: "Trigger Suggestions"
-      };
+      extendRange(it);
       items.push(it);
     }
     for (const c of this.data.controllers.values()) {
@@ -179,11 +171,7 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
       // just close the bracket and drop to a fresh column-0 line.
       it.insertText = new vscode.SnippetString(`${c.type}]\n$0`);
 
-      // If there's an auto-closing bracket, extend the range to replace it
-      if (hasClosingBracket) {
-        const endPos = pos.translate(0, closingBracketMatch![0].length);
-        it.range = new vscode.Range(pos, endPos);
-      }
+      it.range = range;
 
       items.push(it);
     }
