@@ -42,6 +42,7 @@
 // the editor expansion command.
 
 import type { Problem } from "./linter";
+import { expandMathExpressions } from "./maths";
 
 export interface BlueprintPort {
   /** Public port name, referred to directly inside the blueprint body. */
@@ -209,7 +210,10 @@ export function expandToIni(
   const ctx: ExpandCtx = { blueprints, counters: new Map(), problems: [] };
   const lines = text.split(/\r?\n/);
   const out = expandLines(lines, [], ctx);
-  return { ini: out.join("\n"), problems: ctx.problems };
+  // Second sugar pass: rewrite arbitrary math expressions (in the original
+  // patch and any introduced by blueprint inlining) into native `copy` circuits.
+  const math = expandMathExpressions(out.join("\n"));
+  return { ini: math.ini, problems: [...ctx.problems, ...math.problems] };
 }
 
 /** Expands blueprint instances found in `lines`; non-instances pass through. */

@@ -52,12 +52,12 @@
       "editor/title": [
         {
           "command": "droid.showHardwareView",
-          "when": "resourceLangId == droid || resourceLangId == droider || resourceLangId == droid-blueprint",
+          "when": "resourceLangId == droid || resourceLangId == droider",
           "group": "navigation"
         },
         {
           "command": "droid.showCircuitGraph",
-          "when": "resourceLangId == droid || resourceLangId == droider || resourceLangId == droid-blueprint",
+          "when": "resourceLangId == droid || resourceLangId == droider",
           "group": "navigation"
         },
         {
@@ -170,7 +170,8 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "lint": "tsc -p ./ && node out/cli.js"
+    "lint": "tsc -p ./ && node out/cli.js",
+    "test": "tsc -p tsconfig.test.json && node --test \"out-test/test/**/*.test.js\""
   },
   "dependencies": {
     "js-yaml": "^4.1.0"

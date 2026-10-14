@@ -211,8 +211,10 @@ export class HardwareViewProvider {
 
   show() {
     const editor = vscode.window.activeTextEditor;
-    if (!editor || editor.document.languageId !== "droid") {
-      vscode.window.showInformationMessage("Open a DROID patch file first");
+    // .ini patches and .droider patches (which may use megacircuits) both
+    // declare a controller chain, so the hardware view supports both.
+    if (!editor || !["droid", "droider"].includes(editor.document.languageId)) {
+      vscode.window.showInformationMessage("Open a DROID patch (.ini or .droider) first");
       return;
     }
 
@@ -235,7 +237,8 @@ export class HardwareViewProvider {
   /**
    * Revive a panel restored by VSCode after a window reload. The originating
    * document is recovered from the persisted webview state (its URI); if that
-   * fails we fall back to any open DROID patch so the pane is never left blank.
+   * fails we fall back to any open DROID patch (.ini or .droider) so the pane
+   * is never left blank.
    */
   async restore(panel: vscode.WebviewPanel, state: unknown) {
     this.adopt(panel);
@@ -291,8 +294,12 @@ export class HardwareViewProvider {
       }
     }
     const active = vscode.window.activeTextEditor;
-    if (active && active.document.languageId === "droid") return active.document;
-    return vscode.workspace.textDocuments.find((d) => d.languageId === "droid");
+    if (active && ["droid", "droider"].includes(active.document.languageId)) {
+      return active.document;
+    }
+    return vscode.workspace.textDocuments.find((d) =>
+      ["droid", "droider"].includes(d.languageId)
+    );
   }
 
   private updateContent(document: vscode.TextDocument) {
@@ -497,7 +504,6 @@ export class HardwareViewProvider {
             color: #1a1a1a;
             z-index: 3;
             text-align: center;
-            max-width: 40px;
             white-space: nowrap;
             background: rgba(212, 184, 150, 0.95);
             padding: 2px 4px;
@@ -506,7 +512,7 @@ export class HardwareViewProvider {
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
             line-height: 1;
         }
-        
+
         .buttons-section {
             display: grid;
             grid-template-columns: 28px 28px;
@@ -633,7 +639,6 @@ export class HardwareViewProvider {
             color: #1a1a1a;
             z-index: 3;
             text-align: center;
-            max-width: 40px;
             white-space: nowrap;
             background: rgba(212, 184, 150, 0.95);
             padding: 2px 4px;
@@ -642,7 +647,7 @@ export class HardwareViewProvider {
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
             line-height: 1;
         }
-        
+
         .rotary-switch:hover {
             transform: scale(1.05);
             transition: transform 0.2s;
@@ -1163,7 +1168,6 @@ export class HardwareViewProvider {
             font-weight: bold;
             color: #1a1a1a;
             text-align: center;
-            max-width: 24px;
             white-space: nowrap;
             z-index: 1;
             background: rgba(212, 184, 150, 0.95);
@@ -1401,7 +1405,6 @@ export class HardwareViewProvider {
             color: #1a1a1a;
             z-index: 3;
             text-align: center;
-            max-width: 16px;
             white-space: nowrap;
             background: rgba(212, 184, 150, 0.95);
             padding: 2px 4px;

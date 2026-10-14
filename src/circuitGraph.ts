@@ -14,6 +14,7 @@ import { colorForCable } from "./cables";
 import { Blueprint } from "./blueprints";
 import { parseLabelLegend } from "./labels";
 import { BlueprintRegistry } from "./blueprintRegistry";
+import { tokenizeForRows } from "./maths";
 
 const HEADER_RE = /^\[([a-z0-9]+)\]$/;
 
@@ -33,6 +34,11 @@ interface PinRow {
   text: string; // operand as written (cable, register or constant)
   conn: boolean; // is the operand a connectable signal (cable/register)?
   color: string; // wire/pin color (cable color or hardware color)
+  // Formula rows (parenthesized expression split across rows): signals are
+  // drawn as a colored dot (name on hover), with parentheses around them.
+  formula?: boolean;
+  open?: number; // parentheses opening before the operand
+  close?: number; // parentheses closing after the operand
 }
 
 interface InputPin {
@@ -259,6 +265,44 @@ export class CircuitGraphBuilder {
               label: cls.reg,
             });
           }
+        } else if (p.value.includes("(") && tokenizeForRows(p.value).length) {
+          // Complex math sugar (parentheses): split the expression into one row
+          // per operand (parens attached to the operands they wrap), so each
+          // input gets its own pin/row instead of all sharing one.
+          const toks = tokenizeForRows(p.value);
+          const rows: PinRow[] = toks.map((t) => {
+            const cls = classifyOperand(t.bare, validRegs);
+            return {
+              op: t.op,
+              text: t.bare,
+              conn: cls.conn,
+              color: cls.color,
+              formula: true,
+              open: t.open,
+              close: t.close,
+            };
+          });
+          inputs.push({ key: p.param, name: p.name, rows });
+
+          toks.forEach((t, idx) => {
+            const cls = classifyOperand(t.bare, validRegs);
+            const pin = "i:" + p.param + ":" + idx;
+            if (cls.cable) {
+              push(cableConsumers, cls.cable, { node: nid, pin });
+            } else if (cls.reg) {
+              const kind: NodeKind =
+                validRegs.get(cls.reg)!.direction === "output" ? "hwout" : "hwin";
+              hwUsed.set(cls.reg, kind);
+              hwEdges.push({
+                from: "hw_" + cls.reg,
+                fromPin: "p",
+                to: nid,
+                toPin: pin,
+                color: cls.color,
+                label: cls.reg,
+              });
+            }
+          });
         } else {
           // Treat input role and unknown role alike (most params are inputs).
           const tokens = tokenizeExpr(p.value);
@@ -721,6 +765,7 @@ const CLIENT_JS = `
     return _ctx.measureText(text).width;
   }
   var HEAD_GAP = 6; // space between a pin label and its operand/chip
+  var PART_GAP = 3; // space between parts of a formula row (parens, dots, chips)
 
   // View transform (pan + zoom).
   var tx = 0, ty = 0, scale = 1;
@@ -737,6 +782,12 @@ const CLIENT_JS = `
     return (conn && !showNames) ? "" : text;
   }
 
+  // Glyph shown for a row's leading operator ("" for the base/first operand).
+  function glyphFor(op){
+    return op === "*" ? "\\u00d7" : op === "/" ? "\\u00f7"
+      : op === "-" ? "\\u2212" : op === "+" ? "+" : "";
+  }
+
   // Build the displayed rows for a node and measure its box + pin offsets.
   function prepare(n){
     n.pins = {};
@@ -750,22 +801,60 @@ const CLIENT_JS = `
 
     var left = [], right = [];
     (n.inputs || []).forEach(function(pin){
+      // Formula pins reserve a fixed operator column (so the operands line up)
+      // and show the parameter name to the right of the base row.
+      var isFormula = pin.rows.some(function(r){ return r.formula; });
+      var glyphCol = 0;
+      if (isFormula) pin.rows.forEach(function(r){
+        if (r.op !== "") glyphCol = Math.max(glyphCol, tw(glyphFor(r.op), "700"));
+      });
+
       pin.rows.forEach(function(r, idx){
         var base = r.op === "";
-        var glyph = base ? "" :
-          (r.op === "*" ? "\\u00d7" : r.op === "/" ? "\\u00f7"
-           : r.op === "-" ? "\\u2212" : "+");
-        var head = base ? pin.name : glyph;
-        var headW = tw(head, base ? "600" : "700");
-        var operand = operandText(r.text, r.conn);
-        var opW = 0;
-        if (operand) opW = r.conn ? tw(operand, "400") : chipWidth(operand);
-        left.push({
+        var lrow = {
           pinId: "i:" + pin.key + ":" + idx,
-          head: head, headW: headW, operand: operand,
-          base: base, conn: r.conn, color: r.color,
-          width: headW + (operand ? HEAD_GAP + opW : 0)
-        });
+          base: base, conn: r.conn, color: r.color
+        };
+        if (r.formula){
+          // A formula operand: the operator (fixed column), optional parens
+          // (neutral, bold), then a colored dot for a signal or a chip for a
+          // constant. The parameter name sits to the right of the base row.
+          lrow.head = base ? "" : glyphFor(r.op);
+          // The base row has no operator, so its content starts flush at PAD_X
+          // (aligned with the operators of the other rows); the rest reserve the
+          // operator column.
+          var headSpace = base ? 0 : glyphCol + HEAD_GAP;
+          lrow.headSpace = headSpace;
+          var parts = [];
+          if (r.open) { var ops = "(".repeat(r.open); parts.push({ t: "paren", s: ops, w: tw(ops, "800") }); }
+          if (r.conn) parts.push({ t: "dot", color: r.color, w: 2 * PIN_R });
+          else parts.push({ t: "chip", s: r.text, color: r.color, w: chipWidth(r.text) });
+          if (r.close) { var cps = ")".repeat(r.close); parts.push({ t: "paren", s: cps, w: tw(cps, "800") }); }
+          var pw = 0; parts.forEach(function(p){ pw += p.w; });
+          lrow.parts = parts;
+          lrow.nameRight = base ? pin.name : null;
+          var nameW = base ? tw(pin.name, "600") : 0;
+          lrow.width = headSpace + pw + Math.max(0, parts.length - 1) * PART_GAP
+            + (base ? HEAD_GAP + nameW : 0);
+          // Center x of the signal dot (offset from the node's left border), so
+          // the incoming wire can run all the way into it (no separate pin).
+          var ox = PAD_X + headSpace;
+          for (var pi = 0; pi < parts.length; pi++){
+            if (pi) ox += PART_GAP;
+            if (parts[pi].t === "dot"){ lrow.dotX = ox + PIN_R; break; }
+            ox += parts[pi].w;
+          }
+        } else {
+          var head = base ? pin.name : glyphFor(r.op);
+          var headW = tw(head, base ? "600" : "700");
+          lrow.head = head; lrow.headW = headW;
+          var operand = operandText(r.text, r.conn);
+          var opW = 0;
+          if (operand) opW = r.conn ? tw(operand, "400") : chipWidth(operand);
+          lrow.operand = operand;
+          lrow.width = headW + (operand ? HEAD_GAP + opW : 0);
+        }
+        left.push(lrow);
       });
     });
     (n.outputs || []).forEach(function(pin){
@@ -1007,7 +1096,9 @@ const CLIENT_JS = `
 
   // A floating pill (dark bg, colored text) used to reveal a signal name on
   // hover. Lives in the top label layer, never intercepts pointer events.
-  function makeLabel(x, y, text, color, anchor){
+  // 'segments' (optional) is a list of {text,color} parts so a formula can show
+  // each cable name in its own color; 'color' is then the border/fallback.
+  function makeLabel(x, y, text, color, anchor, segments){
     var pad = 6, h = 16, w = tw(text, "600", 10.5) + pad * 2;
     var lx = anchor === "end" ? x - w : anchor === "start" ? x : x - w/2;
     var g = el("g", {});
@@ -1017,10 +1108,33 @@ const CLIENT_JS = `
       fill: "#0c0c0e", "fill-opacity": 0.94, stroke: color,
       "stroke-opacity": 0.85, "stroke-width": 1
     }));
-    var t = el("text", { "class": "wire-label", x: lx + w/2, y: y, fill: color });
-    t.textContent = text;
+    var t = el("text", { "class": "wire-label", x: lx + pad, y: y, fill: color, "xml:space": "preserve" });
+    t.style.textAnchor = "start"; // override the stylesheet's centered anchor
+    if (segments){
+      segments.forEach(function(s){
+        var ts = el("tspan", { fill: s.color });
+        ts.textContent = s.text;
+        t.appendChild(ts);
+      });
+    } else {
+      t.textContent = text;
+    }
     g.appendChild(t);
     return g;
+  }
+
+  // Splits an expression into colored parts: each operand (cable/register) gets
+  // its signal color from colorByName; operators, parentheses, constants and
+  // whitespace keep the neutral 'def' color.
+  function colorSegments(text, colorByName, def){
+    var segs = [], re = /_?[A-Za-z][A-Za-z0-9_.]*/g, last = 0, m;
+    while ((m = re.exec(text))){
+      if (m.index > last) segs.push({ text: text.slice(last, m.index), color: def });
+      segs.push({ text: m[0], color: colorByName[m[0]] || def });
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) segs.push({ text: text.slice(last), color: def });
+    return segs;
   }
   function clearLabels(){
     if (labelLayer) while (labelLayer.firstChild) labelLayer.removeChild(labelLayer.firstChild);
@@ -1053,23 +1167,58 @@ const CLIENT_JS = `
     tooltip.style.top = y + "px";
   }
   function hideTooltip(){ tooltip.style.display = "none"; }
+  // The text written in an input row (its operand expression), looked up by pin
+  // id "i:<key>:<idx>". For a parenthesized formula this is the whole expression
+  // (e.g. "(_A + _B) * _C"), so the hover can show it as a single readable unit.
+  function inputRowText(n, pinId){
+    if (pinId.charAt(0) !== "i") return null;
+    var rest = pinId.slice(2), ci = rest.lastIndexOf(":");
+    if (ci < 0) return null;
+    var key = rest.slice(0, ci), idx = +rest.slice(ci + 1);
+    var pins = n.inputs || [];
+    for (var i = 0; i < pins.length; i++){
+      if (pins[i].key === key){
+        var r = pins[i].rows[idx];
+        return r ? r.text : null;
+      }
+    }
+    return null;
+  }
+
   // Reveal the names of every cable touching a circuit, placed just outside the
-  // relevant pin (in the gutter where the wire runs, so nothing overlaps).
+  // relevant pin (in the gutter where the wire runs). One pill per pin: for an
+  // input pin we show the row's full expression (so a parenthesized formula
+  // reads as one unit with its cable names, instead of overlapping pills).
   function labelNode(n){
     if (n.kind !== "circuit" || !labelLayer) return;
+    // Collect the signals on each pin (name -> color) and the first color seen.
+    var inPins = {}, outPins = {};
     (incident[n.id] || []).forEach(function(ee){
       var e = ee.data;
-      if (e.to === n.id){
-        var p = n.pins[e.toPin]; if (!p) return;
-        labelLayer.appendChild(
-          makeLabel(n.x + p.x - PIN_R - 4, n.y + p.y, e.label, e.color, "end"));
+      if (e.to === n.id && n.pins[e.toPin]){
+        var gi = inPins[e.toPin] || (inPins[e.toPin] = { colors: {}, first: e.color });
+        if (!(e.label in gi.colors)) gi.colors[e.label] = e.color;
       }
-      if (e.from === n.id){
-        var q = n.pins[e.fromPin]; if (!q) return;
-        labelLayer.appendChild(
-          makeLabel(n.x + q.x + PIN_R + 4, n.y + q.y, e.label, e.color, "start"));
+      if (e.from === n.id && n.pins[e.fromPin] && !outPins[e.fromPin]){
+        outPins[e.fromPin] = e;
       }
     });
+    for (var pinId in inPins){
+      var p = n.pins[pinId], grp = inPins[pinId];
+      var text = inputRowText(n, pinId);
+      var x = n.x + p.x - PIN_R - 4, y = n.y + p.y;
+      if (text){
+        var segs = colorSegments(text, grp.colors, "#cfcfcf");
+        labelLayer.appendChild(makeLabel(x, y, text, grp.first, "end", segs));
+      } else {
+        labelLayer.appendChild(makeLabel(x, y, "?", grp.first, "end"));
+      }
+    }
+    for (var oPin in outPins){
+      var e2 = outPins[oPin], q = n.pins[oPin];
+      labelLayer.appendChild(
+        makeLabel(n.x + q.x + PIN_R + 4, n.y + q.y, e2.label, e2.color, "start"));
+    }
   }
 
   function render(){
@@ -1132,7 +1281,16 @@ const CLIENT_JS = `
     g.appendChild(ht);
 
     n._left.forEach(function(r){
-      if (r.conn){
+      // Formula signal rows have no border pin: instead the wire runs straight
+      // into the inline dot (a short lead, drawn behind the row's text).
+      if (r.dotX != null){
+        // The wire's lead inside the card: dimmed so it reads as "already
+        // arrived" and does not compete with the wires running between nodes.
+        g.appendChild(el("line", {
+          x1: -n.w/2, y1: r.y, x2: -n.w/2 + r.dotX, y2: r.y,
+          stroke: r.color, "stroke-width": 2, "stroke-opacity": 0.3
+        }));
+      } else if (r.conn){
         g.appendChild(el("circle", {
           cx: -n.w/2, cy: r.y, r: PIN_R, fill: r.color,
           stroke: "#0a0a0a", "stroke-width": 1
@@ -1146,8 +1304,43 @@ const CLIENT_JS = `
       });
       head.textContent = r.head;
       g.appendChild(head);
-      // operand: a colored chip for constants, plain text for shown signals
-      if (r.operand){
+      if (r.parts){
+        // Formula row: parens (neutral), a colored dot per signal, chip per
+        // constant. The signal name itself only shows on hover. The base row
+        // starts flush at PAD_X; the rest after the reserved operator column.
+        x = -n.w/2 + PAD_X + r.headSpace;
+        r.parts.forEach(function(p, i){
+          if (i) x += PART_GAP;
+          if (p.t === "paren"){
+            var pt = el("text", {
+              "class": "pin-name", x: x, y: r.y, "text-anchor": "start"
+            });
+            pt.style.fontWeight = "800"; // bold parens so the grouping stands out
+            pt.style.fill = "#e8e8e8";
+            pt.textContent = p.s;
+            g.appendChild(pt);
+            x += p.w;
+          } else if (p.t === "dot"){
+            g.appendChild(el("circle", {
+              cx: x + PIN_R, cy: r.y, r: PIN_R, fill: p.color,
+              stroke: "#0a0a0a", "stroke-width": 1
+            }));
+            x += p.w;
+          } else { // chip (constant)
+            x += drawChip(g, x, r.y, p.s, p.color);
+          }
+        });
+        // The parameter name, to the right of the base row's formula part.
+        if (r.nameRight){
+          x += HEAD_GAP;
+          var nm = el("text", {
+            "class": "pin-name pin-base", x: x, y: r.y, "text-anchor": "start"
+          });
+          nm.textContent = r.nameRight;
+          g.appendChild(nm);
+        }
+      } else if (r.operand){
+        // operand: a colored chip for constants, plain text for shown signals
         x += r.headW + HEAD_GAP;
         if (r.conn){
           var ot = el("text", {

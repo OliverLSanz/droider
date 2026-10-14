@@ -13,6 +13,7 @@
 import { DroidData, ParamRole, ParamSpec } from "./data";
 import { lintLabels } from "./labels";
 import { Blueprint, blueprintCycle } from "./blueprints";
+import { isComplexExpression, expressionError } from "./maths";
 
 export type PatchMode = "ini" | "droider" | "blueprint";
 
@@ -52,7 +53,7 @@ export function modeForFile(path: string): PatchMode {
 const HEADER_RE = /^\[([a-z0-9]+)\]$/;
 const PNAME_RE = /^[a-zA-Z][a-zA-Z0-9]*$/;
 const ARRAY_RE = /^([a-zA-Z]+)(\d+)$/;
-const TOKEN_SPLIT = /[*+\-/]/;
+const TOKEN_SPLIT = /[*+\-/()]/;
 
 type BlockKind = "circuit" | "blueprint" | "section-input" | "section-output" | "unknown" | "none";
 
@@ -268,6 +269,21 @@ export function lint(text: string, data: DroidData, opts: LintOptions = {}): Pro
     const valueStart = eq + 1;
     const value = code.slice(valueStart);
     const validRegs = data.validRegisters(chain);
+
+    // A malformed math expression (bad operators/parens) is an error in any
+    // mode — otherwise it would slip through unchanged into an invalid .ini.
+    // A well-formed expression beyond DROID's native `A * B + C` is fine in
+    // .droider/.blueprint (it is sugar) but rejected in a plain .ini.
+    const exprErr = expressionError(value);
+    if (exprErr) {
+      const col = firstNonSpace(value) + valueStart;
+      add(i, col, code.length, exprErr);
+    } else if (mode === "ini" && isComplexExpression(value)) {
+      const col = firstNonSpace(value) + valueStart;
+      add(i, col, code.length,
+        `math expression '${value.trim()}' is beyond DROID's native A * B + C; ` +
+        `use a .droider file (only A * B + C is allowed in .ini)`);
+    }
 
     for (const part of splitTokens(value)) {
       const cls = classify(part);

@@ -134,11 +134,13 @@ export async function activate(context: vscode.ExtensionContext) {
       }
       try {
         const { distUri, problems } = await buildDroiderToDist(editor.document);
-        const errs = problems.filter((p) => p.severity === "error").length;
+        const errs = problems.filter((p) => p.severity === "error");
         const rel = vscode.workspace.asRelativePath(distUri);
-        if (errs > 0) {
-          vscode.window.showWarningMessage(
-            `Built ${rel} with ${errs} expansion error(s) — check the patch.`
+        if (errs.length > 0) {
+          const first = errs[0];
+          vscode.window.showErrorMessage(
+            `${rel} is invalid: ${errs.length} error(s) — ${first.message} ` +
+            `(line ${first.line + 1}). Fix the patch before using it.`
           );
         } else {
           vscode.window.showInformationMessage(`Built ${rel}`);
@@ -211,6 +213,13 @@ async function buildDroiderToDist(
   doc: vscode.TextDocument
 ): Promise<{ distUri: vscode.Uri; iniText: string; problems: ReturnType<typeof expandToIni>["problems"] }> {
   const { ini, problems } = expandToIni(doc.getText(), registry?.all() ?? new Map());
+  // The expansion must always produce a card-ready patch: re-lint the generated
+  // .ini with the strict .ini rules and treat any error as a build failure, so
+  // an expansion bug surfaces instead of writing an invalid patch to the card.
+  const iniErrors = data
+    ? lint(ini, data, { mode: "ini" }).filter((p) => p.severity === "error")
+    : [];
+  const allProblems = [...problems, ...iniErrors];
   const folder = vscode.workspace.getWorkspaceFolder(doc.uri);
   const baseDir = folder ? folder.uri : vscode.Uri.file(path.dirname(doc.uri.fsPath));
   const name = path.basename(doc.uri.fsPath).replace(/\.droider$/, "");
@@ -218,7 +227,7 @@ async function buildDroiderToDist(
   await vscode.workspace.fs.createDirectory(distDir);
   const distUri = vscode.Uri.joinPath(distDir, `${name}.ini`);
   await vscode.workspace.fs.writeFile(distUri, Buffer.from(ini, "utf8"));
-  return { distUri, iniText: ini, problems };
+  return { distUri, iniText: ini, problems: allProblems };
 }
 
 /**
@@ -229,7 +238,14 @@ async function resolveUploadContent(
   doc: vscode.TextDocument
 ): Promise<string> {
   if (doc.languageId === "droider") {
-    const { iniText } = await buildDroiderToDist(doc);
+    const { iniText, problems } = await buildDroiderToDist(doc);
+    const errs = problems.filter((p) => p.severity === "error");
+    if (errs.length > 0) {
+      throw new Error(
+        `the generated .ini is invalid (${errs.length} error(s)): ` +
+        `${errs[0].message} (line ${errs[0].line + 1}). Not writing to the card.`
+      );
+    }
     return iniText;
   }
   return doc.getText();
