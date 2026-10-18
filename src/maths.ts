@@ -25,6 +25,7 @@
 // `.droider`→`.ini` expansion and the circuit graph view.
 
 import type { Problem } from "./linter";
+import { firmwareLineLength, splitComment } from "./patchText";
 
 // --- AST -------------------------------------------------------------------
 
@@ -441,6 +442,43 @@ export function decomposeValue(value: string, fresh: () => string): DecomposeRes
   return { expr, copies: ctx.copies };
 }
 
+/** Materializes long operands so even a native slot fits the line buffer.
+ * Cable names are shortened first by the card-formatting pass. Long numeric
+ * operands can still require copies; their spelling and precision are kept. */
+export function fitSlotLength(value: string, budget: number, fresh: () => string): DecomposeResult {
+  const ctx: Ctx = { fresh, copies: [] };
+  let expr = value;
+  while (firmwareLineLength(expr) > budget) {
+    const ast = parseExpression(expr);
+    if (!ast) break; // Text and unsupported syntax are validated separately.
+    const atoms: AtomNode[] = [];
+    const visit = (node: Node) => {
+      if (node.t === "atom") atoms.push(node);
+      else if (node.t === "neg") visit(node.e);
+      else if (node.t === "mul") node.factors.forEach(visit);
+      else node.terms.forEach((term) => visit(term.e));
+    };
+    visit(ast);
+    // A copy's input has 57 characters available (63 minus "input=").
+    // An indivisible atom longer than that cannot be represented by a copy.
+    const atom = atoms.filter((a) => a.text.length <= 57)
+      .sort((a, b) => b.text.length - a.text.length)[0];
+    if (!atom) break;
+    const cable = fresh();
+    if (atom.text.length <= cable.length) break;
+    ctx.copies.push({ input: atom.text, output: cable });
+    atom.text = cable;
+    expr = reduceSlot(ctx, ast);
+  }
+
+  const copies: GeneratedCopy[] = [];
+  for (const copy of ctx.copies) {
+    const fitted = fitSlotLength(copy.input, 57, fresh);
+    copies.push(...fitted.copies, { input: fitted.expr, output: copy.output });
+  }
+  return { expr, copies };
+}
+
 // --- Operand extraction (for the graph view) -------------------------------
 
 /** Lists the operand texts (numbers, registers, cables) of an expression in
@@ -537,11 +575,6 @@ export function tokenizeForRows(value: string): RowToken[] {
 // --- Text-level expansion pass ---------------------------------------------
 
 const HEADER_RE = /^\s*\[([a-z0-9]+)\]\s*$/;
-
-function splitComment(raw: string): [string, string] {
-  const i = raw.indexOf("#");
-  return i >= 0 ? [raw.slice(0, i), raw.slice(i)] : [raw, ""];
-}
 
 /**
  * Rewrites every complex math expression in an `.ini`-shaped text into the

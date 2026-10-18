@@ -493,7 +493,13 @@ The color indicates the reason; the LEDs also encode the line number.
    one input.
 7. **Value syntax:** numbers in plain format; at most `A * B + C`; division only
    by a fixed number; no parentheses or extra operations.
-8. **Line length:** ≤ 63 characters.
+8. **Line length:** ≤ 63 characters in the final `.ini`, excluding comments
+   and formatting whitespace outside quoted text. The linter checks this in
+   `.ini` mode. `.droider` and `.blueprint` source formulas and cable names
+   have no such limit: expansion shortens internal cable names where needed
+   and materializes long arithmetic operands in additional `copy` circuits.
+   Generated aliases are documented in comments in the output. The build
+   validates the resulting `.ini` before allowing an upload.
 9. **Total size:** ≤ 64,000 bytes (not counting spaces/comments).
 10. **Controllers:** ≤ 16; declared at the top and in chain order.
 

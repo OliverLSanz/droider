@@ -8,7 +8,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { DroidData } from "./data";
 import { lint, modeForLanguageId } from "./linter";
-import { expandToIni } from "./blueprints";
+import { buildPatch, BuildProblem, describeBuildProblem } from "./build";
 import { BlueprintRegistry } from "./blueprintRegistry";
 import { DroidSemanticTokensProvider, SEMANTIC_LEGEND } from "./semantic";
 import { CableDecorator } from "./cables";
@@ -139,8 +139,8 @@ export async function activate(context: vscode.ExtensionContext) {
         if (errs.length > 0) {
           const first = errs[0];
           vscode.window.showErrorMessage(
-            `${rel} is invalid: ${errs.length} error(s) — ${first.message} ` +
-            `(line ${first.line + 1}). Fix the patch before using it.`
+            `${rel} is invalid: ${errs.length} error(s) — ${describeBuildProblem(first)}. ` +
+            `Fix the patch before using it.`
           );
         } else {
           vscode.window.showInformationMessage(`Built ${rel}`);
@@ -211,15 +211,9 @@ function refresh(doc: vscode.TextDocument) {
  */
 async function buildDroiderToDist(
   doc: vscode.TextDocument
-): Promise<{ distUri: vscode.Uri; iniText: string; problems: ReturnType<typeof expandToIni>["problems"] }> {
-  const { ini, problems } = expandToIni(doc.getText(), registry?.all() ?? new Map());
-  // The expansion must always produce a card-ready patch: re-lint the generated
-  // .ini with the strict .ini rules and treat any error as a build failure, so
-  // an expansion bug surfaces instead of writing an invalid patch to the card.
-  const iniErrors = data
-    ? lint(ini, data, { mode: "ini" }).filter((p) => p.severity === "error")
-    : [];
-  const allProblems = [...problems, ...iniErrors];
+): Promise<{ distUri: vscode.Uri; iniText: string; problems: BuildProblem[] }> {
+  if (!data) throw new Error("DROID language data is unavailable");
+  const { ini, problems } = buildPatch(doc.getText(), data, "droider", registry?.all());
   const folder = vscode.workspace.getWorkspaceFolder(doc.uri);
   const baseDir = folder ? folder.uri : vscode.Uri.file(path.dirname(doc.uri.fsPath));
   const name = path.basename(doc.uri.fsPath).replace(/\.droider$/, "");
@@ -227,7 +221,7 @@ async function buildDroiderToDist(
   await vscode.workspace.fs.createDirectory(distDir);
   const distUri = vscode.Uri.joinPath(distDir, `${name}.ini`);
   await vscode.workspace.fs.writeFile(distUri, Buffer.from(ini, "utf8"));
-  return { distUri, iniText: ini, problems: allProblems };
+  return { distUri, iniText: ini, problems };
 }
 
 /**
@@ -243,12 +237,18 @@ async function resolveUploadContent(
     if (errs.length > 0) {
       throw new Error(
         `the generated .ini is invalid (${errs.length} error(s)): ` +
-        `${errs[0].message} (line ${errs[0].line + 1}). Not writing to the card.`
+        `${describeBuildProblem(errs[0])}. Not writing to the card.`
       );
     }
     return iniText;
   }
-  return doc.getText();
+  if (!data) throw new Error("DROID language data is unavailable");
+  const { ini, problems } = buildPatch(doc.getText(), data, "ini");
+  const errors = problems.filter((p) => p.severity === "error");
+  if (errors.length) {
+    throw new Error(`${describeBuildProblem(errors[0])}. Not writing to the card.`);
+  }
+  return ini;
 }
 
 class DroidEnterProvider implements vscode.OnTypeFormattingEditProvider {

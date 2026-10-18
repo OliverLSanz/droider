@@ -9,7 +9,9 @@ import {
   tokenizeForRows,
   expressionError,
   GeneratedCopy,
+  fitSlotLength,
 } from "../src/maths";
+import { firmwareLineLength } from "../src/patchText";
 
 // A deterministic fresh-cable generator for tests: _MATH1, _MATH2, ...
 function freshGen(): () => string {
@@ -42,6 +44,25 @@ function evalDecomposed(
   }
   return jsEval(expr, env);
 }
+
+test("fitting long native slots preserves arithmetic, including negative operands", () => {
+  const a = `0.${"123456789".repeat(4)}`;
+  const b = `0.${"987654321".repeat(4)}`;
+  for (const value of [
+    `${a} * ${b} + I1`, `${a} - ${b}`, `-${a} * ${b}`,
+    `${a} * -${b} + I1`, `${a} * ${b} - I1`,
+  ]) {
+    const result = fitSlotLength(value, 45, freshGen());
+    assert.ok(firmwareLineLength(result.expr) <= 45, result.expr);
+    assert.ok(isNativeSlot(result.expr), result.expr);
+    for (const copy of result.copies) {
+      assert.ok(firmwareLineLength(copy.input) <= 57, copy.input);
+      assert.ok(isNativeSlot(copy.input), copy.input);
+    }
+    const scope = { I1: 0.3 };
+    assert.ok(Math.abs(jsEval(value, scope) - evalDecomposed(result.expr, result.copies, scope)) < 1e-12);
+  }
+});
 
 // ===========================================================================
 // Exact-output (snapshot) tests — pin the minimal decomposition.

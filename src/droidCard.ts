@@ -212,7 +212,13 @@ export class DroidCardManager {
           progress.report({ increment: 30 });
 
           // Write file
-          fs.writeFileSync(droidIniPath, content, "utf8");
+          const descriptor = fs.openSync(droidIniPath, "w");
+          try {
+            fs.writeFileSync(descriptor, content, "utf8");
+            fs.fsyncSync(descriptor);
+          } finally {
+            fs.closeSync(descriptor);
+          }
           
           progress.report({ increment: 40, message: "Syncing..." });
 
@@ -221,13 +227,18 @@ export class DroidCardManager {
             await execAsync("sync");
           }
 
+          if (!fs.readFileSync(droidIniPath).equals(Buffer.from(content, "utf8"))) {
+            throw new Error("Card read-back differs from the patch. The card has not been ejected; retry the upload.");
+          }
+
           progress.report({ increment: 30, message: "Ejecting..." });
 
           // Eject the card
           await this.ejectCard(this.detectedCardPath!);
 
           vscode.window.showInformationMessage(
-            `✅ Patch written to ${cardName} and card ejected safely`
+            `✅ Patch written and verified on ${cardName}; card ejected safely. ` +
+            `Insert it into DROID and press Load (or return the X7 USB switch to center).`
           );
         }
       );

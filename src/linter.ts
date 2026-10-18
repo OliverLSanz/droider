@@ -14,6 +14,7 @@ import { DroidData, ParamRole, ParamSpec } from "./data";
 import { lintLabels } from "./labels";
 import { Blueprint, blueprintCycle } from "./blueprints";
 import { isComplexExpression, expressionError } from "./maths";
+import { firmwareLineLength, splitComment } from "./patchText";
 
 export type PatchMode = "ini" | "droider" | "blueprint";
 
@@ -114,11 +115,21 @@ export function lint(text: string, data: DroidData, opts: LintOptions = {}): Pro
     pending = null;
   };
 
+  const checkLineLength = (code: string, line: number) => {
+    const length = firmwareLineLength(code);
+    if (length > 63) {
+      add(line, firstNonSpace(code), code.trimEnd().length,
+        `line too long: ${length} characters; DROID allows at most 63 ` +
+        `(excluding comments and whitespace outside text). Shorten cable names or split the expression`);
+    }
+  };
+
   lines.forEach((raw, i) => {
     // Strip the comment but keep the original column positions.
-    const code = raw.split("#")[0];
+    const [code] = splitComment(raw);
     const trimmed = code.trim();
     if (!trimmed) return;
+    if (mode === "ini") checkLineLength(code, i);
 
     // --- Header [something] ---
     const hm = trimmed.match(HEADER_RE);

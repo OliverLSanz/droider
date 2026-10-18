@@ -43,6 +43,8 @@
 
 import type { Problem } from "./linter";
 import { expandMathExpressions } from "./maths";
+import { fitHardwareLines } from "./cardFormat";
+import { splitComment } from "./patchText";
 
 export interface BlueprintPort {
   /** Public port name, referred to directly inside the blueprint body. */
@@ -75,12 +77,6 @@ const VALUE_TOKEN_RE = /_[A-Za-z0-9_]+|[A-Za-z][A-Za-z0-9.]*/g;
 function headerName(rawCode: string): string | null {
   const m = rawCode.trim().match(HEADER_RE);
   return m ? m[1] : null;
-}
-
-/** Splits a line into [code, comment] keeping the `#`. */
-function splitComment(raw: string): [string, string] {
-  const i = raw.indexOf("#");
-  return i >= 0 ? [raw.slice(0, i), raw.slice(i)] : [raw, ""];
 }
 
 /** Text of a line's comment (after `#`, trimmed), or null if there is none. */
@@ -213,7 +209,7 @@ export function expandToIni(
   // Second sugar pass: rewrite arbitrary math expressions (in the original
   // patch and any introduced by blueprint inlining) into native `copy` circuits.
   const math = expandMathExpressions(out.join("\n"));
-  return { ini: math.ini, problems: [...ctx.problems, ...math.problems] };
+  return { ini: fitHardwareLines(math.ini), problems: [...ctx.problems, ...math.problems] };
 }
 
 /** Expands blueprint instances found in `lines`; non-instances pass through. */

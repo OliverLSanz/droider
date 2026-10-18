@@ -8,6 +8,57 @@ const data = DroidData.load([process.cwd(), __dirname]);
 const modes: PatchMode[] = ["ini", "droider", "blueprint"];
 const destinationError = /output.*single destination/i;
 
+test("DROID's 63-character line limit includes the assignment and excludes formatting and comments", () => {
+  for (const mode of ["ini"] as const) {
+    for (const length of [63, 64]) {
+      const code = `input=0.${"1".repeat(length - 8)}`;
+      assert.equal(code.length, length);
+      const line = `    ${code.replace("=", " = ")}    # ${"comment ".repeat(20)}`;
+      const problems = lint(`[copy]\n${line}\noutput = O1`, data, { mode });
+      if (length === 63) {
+        assert.deepEqual(problems, []);
+      } else {
+        assert.equal(problems.length, 1);
+        assert.match(problems[0].message, /line too long: 64 characters/);
+        assert.equal(problems[0].severity, "error");
+        assert.equal(problems[0].line, 1);
+        assert.equal(problems[0].startCol, 4);
+        assert.equal(problems[0].endCol, line.indexOf("#") - 4);
+      }
+    }
+    assert.deepEqual(lint(`# ${"comment ".repeat(50)}\n[copy]\ninput = I1\noutput = O1`, data, { mode }), []);
+  }
+});
+
+test("spaces inside text count towards the hardware line limit", () => {
+  const text = `A${" ".repeat(54)}B`;
+  const problems = lint(`[copy]\ninput = "${text}"\noutput = O1`, data);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0].message, /line too long: 64 characters/);
+});
+
+test("long complex .droider inputs are checked after decomposition, not as native lines", () => {
+  const patch = `[copy]\ninput = ${Array(25).fill("I1").join(" * ")}\noutput = O1`;
+  assert.deepEqual(lint(patch, data, { mode: "droider" }), []);
+  assert.ok(lint(patch, data).some((p) => /line too long/.test(p.message)));
+});
+
+test("long native cable expressions are allowed in source and rejected in handwritten .ini", () => {
+  const patch = [
+    "[copy]", "input = I1", "output = _ENV1_VELOCITY_RANDOM_POT",
+    "[copy]", "input = I2", "output = _ENV1_VELOCITY_RANDOM_POT_ATTENUATION",
+    "[copy]", "input = _ENV1_VELOCITY_RANDOM_POT * _ENV1_VELOCITY_RANDOM_POT_ATTENUATION",
+    "output = O1",
+  ].join("\n");
+  assert.deepEqual(lint(patch, data, { mode: "droider" }), []);
+  for (const mode of ["ini"] as const) {
+    const problems = lint(patch, data, { mode });
+    assert.equal(problems.length, 1);
+    assert.match(problems[0].message, /line too long: 69 characters/);
+    assert.equal(problems[0].line, 7);
+  }
+});
+
 test("assignments require a value, including when only whitespace or a comment follows", () => {
   for (const mode of modes) {
     for (const param of ["input", "i", "output", "o"]) {
