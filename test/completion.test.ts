@@ -47,6 +47,22 @@ const blueprints = new Map([["custom", parseBlueprint("[input]\n    gate", "cust
 const registry = { all: () => blueprints } as BlueprintRegistry;
 const provider = new Provider(data, registry);
 
+test("Forge gate label sections offer registers from the selected expander", () => {
+  for (const [section, expected] of [
+    ["GATES ON MODULE 1", Array.from({ length: 8 }, (_, i) => `G${i + 1}`)],
+    ["GATES ON MODULE 2", Array.from({ length: 8 }, (_, i) => `G2.${i + 1}`)],
+    ["GATES ON X7", ["G9", "G10", "G11", "G12"]],
+  ] as const) {
+    const lines = ["# LABELS: master=16", `# ${section}:`, "#  G"];
+    const doc = {
+      languageId: "droider", getText: () => lines.join("\n"),
+      lineAt: (line: number) => ({ text: lines[line] }),
+    } as unknown as vscode.TextDocument;
+    const items = provider.provideCompletionItems(doc, new Position(2, 4) as vscode.Position)!;
+    assert.deepEqual(items.map((it) => it.label), expected);
+  }
+});
+
 function suggestions(line: string, cursor: number, languageId = "droid") {
   const doc = {
     languageId,

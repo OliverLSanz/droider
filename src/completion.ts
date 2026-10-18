@@ -6,7 +6,7 @@
 import * as vscode from "vscode";
 import { DroidData, ParamSpec } from "./data";
 import { cablesInDocument, cablesUsedAsOutputs, contextAtLine, currentBlockHeader, paramsUsedInBlock } from "./context";
-import { LabelSection, labelSectionAtLine } from "./labels";
+import { LabelSection, labelSectionAtLine, matchesGateLabelSection } from "./labels";
 import { BlueprintRegistry } from "./blueprintRegistry";
 import { Blueprint, parseBlueprint } from "./blueprints";
 import { modeForLanguageId, PatchMode } from "./linter";
@@ -259,6 +259,7 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
     const matches = (name: string): boolean => {
       if (section.kind === "inputs") return /^I\d+$/.test(name);
       if (section.kind === "outputs") return /^O\d+$/.test(name);
+      if (section.kind === "gates") return matchesGateLabelSection(section, name);
       return controllerRe.test(name);
     };
     const items: vscode.CompletionItem[] = [];

@@ -347,9 +347,8 @@ export class HardwareViewProvider {
       .filter((html) => html !== "")
       .join("\n");
 
-    const expandersHTML =
-      g8.map((inst) => this.generateG8HTML(inst)).join("\n") +
-      (x7 ? "\n" + this.generateX7HTML(x7) : "");
+    const g8HTML = g8.map((inst) => this.generateG8HTML(inst)).join("\n");
+    const x7HTML = x7 ? this.generateX7HTML(x7) : "";
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -1511,8 +1510,9 @@ export class HardwareViewProvider {
 <body>
     <div class="controllers-container">
         ${masterHTML}
+        ${g8HTML}
+        ${x7HTML}
         ${controllersHTML}
-        ${expandersHTML}
     </div>
     ${
       controllers.length === 0 && !masterHTML
