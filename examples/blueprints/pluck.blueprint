@@ -1,0 +1,48 @@
+# A plucky voice: Euclidean gates, a random note snapped
+# to C minor and a short decay envelope.
+
+[input]
+    # the clock to follow
+    clock
+    # how many of the 16 steps play
+    beats = 5
+    # envelope decay time
+    decay = 0.25
+
+[output]
+    # melody, 1 V/oct
+    pitch
+    # one gate per note
+    gate
+    # the plucky envelope
+    env
+
+[euklid]
+    clock  = clock
+    length = 16
+    beats  = beats
+    output = _GATE
+
+[random]
+    clock   = _GATE
+    maximum = 2V
+    output  = _NOTE
+
+[minifonion]
+    input   = _NOTE
+    degree  = 7
+    select1 = on
+    select3 = on
+    select5 = on
+    output  = pitch
+
+[contour]
+    trigger = _GATE
+    attack  = 0.01
+    decay   = decay
+    sustain = 0
+    output  = env
+
+[copy]
+    input  = _GATE
+    output = gate

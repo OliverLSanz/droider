@@ -1,0 +1,32 @@
+# Two plucky voices that share a clock.
+# Build it with "DROID: Build .droider to dist/*.ini".
+
+[p2b8]
+
+# --- Clock -------------------------------------------------
+[lfo]
+    hz     = P1.1 * 8 + 1
+    square = _CLOCK
+
+# --- Voices ------------------------------------------------
+# "pluck" is a megacircuit: see blueprints/pluck.blueprint
+[pluck]
+    clock = _CLOCK
+    beats = P1.2 * 10 + 3
+    pitch = O1
+    gate  = O2
+    env   = _ENV_LEAD
+
+[pluck]
+    clock = _CLOCK
+    beats = 3
+    decay = 0.8
+    pitch = O3
+    gate  = O4
+    env   = _ENV_BASS
+
+# --- Mix ---------------------------------------------------
+# Free arithmetic: compiled into native A * B + C steps.
+[copy]
+    input  = (_ENV_LEAD - _ENV_BASS) * P1.2 + _ENV_BASS
+    output = O5
