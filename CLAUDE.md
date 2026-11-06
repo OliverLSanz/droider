@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A VSCode extension ("DROID Patch Language") that provides editing support — error
+A VSCode extension (**Droider**, Marketplace ID `oliverlsanz.droider`) that provides editing support — error
 detection, autocompletion, hover docs, semantic highlighting, cable decoration,
 hardware/graph views, and SD-card writing — for **DROID** Eurorack patch files.
 A patch is a list of **circuits** (`[name]` headers with `parameter = value`
@@ -80,6 +80,23 @@ VSCode layer.
   text split from `droid-manual-blue-7.pdf`). **Work from the extracted text, not
   the PDF.** See `CIRCUIT_EXTRACTION.md` for the extraction playbook and remaining
   TODO, and `extracted_text/AGENT_INSTRUCTIONS.md` for the authoring rules.
+
+## Website, video and releases
+
+The repository is public. `README.md` is its front page for users (website link,
+features, install); put developer detail in `docs/development.md`, not the README.
+
+- `site/` is the static website and guide, deployed with `./scripts/deploy-site.sh`
+  to https://oliverlsanz.com/droider/. Keep the guide (`site/docs/index.html`) in
+  step with user-facing changes. Screenshots are real captures of `examples/`.
+  Regenerate `site/assets/droid-data.js` with `node scripts/site-data.js` after
+  changing `circuits/`.
+- `video/` is the Remotion promo video (see `video/README.md`).
+- Releases: bump `version` and `CHANGELOG.md`, `npm run package`, then
+  `npx @vscode/vsce publish` and a GitHub release with the `.vsix`
+  (`docs/development.md`, Releasing). Only publish when Óliver asks.
+- `.vscodeignore` decides what ships in the `.vsix`; never ship the manual PDF,
+  `extracted_text/`, tests or agent files.
 
 ## Authoring patches
 
