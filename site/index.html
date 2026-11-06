@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Droider — DROID patches without the guesswork</title>
+    <meta name="description" content="Droider is a free VS Code extension for DROID Eurorack patches: live error checking, autocompletion, hover docs, rainbow cables, hardware and circuit-graph views, megacircuits and one-click SD-card upload." />
+    <meta name="theme-color" content="#0b0d11" />
+    <meta property="og:title" content="Droider — DROID patches without the guesswork" />
+    <meta property="og:description" content="A free VS Code extension for DROID patches: errors before the card, docs under your cursor, cables in colour, megacircuits and one-click upload." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://oliverlsanz.com/droider/" />
+    <meta property="og:image" content="https://oliverlsanz.com/droider/assets/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://oliverlsanz.com/droider/" />
+    <link rel="icon" type="image/png" href="assets/icon.png" />
+    <link rel="apple-touch-icon" href="assets/icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/style.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap">
+        <a class="brand" href="./"><img src="assets/icon.png" alt="" />Droider</a>
+        <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        </button>
+        <nav class="nav-links" aria-label="Main">
+          <a href="#tour">Tour</a>
+          <a href="#features">Features</a>
+          <a href="#droider">Megacircuits</a>
+          <a href="docs/">Guide</a>
+          <a href="https://github.com/OliverLSanz/droider">GitHub</a>
+          <a class="button small" href="https://marketplace.visualstudio.com/items?itemName=oliverlsanz.droider">Install</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-cables" aria-hidden="true">
+          <svg viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice" fill="none" stroke-width="3" stroke-linecap="round">
+            <defs>
+              <linearGradient id="hc1" x1="0" x2="1"><stop offset="0" stop-color="#38bdf8" stop-opacity="0" /><stop offset=".5" stop-color="#38bdf8" /><stop offset="1" stop-color="#a78bfa" stop-opacity="0" /></linearGradient>
+              <linearGradient id="hc2" x1="0" x2="1"><stop offset="0" stop-color="#f472b6" stop-opacity="0" /><stop offset=".5" stop-color="#f472b6" /><stop offset="1" stop-color="#fbbf24" stop-opacity="0" /></linearGradient>
+            </defs>
+            <path d="M-20 120 C 220 120, 260 330, 470 330" stroke="url(#hc1)" opacity=".5" />
+            <path d="M1220 90 C 980 90, 950 300, 760 300" stroke="url(#hc2)" opacity=".45" />
+            <path d="M-20 520 C 200 520, 240 420, 380 420" stroke="url(#hc2)" opacity=".3" />
+            <path d="M1220 560 C 1000 560, 980 460, 840 460" stroke="url(#hc1)" opacity=".3" />
+          </svg>
+        </div>
+        <div class="wrap">
+          <span class="eyebrow"><span class="led"></span>Free VS Code extension for DROID</span>
+          <h1>DROID patches <span class="grad">without the guesswork.</span></h1>
+          <p class="lede">
+            Droider turns VS Code into an editor that <strong>knows every DROID circuit</strong>. Errors show up as you
+            type, not as blinking LEDs. Every parameter is documented under your cursor, and every cable has its own colour.
+            And when you're ready, <strong>one click puts the patch on your card</strong>.
+          </p>
+          <div class="cta">
+            <a class="button primary" href="https://marketplace.visualstudio.com/items?itemName=oliverlsanz.droider">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14" /></svg>
+              Install free
+            </a>
+            <a class="button ghost" href="docs/">Read the step-by-step guide</a>
+          </div>
+          <p class="meta">Windows · macOS · Linux · Open source (MIT) · No account, works offline</p>
+        </div>
+
+        <div class="wrap showcase reveal">
+          <div class="window glow">
+            <img src="assets/screens/editor.webp" width="1800" height="1125" alt="A DROID patch open in VS Code with Droider: circuit inputs in blue, outputs in magenta, registers in teal and every internal cable in its own colour." />
+          </div>
+          <div class="float graph-card"><img src="assets/screens/graph-view.webp" width="1800" height="1054" alt="" loading="lazy" /></div>
+        </div>
+      </section>
+
+      <section id="problem">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <span class="kicker">Why Droider</span>
+            <h2>Stop debugging with blinking LEDs.</h2>
+            <p>A DROID patch is a text file. Without tools, a typo only shows up once the patch is on the module. Droider catches it while you write.</p>
+          </div>
+          <div class="loop reveal">
+            <div class="loop-card before">
+              <h3>Before</h3>
+              <ul class="steps-inline">
+                <li>Write the patch in a plain text editor</li>
+                <li>Look up parameter names in the manual</li>
+                <li>Copy it to the SD card, eject, insert, press Load</li>
+                <li class="bad">The LEDs blink an error code</li>
+                <li>Find line 37 and guess what's wrong. Repeat.</li>
+              </ul>
+            </div>
+            <div class="loop-card after">
+              <h3>With Droider</h3>
+              <ul class="steps-inline">
+                <li>Circuits, parameters and cables autocomplete</li>
+                <li>The manual's docs appear when you hover</li>
+                <li>Mistakes are underlined the moment you type them</li>
+                <li>See the rack and the signal flow as you go</li>
+                <li>Click “Write to DROID”: written, verified, ejected</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tour">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <span class="kicker">Video tour</span>
+            <h2>From a tiny melody to a two-voice duet.</h2>
+            <p>One patch grows feature by feature: colours, completion, docs, errors, the rack, the graph, megacircuits and the card.</p>
+          </div>
+          <div class="tour-player glow reveal" data-tour>
+            <video controls preload="none" playsinline width="1920" height="1080" poster="assets/video/tour-poster.webp">
+              <source src="assets/video/tour.mp4" type="video/mp4" />
+            </video>
+            <button class="tour-play" type="button" hidden>
+              <span class="tour-play-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.6-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" /></svg></span>
+              <span class="tour-play-label">Watch the tour<small>About a minute · sound on</small></span>
+            </button>
+          </div>
+          <div class="tour-links">
+            <a href="docs/">Prefer reading? Start the guide →</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <span class="kicker">Features</span>
+            <h2>Everything the manual knows, right in your editor.</h2>
+            <p>Droider ships with the documentation of every DROID circuit, so it can check, complete and explain your patch as you write it.</p>
+          </div>
+
+          <div class="story">
+            <div class="story-row reveal">
+              <div class="story-text">
+                <span class="num">01 — READ</span>
+                <h3>See inputs, outputs and every cable.</h3>
+                <p>Inputs and outputs get different colours, so you can tell at a glance what feeds a circuit and what it sends out. Each internal cable gets its own colour too, so you can follow <code>_CLOCK</code> through the whole patch.</p>
+                <div class="chip-row">
+                  <span class="chip"><i style="background: var(--c-input)"></i>input</span>
+                  <span class="chip"><i style="background: var(--c-output)"></i>output</span>
+                  <span class="chip"><i style="background: var(--c-register)"></i>register</span>
+                  <span class="chip"><i style="background: var(--cable)"></i>_cables</span>
+                </div>
+              </div>
+              <div class="story-media"><div class="window"><img src="assets/screens/crop-read.webp" width="1480" height="1110" loading="lazy" alt="Semantic colours in a DROID patch: inputs blue, outputs magenta, registers teal, each cable its own colour" /></div></div>
+            </div>
+
+            <div class="story-row reveal">
+              <div class="story-text">
+                <span class="num">02 — WRITE</span>
+                <h3>Autocomplete for every circuit.</h3>
+                <p>Type <kbd>[</kbd> to pick from all the circuits. Inside one, you get its parameters with their type and abbreviation, without the ones you've already used. Type <kbd>_</kbd> for the cables already in the patch.</p>
+                <ul>
+                  <li>Indentation and closing <code>]</code> are added for you.</li>
+                  <li>Registers come from the hardware you declared: <code>P1.1</code> exists only if a controller does.</li>
+                </ul>
+              </div>
+              <div class="story-media"><div class="window"><img src="assets/screens/crop-write.webp" width="1500" height="735" loading="lazy" alt="Autocompletion listing the parameters of the slew circuit" /></div></div>
+            </div>
+
+            <div class="story-row reveal">
+              <div class="story-text">
+                <span class="num">03 — UNDERSTAND</span>
+                <h3>The manual, under your cursor.</h3>
+                <p>Hover any circuit, parameter or register to see what it does: its type, default value, range and description. The descriptions are adapted from the official DROID manual (used with permission).</p>
+              </div>
+              <div class="story-media"><div class="window"><img src="assets/screens/crop-hover.webp" width="1730" height="1040" loading="lazy" alt="Hover documentation for the minifonion circuit" /></div></div>
+            </div>
+
+            <div class="story-row reveal">
+              <div class="story-text">
+                <span class="num">04 — CHECK</span>
+                <h3>Errors before the card, not after.</h3>
+                <p>Droider checks the same things the DROID master checks when it loads a patch, while you type:</p>
+                <ul>
+                  <li>Unknown circuits, parameters and registers, like <code>O9</code></li>
+                  <li>Cables that nothing writes, nothing reads, or that two circuits write</li>
+                  <li>Writing to an input such as a pot or a button</li>
+                  <li>Values beyond <code>A * B + C</code>, and lines over 63 characters</li>
+                </ul>
+              </div>
+              <div class="story-media"><div class="window"><img src="assets/screens/crop-errors.webp" width="1500" height="810" loading="lazy" alt="A misspelled cable underlined, and two errors listed in the Problems panel" /></div></div>
+            </div>
+
+            <div class="story-row reveal">
+              <div class="story-text">
+                <span class="num">05 — VISUALISE</span>
+                <h3>Your rack, with your labels.</h3>
+                <p>The <strong>hardware view</strong> draws your master, expanders and controllers, with the labels from your patch's Forge-style legend on every jack, pot and button. The legend itself is checked and autocompleted too.</p>
+              </div>
+              <div class="story-media"><div class="window" style="background:#1b1b1b;padding:24px;display:grid;place-items:center"><img src="assets/screens/hardware-view.webp" width="620" height="1020" loading="lazy" alt="Hardware view: the DROID master and a P2B8 controller with labels RATE, DENS, OCT, RESET, PITCH, GATE and ENV" style="max-height:520px;width:auto" /></div></div>
+            </div>
+
+            <div class="story-row reveal">
+              <div class="story-text">
+                <span class="num">06 — FOLLOW THE SIGNAL</span>
+                <h3>The patch as a graph.</h3>
+                <p>The <strong>circuit graph</strong> lays out circuits, cables and jacks from left to right, in signal-flow order. Attenuation and offsets are shown on each input, and clicking a node takes you to its line.</p>
+              </div>
+              <div class="story-media"><div class="window"><img src="assets/screens/graph-view.webp" width="1800" height="1054" loading="lazy" alt="Circuit graph of the melody patch" /></div></div>
+            </div>
+
+            <div class="story-row reveal">
+              <div class="story-text">
+                <span class="num">07 — LOAD</span>
+                <h3>One click to the card.</h3>
+                <p>Insert the SD card and a <strong>Write to DROID</strong> button appears in the status bar. Droider saves the patch as <code>droid.ini</code> and reads it back to check it. Then it ejects the card safely, ready for the module's Load button.</p>
+              </div>
+              <div class="story-media"><div class="window"><img src="assets/screens/card-toast.webp" width="930" height="96" loading="lazy" alt="Notification: Patch written and verified on DROID; card ejected safely." /></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="droider">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <span class="kicker">The .droider syntax</span>
+            <h2>Build bigger patches with megacircuits.</h2>
+            <p>
+              <code>.droider</code> files are DROID patches with two extras: <strong>megacircuits</strong> (your own reusable circuits) and
+              <strong>free arithmetic</strong> on any input. Droider compiles them into a plain <code>droid.ini</code>
+              that runs on any DROID, and checks the result before it goes to the card.
+            </p>
+          </div>
+          <div class="compare reveal">
+            <div class="code" data-nocopy>
+              <div class="code-title"><span><span class="dots"><i></i><i></i><i></i></span>blueprints/pluck.blueprint</span></div>
+<pre data-droid># A plucky voice: Euclidean gates and a random
+# note snapped to C minor.
+[input]
+    clock
+    beats = 5
+    decay = 0.25
+[output]
+    pitch
+    gate
+    env
+
+[euklid]
+    clock  = clock
+    length = 16
+    beats  = beats
+    output = _GATE
+# …random, minifonion, contour</pre>
+            </div>
+            <div class="compare-arrow" aria-hidden="true"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-5-5 5 5-5 5" /></svg><span>use it<br />anywhere</span></div></div>
+            <div class="code" data-nocopy>
+              <div class="code-title"><span><span class="dots"><i></i><i></i><i></i></span>duet.droider</span></div>
+<pre data-droid data-mega="pluck:pitch,gate,env">[pluck]
+    clock = _CLOCK
+    beats = P1.2 * 10 + 3
+    pitch = O1
+    gate  = O2
+    env   = _ENV_LEAD
+
+[pluck]
+    clock = _CLOCK
+    beats = 3
+    decay = 0.8
+    pitch = O3
+    gate  = O4
+    env   = _ENV_BASS
+
+# Not possible in plain DROID:
+[copy]
+    input  = (_ENV_LEAD - _ENV_BASS) * P1.2 + _ENV_BASS
+    output = O5</pre>
+            </div>
+          </div>
+          <div class="features reveal" style="margin-top: 22px">
+            <article class="feature" style="--c: var(--violet)">
+              <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><path d="M14 17.5h7M17.5 14v7" /></svg></div>
+              <h3>Reusable, documented</h3>
+              <p>A <code>.blueprint</code> has named inputs (with optional defaults) and outputs. Comments become hover docs wherever it's used.</p>
+            </article>
+            <article class="feature" style="--c: var(--pink)">
+              <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5v14" /><path d="M6 6l12 12" opacity=".4" /></svg></div>
+              <h3>Any arithmetic</h3>
+              <p>Use <code>+</code>, <code>-</code>, <code>*</code> and parentheses on any input. Droider rewrites them into the fewest native <code>copy</code> circuits.</p>
+            </article>
+            <article class="feature" style="--c: var(--green)">
+              <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg></div>
+              <h3>Plain .ini out</h3>
+              <p>Private cables are renamed per instance, so two copies never collide. The output is a normal patch, checked before it's written.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="everything">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <span class="kicker">All in one place</span>
+            <h2>Everything included.</h2>
+          </div>
+          <div class="features reveal">
+            <article class="feature" style="--c: var(--cyan)"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M4 12h16M4 17h7" /></svg></div><h3>Autocompletion</h3><p>Circuits, parameters, registers, cables and label-legend entries.</p></article>
+            <article class="feature" style="--c: var(--violet)"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v5h1" /></svg></div><h3>Hover docs</h3><p>Every circuit's description, and each parameter's type, default and range.</p></article>
+            <article class="feature" style="--c: var(--red)"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg></div><h3>Live error checking</h3><p>The DROID master's own checks, while you type, with a Problems list.</p></article>
+            <article class="feature" style="--c: var(--pink)"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12c4-8 8 8 12 0s4 0 6 0" /></svg></div><h3>Rainbow cables</h3><p>Each internal cable gets its own colour, and inputs and outputs are coloured differently.</p></article>
+            <article class="feature" style="--c: var(--amber)"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16" /><path d="M7 7v.01M7 12v.01M7 17v.01" /></svg></div><h3>Forge labels</h3><p>The <code># LABELS</code> legend is validated and completed, and shown in the hardware view.</p></article>
+            <article class="feature" style="--c: var(--green)"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="8" height="16" rx="1.5" /><rect x="13" y="4" width="8" height="16" rx="1.5" /><circle cx="7" cy="9" r="1.5" /><circle cx="17" cy="9" r="1.5" /></svg></div><h3>Hardware view</h3><p>Master, G8 and X7 expanders and every controller type, drawn with your labels.</p></article>
+            <article class="feature" style="--c: var(--cyan)"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="2" /><circle cx="19" cy="6" r="2" /><circle cx="19" cy="18" r="2" /><path d="M7 12c5 0 6-6 10-6M7 12c5 0 6 6 10 6" /></svg></div><h3>Circuit graph</h3><p>Signal-flow layout of circuits and cables, and click a node to jump to its line.</p></article>
+            <article class="feature" style="--c: var(--violet)"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M8 12h8M12 8v8" /></svg></div><h3>Megacircuits</h3><p>Reusable <code>.blueprint</code> sub-patches, nested as deep as you like.</p></article>
+            <article class="feature" style="--c: var(--pink)"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14" /></svg></div><h3>Write to the card</h3><p>Detects the SD card, writes, verifies and ejects on macOS, Windows and Linux.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="start">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <span class="kicker">Get started</span>
+            <h2>Ready in three minutes.</h2>
+            <p>Never used VS Code? No problem: the guide walks you through every step.</p>
+          </div>
+          <div class="start reveal">
+            <div class="start-step">
+              <h3>Install VS Code</h3>
+              <p>The free code editor from Microsoft, for Windows, macOS and Linux.</p>
+              <a href="docs/#install-vscode">How to install it →</a>
+            </div>
+            <div class="start-step">
+              <h3>Add Droider</h3>
+              <p>Open the Extensions view, search for <b>Droider</b> and click Install.</p>
+              <a href="docs/#install-droider">Step by step →</a>
+            </div>
+            <div class="start-step">
+              <h3>Open your patch</h3>
+              <p>Open the folder with your <code>droid.ini</code>, or write your first patch with the guide.</p>
+              <a href="docs/#first-patch">Your first patch →</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <span class="kicker">FAQ</span>
+            <h2>Questions.</h2>
+          </div>
+          <div class="faq reveal">
+            <details><summary>Is it free?</summary><p>Yes. Droider is free and open source under the MIT license, with no account and no tracking. It works offline.</p></details>
+            <details><summary>Does it work with my existing patches?</summary><p>Yes. Open any <code>droid.ini</code> (or any <code>.ini</code> patch) and Droider checks and colours it straight away. Plain <code>.ini</code> files stay plain: the extra syntax only works in <code>.droider</code> files.</p></details>
+            <details><summary>Which DROID hardware is supported?</summary><p>The MASTER and MASTER18, the G8 and X7 expanders and all controllers (P2B8, P4B2, P10, S10, P8S8, B32, M4, E4, DB8E). Circuit data follows the blue-7 firmware manual.</p></details>
+            <details><summary>Does it replace the DROID Forge?</summary><p>No, they work well together. Droider reads and writes the Forge's label legend, so you can switch between the two. Droider is for people who like to work with the patch as text.</p></details>
+            <details><summary>Will a .droider patch run on my DROID?</summary><p>Yes, once it's built. The DROID only reads plain <code>.ini</code>, so Droider compiles <code>.droider</code> files to a normal patch and checks that patch first. Writing to the card does this automatically.</p></details>
+            <details><summary>Does it work in Cursor or VSCodium?</summary><p>Droider is published on the VS Code Marketplace. In editors that use other extension stores, download the <code>.vsix</code> from the GitHub releases and choose “Install from VSIX…”.</p></details>
+            <details><summary>Is this official?</summary><p>No. Droider is a community project, not affiliated with Der Mann mit der Maschine. Circuit documentation is adapted from the official DROID manual with the author's written permission.</p></details>
+          </div>
+        </div>
+      </section>
+
+      <section class="final">
+        <div class="wrap reveal">
+          <h2>Write your next patch <span class="grad">with confidence.</span></h2>
+          <p>Free for Windows, macOS and Linux. Search “Droider” in the VS Code Extensions view, or click below.</p>
+          <div class="cta">
+            <a class="button primary" href="https://marketplace.visualstudio.com/items?itemName=oliverlsanz.droider">Install Droider</a>
+            <a class="button ghost" href="docs/">Open the guide</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div>
+          <p>Made by <a href="https://oliverlsanz.com/">Óliver L. Sanz</a>. Free and open source under the MIT license.</p>
+          <p>DROID is made by Der Mann mit der Maschine. Droider is not affiliated with it. Circuit documentation is adapted from the official DROID manual with permission.</p>
+        </div>
+        <div>
+          <p><a href="docs/">Guide</a> · <a href="https://github.com/OliverLSanz/droider">GitHub</a> · <a href="https://github.com/OliverLSanz/droider/issues">Report an issue</a></p>
+        </div>
+      </div>
+    </footer>
+    <script src="assets/droid-data.js"></script>
+    <script src="assets/site.js"></script>
+  </body>
+</html>
