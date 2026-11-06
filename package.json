@@ -1,9 +1,40 @@
 {
-  "name": "droid-patch-language",
-  "displayName": "DROID Patch Language",
-  "description": "Editing support for DROID text patches (.ini): error detection, autocompletion and hover.",
-  "version": "0.0.1",
+  "name": "droider",
+  "displayName": "Droider — DROID Patch Language",
+  "description": "Write DROID Eurorack patches in VS Code: live error checking, autocompletion, hover docs, rainbow cables, hardware and circuit-graph views, megacircuits and one-click SD-card upload.",
+  "version": "1.0.0",
   "publisher": "oliverlsanz",
+  "author": {
+    "name": "Óliver L. Sanz",
+    "url": "https://oliverlsanz.com/"
+  },
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0B0D11",
+    "theme": "dark"
+  },
+  "homepage": "https://oliverlsanz.com/droider/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OliverLSanz/droider.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OliverLSanz/droider/issues"
+  },
+  "keywords": [
+    "droid",
+    "eurorack",
+    "modular",
+    "synthesizer",
+    "patch",
+    "der mann mit der maschine",
+    "dmmdm",
+    "cv",
+    "droid.ini",
+    "linter"
+  ],
+  "qna": "marketplace",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -151,17 +182,29 @@
         }
       },
       "[droid]": {
-        "editor.quickSuggestions": { "other": "on", "comments": "off", "strings": "off" },
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        },
         "editor.suggestOnTriggerCharacters": true,
         "editor.formatOnType": true
       },
       "[droider]": {
-        "editor.quickSuggestions": { "other": "on", "comments": "off", "strings": "off" },
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        },
         "editor.suggestOnTriggerCharacters": true,
         "editor.formatOnType": true
       },
       "[droid-blueprint]": {
-        "editor.quickSuggestions": { "other": "on", "comments": "off", "strings": "off" },
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        },
         "editor.suggestOnTriggerCharacters": true,
         "editor.formatOnType": true
       }
@@ -171,7 +214,9 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "tsc -p ./ && node out/cli.js",
-    "test": "tsc -p tsconfig.test.json && node --test \"out-test/test/**/*.test.js\""
+    "test": "tsc -p tsconfig.test.json && node --test \"out-test/test/**/*.test.js\"",
+    "vscode:prepublish": "npm run compile",
+    "package": "npx --yes @vscode/vsce@3 package"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"

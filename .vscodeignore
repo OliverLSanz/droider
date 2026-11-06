@@ -1,0 +1,15 @@
+# Ship only the compiled extension, its data model and the user-facing docs.
+**
+!package.json
+!README.md
+!CHANGELOG.md
+!LICENSE
+!language-configuration.json
+!syntaxes/**
+!circuits/*.yaml
+!controllers.yaml
+!registers.yaml
+!media/icon.png
+!out/*.js
+!node_modules/js-yaml/**
+!node_modules/argparse/**
