@@ -80,13 +80,46 @@ export class DroidCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     // --- Parameter / port name inside a known block ---
+    let params: vscode.CompletionItem[] | undefined;
     if (bp) {
-      return this.blueprintPortCompletions(bp, paramsUsedInBlock(doc, pos.line));
+      params = this.blueprintPortCompletions(bp, paramsUsedInBlock(doc, pos.line));
+    } else if (ctx.circuit) {
+      params = this.parameterCompletions(ctx.circuit, paramsUsedInBlock(doc, pos.line));
     }
-    if (ctx.circuit) {
-      return this.parameterCompletions(ctx.circuit, paramsUsedInBlock(doc, pos.line));
-    }
-    return undefined;
+    if (!params) return undefined;
+    // Suggestions pop up by themselves after Enter, so a second Enter (to end
+    // the circuit) must not accept a parameter: offer "end circuit" first.
+    const endItem = this.endCircuitItem(doc, pos);
+    return endItem ? [endItem, ...params] : params;
+  }
+
+  /**
+   * Preselected first item on a blank parameter line: accepting it (e.g. a
+   * second Enter) clears the indentation and moves to a fresh empty line, just
+   * like pressing Enter twice without suggestions. Hidden once a name is typed.
+   */
+  private endCircuitItem(
+    doc: vscode.TextDocument,
+    pos: vscode.Position
+  ): vscode.CompletionItem | undefined {
+    const line = doc.lineAt(pos.line).text;
+    if (line.trim() !== "") return undefined;
+    const it = new vscode.CompletionItem(
+      "\u21b5 end circuit",
+      vscode.CompletionItemKind.Keyword
+    );
+    it.detail = "new empty line";
+    it.documentation = new vscode.MarkdownString(
+      "Finish this circuit: leaves a blank line and puts the cursor on a new line at column 0."
+    );
+    it.range = new vscode.Range(pos.line, 0, pos.line, line.length);
+    it.insertText = "\n";
+    it.keepWhitespace = true;
+    // Matches only an empty prefix, so typing a parameter name hides it.
+    it.filterText = "\n";
+    it.sortText = " ";
+    it.preselect = true;
+    return it;
   }
 
   private headerCompletions(
