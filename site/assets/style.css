@@ -35,6 +35,8 @@
 }
 
 * { box-sizing: border-box; }
+/* `hidden` must win over the display rules below (play button, guide search). */
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
