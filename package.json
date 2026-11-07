@@ -88,7 +88,7 @@
         },
         {
           "command": "droid.showCircuitGraph",
-          "when": "resourceLangId == droid || resourceLangId == droider",
+          "when": "resourceLangId == droid || resourceLangId == droider || resourceLangId == droid-blueprint",
           "group": "navigation"
         },
         {

@@ -11,7 +11,7 @@
 import * as vscode from "vscode";
 import { DroidData } from "./data";
 import { colorForCable } from "./cables";
-import { Blueprint } from "./blueprints";
+import { Blueprint, BlueprintPort, parseBlueprint } from "./blueprints";
 import { parseLabelLegend } from "./labels";
 import { BlueprintRegistry } from "./blueprintRegistry";
 import { tokenizeForRows } from "./maths";
@@ -199,7 +199,12 @@ export class CircuitGraphBuilder {
     this.blueprints = blueprints ?? new Map();
   }
 
-  build(text: string): Graph {
+  /**
+   * `blueprint`: the text is a megacircuit definition. Its `[input]`/`[output]`
+   * sections are not circuits; their ports are drawn like hardware jacks (the
+   * megacircuit's public interface) and the body circuits wire to them.
+   */
+  build(text: string, opts: { blueprint?: boolean } = {}): Graph {
     const lines = text.split(/\r?\n/);
     const chain = this.data.controllerChain(lines);
     const validRegs = this.data.validRegisters(chain) as Map<
@@ -207,7 +212,21 @@ export class CircuitGraphBuilder {
       { direction: string; description?: string }
     >;
     const legend = parseLabelLegend(text);
-    const instances = this.parseCircuits(lines);
+    const instances = this.parseCircuits(lines, !!opts.blueprint);
+
+    // Blueprint ports behave like registers: referenced by bare name in values.
+    const ports = new Map<string, { kind: NodeKind; port: BlueprintPort }>();
+    if (opts.blueprint) {
+      const def = parseBlueprint(text, "");
+      for (const port of def.inputs) ports.set(port.name, { kind: "hwin", port });
+      for (const port of def.outputs) ports.set(port.name, { kind: "hwout", port });
+      for (const [name, { kind }] of ports) {
+        validRegs.set(name, {
+          direction: kind === "hwout" ? "output" : "input",
+          description: kind === "hwout" ? "Megacircuit output" : "Megacircuit input",
+        });
+      }
+    }
 
     const nodes: GraphNode[] = [];
     const nodeIds = new Set<string>();
@@ -367,6 +386,7 @@ export class CircuitGraphBuilder {
     // Hardware nodes (one per referenced register), enriched with the file's
     // Forge label legend so a hover can show the documented label/description.
     for (const [reg, kind] of hwUsed) {
+      if (ports.has(reg)) continue; // drawn below, with the port's own docs
       const li = legend.get(reg);
       addNode({
         id: "hw_" + reg,
@@ -376,6 +396,27 @@ export class CircuitGraphBuilder {
         title: li?.description ?? validRegs.get(reg)?.description ?? "Hardware register",
         flabel: li?.label,
         fdesc: li?.description,
+      });
+    }
+
+    // Megacircuit ports: the whole interface, even ports not wired yet.
+    for (const [name, { kind, port }] of ports) {
+      const role = kind === "hwout" ? "output" : "input";
+      const desc = [
+        port.doc,
+        port.default !== undefined ? "default: " + port.default : undefined,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      addNode({
+        id: "hw_" + name,
+        kind,
+        label: name,
+        hwColor: kind === "hwout" ? HW_OUT_COLOR : HW_IN_COLOR,
+        title: "Megacircuit " + role,
+        line: port.line,
+        flabel: "megacircuit " + role,
+        fdesc: desc || undefined,
       });
     }
 
@@ -414,7 +455,7 @@ export class CircuitGraphBuilder {
   }
 
   /** Splits the patch into circuit blocks, skipping the controller chain. */
-  private parseCircuits(lines: string[]): CircuitInstance[] {
+  private parseCircuits(lines: string[], blueprint = false): CircuitInstance[] {
     const instances: CircuitInstance[] = [];
     let declaring = true;
     let current: CircuitInstance | null = null;
@@ -430,6 +471,10 @@ export class CircuitGraphBuilder {
         const name = hm[1];
         if (this.data.controllers.has(name) && declaring) return; // chain decl
         declaring = false;
+        if (blueprint && (name === "input" || name === "output")) {
+          current = null; // port section, not a circuit
+          return;
+        }
         index++;
         current = {
           index,
@@ -487,6 +532,9 @@ function push<T>(map: Map<string, T[]>, key: string, value: T): void {
   else map.set(key, [value]);
 }
 
+/** Languages the graph can show: patches and megacircuit definitions. */
+const GRAPH_LANGUAGES = ["droid", "droider", "droid-blueprint"];
+
 /**
  * Manages the circuit graph webview panel (mirrors HardwareViewProvider).
  */
@@ -507,8 +555,10 @@ export class CircuitGraphProvider {
     const editor = vscode.window.activeTextEditor;
     // .ini patches and .droider patches (which may use megacircuits) are both
     // shown; megacircuit instances render as ordinary circuit nodes.
-    if (!editor || !["droid", "droider"].includes(editor.document.languageId)) {
-      vscode.window.showInformationMessage("Open a DROID patch (.ini or .droider) first");
+    if (!editor || !GRAPH_LANGUAGES.includes(editor.document.languageId)) {
+      vscode.window.showInformationMessage(
+        "Open a DROID patch (.ini, .droider or .blueprint) first"
+      );
       return;
     }
 
@@ -598,11 +648,11 @@ export class CircuitGraphProvider {
       }
     }
     const active = vscode.window.activeTextEditor;
-    if (active && ["droid", "droider"].includes(active.document.languageId)) {
+    if (active && GRAPH_LANGUAGES.includes(active.document.languageId)) {
       return active.document;
     }
     return vscode.workspace.textDocuments.find((d) =>
-      ["droid", "droider"].includes(d.languageId)
+      GRAPH_LANGUAGES.includes(d.languageId)
     );
   }
 
@@ -624,7 +674,9 @@ export class CircuitGraphProvider {
     const graph = new CircuitGraphBuilder(
       this.data,
       this.registry?.all()
-    ).build(document.getText());
+    ).build(document.getText(), {
+      blueprint: document.languageId === "droid-blueprint",
+    });
     this.panel.webview.html = this.generateHTML(graph, document.uri.toString());
   }
 
