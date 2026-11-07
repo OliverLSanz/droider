@@ -313,7 +313,7 @@
             </table>
           </div>
           <figure><div class="window"><img src="../assets/screens/crop-write.webp" width="1500" height="735" alt="Suggestions for the parameters of the slew circuit" loading="lazy" /></div><figcaption>Parameters of <code>[slew]</code>, with their kind (input or output) and abbreviation.</figcaption></figure>
-          <p>Pressing <kbd>Enter</kbd> after a circuit header indents the next line and shows the parameters. Pressing <kbd>Enter</kbd> after a parameter keeps the same indentation.</p>
+          <p>Pressing <kbd>Enter</kbd> after a circuit header indents the next line and shows the parameters. Pressing <kbd>Enter</kbd> after a parameter keeps the same indentation. When you've finished a circuit, press <kbd>Enter</kbd> twice: the first suggestion on an empty line is <strong>↵ end circuit</strong>, which leaves a blank line and starts the next line at the left edge, ready for the next circuit.</p>
           <div class="callout"><p><b>Short names.</b> Every DROID parameter has an abbreviation (<code>clock</code> → <code>c</code>). Droider accepts both and shows the abbreviation in suggestions and hovers. Long names are easier to read; short ones save space in big patches.</p></div>
         </article>
 
@@ -433,7 +433,7 @@
             <li>Attenuation and offset on an input (<code>× 8</code>, <code>+ 1</code>) are shown under it; fixed values appear as small tags.</li>
             <li><strong>Click</strong> a box to jump to that circuit in the patch. <strong>Drag</strong> boxes to rearrange them, drag the background to pan, and pinch or scroll to zoom.</li>
             <li><strong>Re-layout</strong> tidies everything again; <strong>Fit</strong> zooms to show the whole patch.</li>
-            <li>In <code>.droider</code> patches, megacircuits are a single box. Open a <code>.blueprint</code> to see its inside, with its ports as jacks.</li>
+            <li>In <code>.droider</code> patches, megacircuits are a single box. Open a <code>.blueprint</code> and show its graph to see its inside: its inputs and outputs are drawn as jacks.</li>
           </ul>
         </article>
 

@@ -2,7 +2,7 @@
   "name": "droider",
   "displayName": "Droider — DROID Patch Language",
   "description": "Write DROID Eurorack patches in VS Code: live error checking, autocompletion, hover docs, rainbow cables, hardware and circuit-graph views, megacircuits and one-click SD-card upload.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "oliverlsanz",
   "author": {
     "name": "Óliver L. Sanz",

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- The circuit graph now opens for megacircuit blueprints (`.blueprint`), with their inputs and outputs drawn as jacks.
+- Pressing Enter twice inside a circuit ends it: the first suggestion after a new line is "end circuit", so the second Enter no longer inserts a parameter.
+
 ## 1.0.0 — first public release
 
 - Live error checking for `.ini` patches, matching the errors the DROID master reports.
