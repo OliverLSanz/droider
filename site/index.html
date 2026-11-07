@@ -114,16 +114,15 @@
         <div class="wrap">
           <div class="section-head reveal">
             <span class="kicker">Video tour</span>
-            <h2>From a tiny melody to a two-voice duet.</h2>
-            <p>One patch grows feature by feature: colours, completion, docs, errors, the rack, the graph, megacircuits and the card.</p>
+            <h2>See it in action.</h2>
+            <p>One minute, with sound.</p>
           </div>
           <div class="tour-player glow reveal" data-tour>
             <video controls preload="none" playsinline width="1920" height="1080" poster="assets/video/tour-poster.webp">
               <source src="assets/video/tour.mp4" type="video/mp4" />
             </video>
-            <button class="tour-play" type="button" hidden>
+            <button class="tour-play" type="button" aria-label="Play the video tour" hidden>
               <span class="tour-play-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.6-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" /></svg></span>
-              <span class="tour-play-label">Watch the tour<small>About a minute · sound on</small></span>
             </button>
           </div>
           <div class="tour-links">
@@ -236,47 +235,66 @@
           </div>
           <div class="compare reveal">
             <div class="code" data-nocopy>
-              <div class="code-title"><span><span class="dots"><i></i><i></i><i></i></span>blueprints/pluck.blueprint</span></div>
-<pre data-droid># A plucky voice: Euclidean gates and a random
-# note snapped to C minor.
-[input]
-    clock
-    beats = 5
-    decay = 0.25
-[output]
-    pitch
-    gate
-    env
+              <div class="code-title"><span><span class="dots"><i></i><i></i><i></i></span>blueprints/randomnote.blueprint</span></div>
+<pre data-droid># A megacircuit is your own reusable circuit.
+# This file defines [randomnote]: a random note
+# in C minor on every clock.
 
-[euklid]
-    clock  = clock
-    length = 16
-    beats  = beats
-    output = _GATE
-# …random, minifonion, contour</pre>
+[input]
+    # a new note on each clock
+    clock
+    # how far it can jump (1V = one octave)
+    range = 2V
+
+[output]
+    # the note, 1 V/oct
+    pitch
+
+[random]
+    clock   = clock
+    maximum = range
+    output  = _VOLTAGE
+
+[minifonion]
+    input   = _VOLTAGE
+    degree  = 7       # natural minor
+    select1 = on
+    select3 = on
+    select5 = on
+    output  = pitch</pre>
             </div>
             <div class="compare-arrow" aria-hidden="true"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-5-5 5 5-5 5" /></svg><span>use it<br />anywhere</span></div></div>
             <div class="code" data-nocopy>
-              <div class="code-title"><span><span class="dots"><i></i><i></i><i></i></span>duet.droider</span></div>
-<pre data-droid data-mega="pluck:pitch,gate,env">[pluck]
-    clock = _CLOCK
-    beats = P1.2 * 10 + 3
+              <div class="code-title"><span><span class="dots"><i></i><i></i><i></i></span>melodies.droider</span></div>
+<pre data-droid data-mega="randomnote:pitch"># Use your megacircuit in any .droider
+# patch, just like a built-in circuit.
+[p2b8]
+
+[lfo]
+    hz     = 4
+    square = _CLOCK
+
+[euklid]
+    clock  = _CLOCK
+    length = 16
+    beats  = 5
+    output = _RHYTHM
+
+# Two melodies from the same megacircuit
+[randomnote]
+    clock = _RHYTHM
     pitch = O1
-    gate  = O2
-    env   = _ENV_LEAD
 
-[pluck]
+[randomnote]
     clock = _CLOCK
-    beats = 3
-    decay = 0.8
-    pitch = O3
-    gate  = O4
-    env   = _ENV_BASS
+    range = 1V
+    pitch = O2
 
-# Not possible in plain DROID:
+# Pot 1 morphs from one melody to the
+# other: arithmetic plain DROID can't do
 [copy]
-    input  = (_ENV_LEAD - _ENV_BASS) * P1.2 + _ENV_BASS
-    output = O5</pre>
+    input  = (O1 - O2) * P1.1 + O2
+    output = O3</pre>
             </div>
           </div>
           <div class="features reveal" style="margin-top: 22px">
