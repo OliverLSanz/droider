@@ -77,8 +77,8 @@ VSCode layer.
 - `registers.yaml` / `controllers.yaml` — fixed master registers and controller
   types (pots/buttons/LEDs/etc.). Schema in `docs/hardware-schema.md`.
 - Circuit YAML is generated from `extracted_text/<name>.txt` (clean per-circuit
-  text split from `droid-manual-blue-7.pdf`). **Work from the extracted text, not
-  the PDF.** See `CIRCUIT_EXTRACTION.md` for the extraction playbook and remaining
+  text split from the official DROID manual, blue-7; the PDF itself is not in the
+  repository). **Work from the extracted text.** See `CIRCUIT_EXTRACTION.md` for the extraction playbook and remaining
   TODO, and `extracted_text/AGENT_INSTRUCTIONS.md` for the authoring rules.
 
 ## Website, video and releases

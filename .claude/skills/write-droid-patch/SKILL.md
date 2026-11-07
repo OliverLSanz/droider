@@ -37,7 +37,7 @@ exact parameter names, abbreviations, defaults and ranges):
 
 > Not every circuit has been extracted to YAML yet. If a circuit you need is not
 > in `circuits/`, the linter cannot fully validate it (its body is treated as
-> unknown). Verify those circuits manually against `droid-manual-blue-7.pdf`.
+> unknown). Verify those circuits manually against the official DROID manual.
 
 ## 2. Authoring conventions (required)
 

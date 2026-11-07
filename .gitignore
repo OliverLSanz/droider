@@ -5,3 +5,5 @@ dist/
 *.vsix
 .DS_Store
 .mypy_cache/
+# The official manual is not redistributed; keep a local copy here if you like.
+droid-manual-*.pdf

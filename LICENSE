@@ -24,8 +24,7 @@ SOFTWARE.
 
 Third-party content
 
-The circuit documentation in `circuits/`, `extracted_text/` and
-`droid-manual-blue-7.pdf` is adapted from the official DROID manual,
+The circuit documentation in `circuits/` and `extracted_text/` is adapted from the official DROID manual,
 © Der Mann mit der Maschine, and is used with the author's written permission.
 It is not covered by the MIT license above. DROID is a product of
 Der Mann mit der Maschine; this project is not affiliated with it.
