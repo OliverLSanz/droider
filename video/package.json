@@ -1,0 +1,29 @@
+{
+  "name": "droider-video",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "data": "node scripts/gen-data.ts",
+    "audio": "node scripts/render-audio.ts",
+    "studio": "npm run audio && remotion studio",
+    "render": "npm run audio && remotion render Demo out/droider-tour.mp4",
+    "render:vertical": "npm run audio && remotion render DemoVertical out/droider-tour-vertical.mp4",
+    "thumbnail": "remotion still Thumbnail out/youtube-thumbnail.png && ffmpeg -y -loglevel error -i out/youtube-thumbnail.png -q:v 3 out/youtube-thumbnail.jpg",
+    "web": "sh scripts/web.sh",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.541",
+    "@remotion/google-fonts": "4.0.541",
+    "lucide-react": "0.468.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.541"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.30",
+    "@types/react": "19.3.0",
+    "typescript": "5.9.3"
+  }
+}

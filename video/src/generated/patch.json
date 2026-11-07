@@ -1,0 +1,2281 @@
+{
+ "docs": {
+  "melody": "# LABELS: master=16\n# INPUTS:\n#  I1: [RESET] Restart the rhythm\n# OUTPUTS:\n#  O1: [PITCH] Melody, 1 V/oct\n#  O2: [GATE] Euclidean gates\n#  O3: [ENV] Plucky envelope\n# CONTROLLER 1:\n#  P1.1: [RATE] Clock speed\n#  P1.2: [DENS] Rhythm density\n#  B1.1: [OCT] Hold for one octave up\n\n[p2b8]\n\n# --- Clock -------------------------------------------------\n# A square LFO is our master clock (1 to 9 Hz).\n[lfo]\n    hz     = P1.1 * 8 + 1\n    square = _CLOCK\n\n# --- Rhythm ------------------------------------------------\n# 16 steps, 2 to 14 beats spread as evenly as possible.\n[euklid]\n    clock  = _CLOCK\n    reset  = I1\n    length = 16\n    beats  = P1.2 * 12 + 2\n    output = _GATE\n\n# --- Melody ------------------------------------------------\n# A new random voltage on every beat.\n[random]\n    clock   = _GATE\n    minimum = 0\n    maximum = 2V\n    output  = _RANDOM\n\n# Snap it to C natural minor; OCT adds one octave while held.\n[minifonion]\n    input   = B1.1 * 1V + _RANDOM\n    root    = 0\n    degree  = 7\n    select1 = on\n    select3 = on\n    select5 = on\n    select7 = on\n    output  = O1\n\n# --- Envelope ----------------------------------------------\n[contour]\n    trigger = _GATE\n    attack  = 0.01\n    decay   = 0.25\n    sustain = 0\n    output  = O3\n\n[copy]\n    input  = _GATE\n    output = O2\n",
+  "melodyO9": "# LABELS: master=16\n# INPUTS:\n#  I1: [RESET] Restart the rhythm\n# OUTPUTS:\n#  O1: [PITCH] Melody, 1 V/oct\n#  O2: [GATE] Euclidean gates\n#  O3: [ENV] Plucky envelope\n# CONTROLLER 1:\n#  P1.1: [RATE] Clock speed\n#  P1.2: [DENS] Rhythm density\n#  B1.1: [OCT] Hold for one octave up\n\n[p2b8]\n\n# --- Clock -------------------------------------------------\n# A square LFO is our master clock (1 to 9 Hz).\n[lfo]\n    hz     = P1.1 * 8 + 1\n    square = _CLOCK\n\n# --- Rhythm ------------------------------------------------\n# 16 steps, 2 to 14 beats spread as evenly as possible.\n[euklid]\n    clock  = _CLOCK\n    reset  = I1\n    length = 16\n    beats  = P1.2 * 12 + 2\n    output = _GATE\n\n# --- Melody ------------------------------------------------\n# A new random voltage on every beat.\n[random]\n    clock   = _GATE\n    minimum = 0\n    maximum = 2V\n    output  = _RANDOM\n\n# Snap it to C natural minor; OCT adds one octave while held.\n[minifonion]\n    input   = B1.1 * 1V + _RANDOM\n    root    = 0\n    degree  = 7\n    select1 = on\n    select3 = on\n    select5 = on\n    select7 = on\n    output  = O1\n\n# --- Envelope ----------------------------------------------\n[contour]\n    trigger = _GATE\n    attack  = 0.01\n    decay   = 0.25\n    sustain = 0\n    output  = O9\n\n[copy]\n    input  = _GATE\n    output = O2\n",
+  "duet": "# Two plucky voices that share a clock.\n# Build it with \"DROID: Build .droider to dist/*.ini\".\n\n[p2b8]\n\n# --- Clock -------------------------------------------------\n[lfo]\n    hz     = P1.1 * 8 + 1\n    square = _CLOCK\n\n# --- Voices ------------------------------------------------\n# \"pluck\" is a megacircuit: see blueprints/pluck.blueprint\n[pluck]\n    clock = _CLOCK\n    beats = P1.2 * 10 + 3\n    pitch = O1\n    gate  = O2\n    env   = _ENV_LEAD\n\n[pluck]\n    clock = _CLOCK\n    beats = 3\n    decay = 0.8\n    pitch = O3\n    gate  = O4\n    env   = _ENV_BASS\n\n# --- Mix ---------------------------------------------------\n# Free arithmetic: compiled into native A * B + C steps.\n[copy]\n    input  = (_ENV_LEAD - _ENV_BASS) * P1.2 + _ENV_BASS\n    output = O5\n",
+  "pluck": "# A plucky voice: Euclidean gates, a random note snapped\n# to C minor and a short decay envelope.\n\n[input]\n    # the clock to follow\n    clock\n    # how many of the 16 steps play\n    beats = 5\n    # envelope decay time\n    decay = 0.25\n\n[output]\n    # melody, 1 V/oct\n    pitch\n    # one gate per note\n    gate\n    # the plucky envelope\n    env\n\n[euklid]\n    clock  = clock\n    length = 16\n    beats  = beats\n    output = _GATE\n\n[random]\n    clock   = _GATE\n    maximum = 2V\n    output  = _NOTE\n\n[minifonion]\n    input   = _NOTE\n    degree  = 7\n    select1 = on\n    select3 = on\n    select5 = on\n    output  = pitch\n\n[contour]\n    trigger = _GATE\n    attack  = 0.01\n    decay   = decay\n    sustain = 0\n    output  = env\n\n[copy]\n    input  = _GATE\n    output = gate\n",
+  "duetIni": "# Two plucky voices that share a clock.\n# Build it with \"DROID: Build .droider to dist/*.ini\".\n\n[p2b8]\n\n# --- Clock -------------------------------------------------\n[lfo]\n    hz     = P1.1 * 8 + 1\n    square = _CLOCK\n\n# --- Voices ------------------------------------------------\n# \"pluck\" is a megacircuit: see blueprints/pluck.blueprint\n# --- begin pluck #1 ---\n[copy]\n    input = P1.2 * 10 + 3\n    output = __pluck_1_beats\n[euklid]\n    clock  = _CLOCK\n    length = 16\n    beats  = __pluck_1_beats\n    output = __pluck_1_GATE\n\n[random]\n    clock   = __pluck_1_GATE\n    maximum = 2V\n    output  = __pluck_1_NOTE\n\n[minifonion]\n    input   = __pluck_1_NOTE\n    degree  = 7\n    select1 = on\n    select3 = on\n    select5 = on\n    output  = O1\n\n[contour]\n    trigger = __pluck_1_GATE\n    attack  = 0.01\n    decay   = 0.25\n    sustain = 0\n    output  = _ENV_LEAD\n\n[copy]\n    input  = __pluck_1_GATE\n    output = O2\n\n# --- end pluck #1 ---\n# --- begin pluck #2 ---\n[euklid]\n    clock  = _CLOCK\n    length = 16\n    beats  = 3\n    output = __pluck_2_GATE\n\n[random]\n    clock   = __pluck_2_GATE\n    maximum = 2V\n    output  = __pluck_2_NOTE\n\n[minifonion]\n    input   = __pluck_2_NOTE\n    degree  = 7\n    select1 = on\n    select3 = on\n    select5 = on\n    output  = O3\n\n[contour]\n    trigger = __pluck_2_GATE\n    attack  = 0.01\n    decay   = 0.8\n    sustain = 0\n    output  = _ENV_BASS\n\n[copy]\n    input  = __pluck_2_GATE\n    output = O4\n\n# --- end pluck #2 ---\n[copy]\n    input = _ENV_LEAD - _ENV_BASS\n    output = _MATH1\n[copy]\n    input  = _MATH1 * P1.2 + _ENV_BASS\n    output = O5\n"
+ },
+ "typoLine": 54,
+ "roles": {
+  "lfo": {
+   "rate": "input",
+   "taptempo": "input",
+   "hz": "input",
+   "level": "input",
+   "randomize": "input",
+   "offset": "input",
+   "bipolar": "input",
+   "phase": "input",
+   "pulsewidth": "input",
+   "skew": "input",
+   "sync": "input",
+   "syncphase": "input",
+   "waveform": "input",
+   "output": "output",
+   "square": "output",
+   "sawtooth": "output",
+   "triangle": "output",
+   "ramp": "output",
+   "paraboloid": "output",
+   "sine": "output",
+   "cosine": "output"
+  },
+  "euklid": {
+   "clock": "input",
+   "reset": "input",
+   "outputsignal": "input",
+   "length": "input",
+   "beats": "input",
+   "offset": "input",
+   "output": "output",
+   "offbeats": "output"
+  },
+  "random": {
+   "clock": "input",
+   "minimum": "input",
+   "maximum": "input",
+   "steps": "input",
+   "output": "output"
+  },
+  "minifonion": {
+   "input": "input",
+   "trigger": "input",
+   "bypass": "input",
+   "direction": "input",
+   "root": "input",
+   "degree": "input",
+   "select1": "input",
+   "select3": "input",
+   "select5": "input",
+   "select7": "input",
+   "select9": "input",
+   "select11": "input",
+   "select13": "input",
+   "selectfill1": "input",
+   "selectfill2": "input",
+   "selectfill3": "input",
+   "selectfill4": "input",
+   "selectfill5": "input",
+   "harmonicshift": "input",
+   "noteshift": "input",
+   "selectnoteshift": "input",
+   "tuningmode": "input",
+   "tuningpitch": "input",
+   "transpose": "input",
+   "output": "output",
+   "notechange": "output"
+  },
+  "contour": {
+   "gate": "input",
+   "trigger": "input",
+   "retrigger": "input",
+   "startfromzero": "input",
+   "abortattack": "input",
+   "loop": "input",
+   "predelay": "input",
+   "attack": "input",
+   "hold": "input",
+   "decay": "input",
+   "sustain": "input",
+   "swell": "input",
+   "swelltime": "input",
+   "swelllevel": "input",
+   "release": "input",
+   "level": "input",
+   "velocity": "input",
+   "pitch": "input",
+   "taptempo": "input",
+   "shape": "input",
+   "attackshape": "input",
+   "decayshape": "input",
+   "swellshape": "input",
+   "releaseshape": "input",
+   "zerocrossing": "input",
+   "output": "output",
+   "negated": "output",
+   "inverted": "output",
+   "endofpredelay": "output",
+   "endofattack": "output",
+   "endofhold": "output",
+   "endofdecay": "output",
+   "endofrelease": "output"
+  },
+  "copy": {
+   "input": "input",
+   "output": "output"
+  }
+ },
+ "circuits": [
+  "adc",
+  "algoquencer",
+  "arpeggio",
+  "bernoulli",
+  "burst",
+  "button",
+  "buttongroup",
+  "calibrator",
+  "case",
+  "chord",
+  "clockedtrigger",
+  "clocktool",
+  "compare",
+  "contour",
+  "copy",
+  "crossfader",
+  "cvlooper",
+  "dac",
+  "delay",
+  "detune",
+  "display",
+  "droid",
+  "encoder",
+  "encoderbank",
+  "encoquencer",
+  "euklid",
+  "explin",
+  "faderbank",
+  "fadermatrix",
+  "firefacecontrol",
+  "flipflop",
+  "fold",
+  "fourstatebutton",
+  "gatetool",
+  "ifequal",
+  "lfo",
+  "logic",
+  "math",
+  "matrixmixer",
+  "midifileplayer",
+  "midiin",
+  "midiout",
+  "midithrough",
+  "minifonion",
+  "mixer",
+  "motoquencer",
+  "motorfader",
+  "multicompare",
+  "notchedpot",
+  "notebuttons",
+  "nudge",
+  "octave",
+  "once",
+  "outputcalibrator",
+  "polytool",
+  "pot",
+  "quantizer",
+  "queue",
+  "random",
+  "recorder",
+  "sample",
+  "select",
+  "sequencer",
+  "sinfonionlink",
+  "slew",
+  "spring",
+  "superjust",
+  "switch",
+  "switchedpot",
+  "timing",
+  "togglebutton",
+  "transient",
+  "triggerdelay",
+  "unusedfaders",
+  "vcotuner",
+  "watch"
+ ],
+ "controllers": [
+  "b32",
+  "db8e",
+  "e4",
+  "m4",
+  "p10",
+  "p2b8",
+  "p4b2",
+  "p8s8",
+  "s10"
+ ],
+ "blueprint": {
+  "name": "pluck",
+  "inputs": [
+   "clock",
+   "beats",
+   "decay"
+  ],
+  "outputs": [
+   "pitch",
+   "gate",
+   "env"
+  ]
+ },
+ "lint": {
+  "melody": [],
+  "melodyO9": [
+   {
+    "line": 54,
+    "startCol": 13,
+    "endCol": 16,
+    "message": "unknown register: O9",
+    "severity": "error"
+   }
+  ],
+  "duet": [],
+  "pluck": [],
+  "duetIni": []
+ },
+ "lintStates": {
+  "complete": [
+   [],
+   [
+    {
+     "line": 49,
+     "startCol": 0,
+     "endCol": 2,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 49,
+     "startCol": 0,
+     "endCol": 3,
+     "message": "unknown circuit: [c]",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 49,
+     "startCol": 0,
+     "endCol": 4,
+     "message": "unknown circuit: [co]",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 49,
+     "startCol": 0,
+     "endCol": 5,
+     "message": "unknown circuit: [con]",
+     "severity": "error"
+    }
+   ],
+   [],
+   [
+    {
+     "line": 50,
+     "startCol": 4,
+     "endCol": 5,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 50,
+     "startCol": 4,
+     "endCol": 6,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 50,
+     "startCol": 12,
+     "endCol": 14,
+     "message": "missing value after '=' for parameter 'trigger'",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 50,
+     "startCol": 13,
+     "endCol": 15,
+     "message": "internal cable '_' has no output (nothing writes to it)",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 50,
+     "startCol": 13,
+     "endCol": 15,
+     "message": "internal cable '_' has no output (nothing writes to it)",
+     "severity": "error"
+    }
+   ],
+   [],
+   [],
+   [
+    {
+     "line": 51,
+     "startCol": 4,
+     "endCol": 5,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 51,
+     "startCol": 4,
+     "endCol": 6,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 51,
+     "startCol": 4,
+     "endCol": 7,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 51,
+     "startCol": 4,
+     "endCol": 8,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 51,
+     "startCol": 4,
+     "endCol": 9,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 51,
+     "startCol": 4,
+     "endCol": 10,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 51,
+     "startCol": 4,
+     "endCol": 11,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 51,
+     "startCol": 11,
+     "endCol": 12,
+     "message": "missing value after '=' for parameter 'attack'",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 51,
+     "startCol": 11,
+     "endCol": 13,
+     "message": "missing value after '=' for parameter 'attack'",
+     "severity": "error"
+    }
+   ],
+   [],
+   [],
+   [],
+   [],
+   [
+    {
+     "line": 52,
+     "startCol": 4,
+     "endCol": 5,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 52,
+     "startCol": 4,
+     "endCol": 6,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 52,
+     "startCol": 4,
+     "endCol": 7,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 52,
+     "startCol": 4,
+     "endCol": 8,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 52,
+     "startCol": 4,
+     "endCol": 9,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 52,
+     "startCol": 4,
+     "endCol": 10,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 52,
+     "startCol": 10,
+     "endCol": 11,
+     "message": "missing value after '=' for parameter 'decay'",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 52,
+     "startCol": 10,
+     "endCol": 12,
+     "message": "missing value after '=' for parameter 'decay'",
+     "severity": "error"
+    }
+   ],
+   [],
+   [],
+   [],
+   [],
+   [
+    {
+     "line": 53,
+     "startCol": 4,
+     "endCol": 5,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 53,
+     "startCol": 4,
+     "endCol": 6,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 53,
+     "startCol": 4,
+     "endCol": 7,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 53,
+     "startCol": 4,
+     "endCol": 8,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 53,
+     "startCol": 4,
+     "endCol": 9,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 53,
+     "startCol": 4,
+     "endCol": 10,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 53,
+     "startCol": 4,
+     "endCol": 11,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 53,
+     "startCol": 4,
+     "endCol": 12,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 53,
+     "startCol": 12,
+     "endCol": 13,
+     "message": "missing value after '=' for parameter 'sustain'",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 53,
+     "startCol": 12,
+     "endCol": 14,
+     "message": "missing value after '=' for parameter 'sustain'",
+     "severity": "error"
+    }
+   ],
+   [],
+   [],
+   [
+    {
+     "line": 54,
+     "startCol": 4,
+     "endCol": 5,
+     "message": "missing '=' in parameter line",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 54,
+     "startCol": 11,
+     "endCol": 13,
+     "message": "missing value after '=' for parameter 'output'",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 54,
+     "startCol": 12,
+     "endCol": 14,
+     "message": "unknown register: O",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 54,
+     "startCol": 12,
+     "endCol": 14,
+     "message": "unknown register: O",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 54,
+     "startCol": 12,
+     "endCol": 14,
+     "message": "unknown register: O",
+     "severity": "error"
+    }
+   ],
+   []
+  ],
+  "errors": [
+   [],
+   [
+    {
+     "line": 54,
+     "startCol": 13,
+     "endCol": 15,
+     "message": "unknown register: O",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 54,
+     "startCol": 13,
+     "endCol": 16,
+     "message": "unknown register: O9",
+     "severity": "error"
+    }
+   ],
+   [
+    {
+     "line": 54,
+     "startCol": 13,
+     "endCol": 15,
+     "message": "unknown register: O",
+     "severity": "error"
+    }
+   ],
+   []
+  ]
+ },
+ "hover": {
+  "beats": "**beats** · _input_ · abbr `b` · `integer`\n\ndefault: `5`\n\nNumber of active beats distributed among the `length` steps. If greater\nthan `length`, it is capped to `length`.\n",
+  "minifonion": "**minifonion** — minifonion – Musical quantizer\n\nMusical quantizer that gently moves any input CV (pitch at 1 V/oct) into selected\nnotes of a musical scale. It is equivalent to a single channel of the Sinfonion, but\nwithout its hardware interface and with more flexibility.\n\nQuantization happens in two steps: first the input is snapped to the nearest semitone;\nthen, if that semitone is not in the selected scale/notes, the circuit searches for the\nnext allowed semitone in the direction set by `direction`.\n\nThe `root` and `degree` inputs use plain integers (0, 1, 2 …), not semitone voltages.\nMultiply by 120 to make them compatible with the Sinfonion's CV inputs.\n\nA complete table of all 108 scales is on page 119 of the manual.\n",
+  "pluck": "**[pluck]** — megacircuit (blueprint)\n\nA plucky voice: Euclidean gates, a random note snapped\nto C minor and a short decay envelope.\n\n**inputs:** clock, beats (=5), decay (=0.25)\n\n**outputs:** pitch, gate, env"
+ },
+ "completions": {
+  "header": [
+   {
+    "label": "adc",
+    "kind": "class",
+    "detail": "AD Converter with 12 bits"
+   },
+   {
+    "label": "algoquencer",
+    "kind": "class",
+    "detail": "Algorithmic sequencer"
+   },
+   {
+    "label": "arpeggio",
+    "kind": "class",
+    "detail": "Arpeggiator – pattern based melody generator"
+   },
+   {
+    "label": "b32",
+    "kind": "module",
+    "detail": "Controller · B32"
+   },
+   {
+    "label": "bernoulli",
+    "kind": "class",
+    "detail": "Random gate distributor"
+   },
+   {
+    "label": "burst",
+    "kind": "class",
+    "detail": "Generate burst of pulses"
+   },
+   {
+    "label": "button",
+    "kind": "class",
+    "detail": "Does all sorts of useful things with buttons"
+   },
+   {
+    "label": "buttongroup",
+    "kind": "class",
+    "detail": "Connected buttons"
+   },
+   {
+    "label": "calibrator",
+    "kind": "class",
+    "detail": "VCO Calibrator"
+   },
+   {
+    "label": "case",
+    "kind": "class",
+    "detail": "Switch choosing from inputs via conditions"
+   },
+   {
+    "label": "chord",
+    "kind": "class",
+    "detail": "Chord generator"
+   },
+   {
+    "label": "clockedtrigger",
+    "kind": "class",
+    "detail": "Delay a trigger until the next clock tick"
+   },
+   {
+    "label": "clocktool",
+    "kind": "class",
+    "detail": "Clock divider / multiplier / shifter"
+   },
+   {
+    "label": "compare",
+    "kind": "class",
+    "detail": "compare – Compare two values"
+   },
+   {
+    "label": "contour",
+    "kind": "class",
+    "detail": "Contour generator"
+   },
+   {
+    "label": "copy",
+    "kind": "class",
+    "detail": "Copy a signal, while applying attenuation and offset"
+   },
+   {
+    "label": "crossfader",
+    "kind": "class",
+    "detail": "Morph between 8 inputs"
+   },
+   {
+    "label": "cvlooper",
+    "kind": "class",
+    "detail": "cvlooper – Clocked CV looper"
+   },
+   {
+    "label": "dac",
+    "kind": "class",
+    "detail": "DA Converter with 12 bits"
+   },
+   {
+    "label": "db8e",
+    "kind": "module",
+    "detail": "Controller · DB8E"
+   },
+   {
+    "label": "delay",
+    "kind": "class",
+    "detail": "delay – A tape delay for CVs, gates and numbers"
+   },
+   {
+    "label": "detune",
+    "kind": "class",
+    "detail": "Detune multiple voices in a most disharmonic way"
+   },
+   {
+    "label": "display",
+    "kind": "class",
+    "detail": "display – Display texts and change parameters on a DB8E"
+   },
+   {
+    "label": "droid",
+    "kind": "class",
+    "detail": "General DROID controls"
+   },
+   {
+    "label": "e4",
+    "kind": "module",
+    "detail": "Controller · E4"
+   },
+   {
+    "label": "encoder",
+    "kind": "class",
+    "detail": "Provide access to a knob on the E4 or DB8E controller"
+   },
+   {
+    "label": "encoderbank",
+    "kind": "class",
+    "detail": "Create bank of up to 8 virtual input knobs from E4 encoders"
+   },
+   {
+    "label": "encoquencer",
+    "kind": "class",
+    "detail": "encoquencer – Performance sequencer using E4 encoders"
+   },
+   {
+    "label": "euklid",
+    "kind": "class",
+    "detail": "Euclidean rhythm generator"
+   },
+   {
+    "label": "explin",
+    "kind": "class",
+    "detail": "Exponential to linear converter"
+   },
+   {
+    "label": "faderbank",
+    "kind": "class",
+    "detail": "Create multiple virtual faders in M4 controller"
+   },
+   {
+    "label": "fadermatrix",
+    "kind": "class",
+    "detail": "Matrix of up to 4x4 virtual motor faders"
+   },
+   {
+    "label": "firefacecontrol",
+    "kind": "class",
+    "detail": "Control a RME Fireface interface (experimental)"
+   },
+   {
+    "label": "flipflop",
+    "kind": "class",
+    "detail": "Simple flip flop"
+   },
+   {
+    "label": "fold",
+    "kind": "class",
+    "detail": "CV folder – keep (pitch) CV within certain bounds"
+   },
+   {
+    "label": "fourstatebutton",
+    "kind": "class",
+    "detail": "fourstatebutton – Button switching through 4 states (OBSOLETE)"
+   },
+   {
+    "label": "gatetool",
+    "kind": "class",
+    "detail": "Operate on triggers and gates, modify gatelength"
+   },
+   {
+    "label": "ifequal",
+    "kind": "class",
+    "detail": "Check if two values are equal"
+   },
+   {
+    "label": "lfo",
+    "kind": "class",
+    "detail": "Low frequency oscillator (LFO)"
+   },
+   {
+    "label": "logic",
+    "kind": "class",
+    "detail": "Logic operations utility"
+   },
+   {
+    "label": "m4",
+    "kind": "module",
+    "detail": "Controller · M4"
+   },
+   {
+    "label": "math",
+    "kind": "class",
+    "detail": "Math utility circuit"
+   },
+   {
+    "label": "matrixmixer",
+    "kind": "class",
+    "detail": "Matrix mixer for CVs"
+   },
+   {
+    "label": "midifileplayer",
+    "kind": "class",
+    "detail": "MIDI file player"
+   },
+   {
+    "label": "midiin",
+    "kind": "class",
+    "detail": "MIDI to CV converter"
+   },
+   {
+    "label": "midiout",
+    "kind": "class",
+    "detail": "CV to MIDI converter"
+   },
+   {
+    "label": "midithrough",
+    "kind": "class",
+    "detail": "Forward MIDI events from input to one or more outputs"
+   },
+   {
+    "label": "minifonion",
+    "kind": "class",
+    "detail": "minifonion – Musical quantizer"
+   },
+   {
+    "label": "mixer",
+    "kind": "class",
+    "detail": "CV mixer"
+   },
+   {
+    "label": "motoquencer",
+    "kind": "class",
+    "detail": "Motor fader sequencer"
+   },
+   {
+    "label": "motorfader",
+    "kind": "class",
+    "detail": "Create virtual fader in M4 controller"
+   },
+   {
+    "label": "multicompare",
+    "kind": "class",
+    "detail": "Compare an input with up to sixteen possible values"
+   },
+   {
+    "label": "notchedpot",
+    "kind": "class",
+    "detail": "Helper circuit for pots (OBSOLETE)"
+   },
+   {
+    "label": "notebuttons",
+    "kind": "class",
+    "detail": "Note Selection Buttons"
+   },
+   {
+    "label": "nudge",
+    "kind": "class",
+    "detail": "nudge – Modify a value in steps using two buttons"
+   },
+   {
+    "label": "octave",
+    "kind": "class",
+    "detail": "Multi-VCO octave animator"
+   },
+   {
+    "label": "once",
+    "kind": "class",
+    "detail": "Output one trigger after the Droid has started"
+   },
+   {
+    "label": "outputcalibrator",
+    "kind": "class",
+    "detail": "Tune the calibration of your CV outputs"
+   },
+   {
+    "label": "p10",
+    "kind": "module",
+    "detail": "Controller · P10"
+   },
+   {
+    "label": "p2b8",
+    "kind": "module",
+    "detail": "Controller · P2B8"
+   },
+   {
+    "label": "p4b2",
+    "kind": "module",
+    "detail": "Controller · P4B2"
+   },
+   {
+    "label": "p8s8",
+    "kind": "module",
+    "detail": "Controller · P8S8"
+   },
+   {
+    "label": "polytool",
+    "kind": "class",
+    "detail": "Change number of voices in polyphonic setups"
+   },
+   {
+    "label": "pot",
+    "kind": "class",
+    "detail": "pot – Helper circuit for pots"
+   },
+   {
+    "label": "quantizer",
+    "kind": "class",
+    "detail": "Non-musical quantizer"
+   },
+   {
+    "label": "queue",
+    "kind": "class",
+    "detail": "Clocked CV shift register"
+   },
+   {
+    "label": "random",
+    "kind": "class",
+    "detail": "Random number generator"
+   },
+   {
+    "label": "recorder",
+    "kind": "class",
+    "detail": "Record and playback CVs and gates"
+   },
+   {
+    "label": "s10",
+    "kind": "module",
+    "detail": "Controller · S10"
+   },
+   {
+    "label": "sample",
+    "kind": "class",
+    "detail": "Sample & Hold Circuit"
+   },
+   {
+    "label": "select",
+    "kind": "class",
+    "detail": "Copy a signal if selected"
+   },
+   {
+    "label": "sequencer",
+    "kind": "class",
+    "detail": "Simple eight step sequencer"
+   },
+   {
+    "label": "sinfonionlink",
+    "kind": "class",
+    "detail": "sinfonionlink – Sync harmonic state from Sinfonion"
+   },
+   {
+    "label": "slew",
+    "kind": "class",
+    "detail": "Slew limiter"
+   },
+   {
+    "label": "spring",
+    "kind": "class",
+    "detail": "Physical spring simulation"
+   },
+   {
+    "label": "superjust",
+    "kind": "class",
+    "detail": "Perfect intonation of up to eight voices"
+   },
+   {
+    "label": "switch",
+    "kind": "class",
+    "detail": "switch – Addressable/clockable switch"
+   },
+   {
+    "label": "switchedpot",
+    "kind": "class",
+    "detail": "Overlay pot with multiple functions (OBSOLETE)"
+   },
+   {
+    "label": "timing",
+    "kind": "class",
+    "detail": "timing – Shuffle/swing and complex timing generator"
+   },
+   {
+    "label": "togglebutton",
+    "kind": "class",
+    "detail": "Create on/off buttons (OBSOLETE)"
+   },
+   {
+    "label": "transient",
+    "kind": "class",
+    "detail": "Transient generator"
+   },
+   {
+    "label": "triggerdelay",
+    "kind": "class",
+    "detail": "Trigger delay with multi tap and optional clocking"
+   },
+   {
+    "label": "unusedfaders",
+    "kind": "class",
+    "detail": "Declare unused motor faders"
+   },
+   {
+    "label": "vcotuner",
+    "kind": "class",
+    "detail": "Measure frequency and tuning of a VCO"
+   },
+   {
+    "label": "watch",
+    "kind": "class",
+    "detail": "Watch how a signal evolves"
+   }
+  ],
+  "contour": [
+   {
+    "label": "abortattack",
+    "kind": "field",
+    "detail": "input gate · abbr: aa · def: 0"
+   },
+   {
+    "label": "attack",
+    "kind": "field",
+    "detail": "input cv · abbr: a · def: 0"
+   },
+   {
+    "label": "attackshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: as"
+   },
+   {
+    "label": "decay",
+    "kind": "field",
+    "detail": "input cv · abbr: d · def: 0.2"
+   },
+   {
+    "label": "decayshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: ds"
+   },
+   {
+    "label": "endofattack",
+    "kind": "property",
+    "detail": "output trigger · abbr: ea"
+   },
+   {
+    "label": "endofdecay",
+    "kind": "property",
+    "detail": "output trigger · abbr: ed"
+   },
+   {
+    "label": "endofhold",
+    "kind": "property",
+    "detail": "output trigger · abbr: eh"
+   },
+   {
+    "label": "endofpredelay",
+    "kind": "property",
+    "detail": "output trigger · abbr: ep"
+   },
+   {
+    "label": "endofrelease",
+    "kind": "property",
+    "detail": "output trigger · abbr: er"
+   },
+   {
+    "label": "gate",
+    "kind": "field",
+    "detail": "input gate · abbr: g"
+   },
+   {
+    "label": "hold",
+    "kind": "field",
+    "detail": "input cv · abbr: h · def: 0"
+   },
+   {
+    "label": "inverted",
+    "kind": "property",
+    "detail": "output cv · abbr: iv"
+   },
+   {
+    "label": "level",
+    "kind": "field",
+    "detail": "input cv · abbr: l · def: 1"
+   },
+   {
+    "label": "loop",
+    "kind": "field",
+    "detail": "input gate · abbr: lo · def: 0"
+   },
+   {
+    "label": "negated",
+    "kind": "property",
+    "detail": "output cv · abbr: n"
+   },
+   {
+    "label": "output",
+    "kind": "property",
+    "detail": "output cv · abbr: o"
+   },
+   {
+    "label": "pitch",
+    "kind": "field",
+    "detail": "input pitch · abbr: p · def: 0"
+   },
+   {
+    "label": "predelay",
+    "kind": "field",
+    "detail": "input cv · abbr: pd · def: 0"
+   },
+   {
+    "label": "release",
+    "kind": "field",
+    "detail": "input cv · abbr: r · def: 0.2"
+   },
+   {
+    "label": "releaseshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: rs"
+   },
+   {
+    "label": "retrigger",
+    "kind": "field",
+    "detail": "input gate · abbr: rt · def: 1"
+   },
+   {
+    "label": "shape",
+    "kind": "field",
+    "detail": "input fraction · abbr: sh · def: 0.5"
+   },
+   {
+    "label": "startfromzero",
+    "kind": "field",
+    "detail": "input gate · abbr: sz · def: 0"
+   },
+   {
+    "label": "sustain",
+    "kind": "field",
+    "detail": "input fraction · abbr: s · def: 0.5"
+   },
+   {
+    "label": "swell",
+    "kind": "field",
+    "detail": "input fraction · abbr: sw · def: 0"
+   },
+   {
+    "label": "swelllevel",
+    "kind": "field",
+    "detail": "input cv · abbr: sl · def: 1"
+   },
+   {
+    "label": "swellshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: ss"
+   },
+   {
+    "label": "swelltime",
+    "kind": "field",
+    "detail": "input cv · abbr: st · def: 5"
+   },
+   {
+    "label": "taptempo",
+    "kind": "field",
+    "detail": "input clock · abbr: tt"
+   },
+   {
+    "label": "trigger",
+    "kind": "field",
+    "detail": "input trigger · abbr: t"
+   },
+   {
+    "label": "velocity",
+    "kind": "field",
+    "detail": "input fraction · abbr: v · def: 1"
+   },
+   {
+    "label": "zerocrossing",
+    "kind": "field",
+    "detail": "input cv · abbr: z"
+   }
+  ],
+  "contour1": [
+   {
+    "label": "abortattack",
+    "kind": "field",
+    "detail": "input gate · abbr: aa · def: 0"
+   },
+   {
+    "label": "attack",
+    "kind": "field",
+    "detail": "input cv · abbr: a · def: 0"
+   },
+   {
+    "label": "attackshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: as"
+   },
+   {
+    "label": "decay",
+    "kind": "field",
+    "detail": "input cv · abbr: d · def: 0.2"
+   },
+   {
+    "label": "decayshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: ds"
+   },
+   {
+    "label": "endofattack",
+    "kind": "property",
+    "detail": "output trigger · abbr: ea"
+   },
+   {
+    "label": "endofdecay",
+    "kind": "property",
+    "detail": "output trigger · abbr: ed"
+   },
+   {
+    "label": "endofhold",
+    "kind": "property",
+    "detail": "output trigger · abbr: eh"
+   },
+   {
+    "label": "endofpredelay",
+    "kind": "property",
+    "detail": "output trigger · abbr: ep"
+   },
+   {
+    "label": "endofrelease",
+    "kind": "property",
+    "detail": "output trigger · abbr: er"
+   },
+   {
+    "label": "gate",
+    "kind": "field",
+    "detail": "input gate · abbr: g"
+   },
+   {
+    "label": "hold",
+    "kind": "field",
+    "detail": "input cv · abbr: h · def: 0"
+   },
+   {
+    "label": "inverted",
+    "kind": "property",
+    "detail": "output cv · abbr: iv"
+   },
+   {
+    "label": "level",
+    "kind": "field",
+    "detail": "input cv · abbr: l · def: 1"
+   },
+   {
+    "label": "loop",
+    "kind": "field",
+    "detail": "input gate · abbr: lo · def: 0"
+   },
+   {
+    "label": "negated",
+    "kind": "property",
+    "detail": "output cv · abbr: n"
+   },
+   {
+    "label": "output",
+    "kind": "property",
+    "detail": "output cv · abbr: o"
+   },
+   {
+    "label": "pitch",
+    "kind": "field",
+    "detail": "input pitch · abbr: p · def: 0"
+   },
+   {
+    "label": "predelay",
+    "kind": "field",
+    "detail": "input cv · abbr: pd · def: 0"
+   },
+   {
+    "label": "release",
+    "kind": "field",
+    "detail": "input cv · abbr: r · def: 0.2"
+   },
+   {
+    "label": "releaseshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: rs"
+   },
+   {
+    "label": "retrigger",
+    "kind": "field",
+    "detail": "input gate · abbr: rt · def: 1"
+   },
+   {
+    "label": "shape",
+    "kind": "field",
+    "detail": "input fraction · abbr: sh · def: 0.5"
+   },
+   {
+    "label": "startfromzero",
+    "kind": "field",
+    "detail": "input gate · abbr: sz · def: 0"
+   },
+   {
+    "label": "sustain",
+    "kind": "field",
+    "detail": "input fraction · abbr: s · def: 0.5"
+   },
+   {
+    "label": "swell",
+    "kind": "field",
+    "detail": "input fraction · abbr: sw · def: 0"
+   },
+   {
+    "label": "swelllevel",
+    "kind": "field",
+    "detail": "input cv · abbr: sl · def: 1"
+   },
+   {
+    "label": "swellshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: ss"
+   },
+   {
+    "label": "swelltime",
+    "kind": "field",
+    "detail": "input cv · abbr: st · def: 5"
+   },
+   {
+    "label": "taptempo",
+    "kind": "field",
+    "detail": "input clock · abbr: tt"
+   },
+   {
+    "label": "velocity",
+    "kind": "field",
+    "detail": "input fraction · abbr: v · def: 1"
+   },
+   {
+    "label": "zerocrossing",
+    "kind": "field",
+    "detail": "input cv · abbr: z"
+   }
+  ],
+  "contour4": [
+   {
+    "label": "abortattack",
+    "kind": "field",
+    "detail": "input gate · abbr: aa · def: 0"
+   },
+   {
+    "label": "attackshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: as"
+   },
+   {
+    "label": "decayshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: ds"
+   },
+   {
+    "label": "endofattack",
+    "kind": "property",
+    "detail": "output trigger · abbr: ea"
+   },
+   {
+    "label": "endofdecay",
+    "kind": "property",
+    "detail": "output trigger · abbr: ed"
+   },
+   {
+    "label": "endofhold",
+    "kind": "property",
+    "detail": "output trigger · abbr: eh"
+   },
+   {
+    "label": "endofpredelay",
+    "kind": "property",
+    "detail": "output trigger · abbr: ep"
+   },
+   {
+    "label": "endofrelease",
+    "kind": "property",
+    "detail": "output trigger · abbr: er"
+   },
+   {
+    "label": "gate",
+    "kind": "field",
+    "detail": "input gate · abbr: g"
+   },
+   {
+    "label": "hold",
+    "kind": "field",
+    "detail": "input cv · abbr: h · def: 0"
+   },
+   {
+    "label": "inverted",
+    "kind": "property",
+    "detail": "output cv · abbr: iv"
+   },
+   {
+    "label": "level",
+    "kind": "field",
+    "detail": "input cv · abbr: l · def: 1"
+   },
+   {
+    "label": "loop",
+    "kind": "field",
+    "detail": "input gate · abbr: lo · def: 0"
+   },
+   {
+    "label": "negated",
+    "kind": "property",
+    "detail": "output cv · abbr: n"
+   },
+   {
+    "label": "output",
+    "kind": "property",
+    "detail": "output cv · abbr: o"
+   },
+   {
+    "label": "pitch",
+    "kind": "field",
+    "detail": "input pitch · abbr: p · def: 0"
+   },
+   {
+    "label": "predelay",
+    "kind": "field",
+    "detail": "input cv · abbr: pd · def: 0"
+   },
+   {
+    "label": "release",
+    "kind": "field",
+    "detail": "input cv · abbr: r · def: 0.2"
+   },
+   {
+    "label": "releaseshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: rs"
+   },
+   {
+    "label": "retrigger",
+    "kind": "field",
+    "detail": "input gate · abbr: rt · def: 1"
+   },
+   {
+    "label": "shape",
+    "kind": "field",
+    "detail": "input fraction · abbr: sh · def: 0.5"
+   },
+   {
+    "label": "startfromzero",
+    "kind": "field",
+    "detail": "input gate · abbr: sz · def: 0"
+   },
+   {
+    "label": "swell",
+    "kind": "field",
+    "detail": "input fraction · abbr: sw · def: 0"
+   },
+   {
+    "label": "swelllevel",
+    "kind": "field",
+    "detail": "input cv · abbr: sl · def: 1"
+   },
+   {
+    "label": "swellshape",
+    "kind": "field",
+    "detail": "input fraction · abbr: ss"
+   },
+   {
+    "label": "swelltime",
+    "kind": "field",
+    "detail": "input cv · abbr: st · def: 5"
+   },
+   {
+    "label": "taptempo",
+    "kind": "field",
+    "detail": "input clock · abbr: tt"
+   },
+   {
+    "label": "velocity",
+    "kind": "field",
+    "detail": "input fraction · abbr: v · def: 1"
+   },
+   {
+    "label": "zerocrossing",
+    "kind": "field",
+    "detail": "input cv · abbr: z"
+   }
+  ],
+  "cables": [
+   {
+    "label": "_CLOCK",
+    "kind": "variable",
+    "detail": "internal cable"
+   },
+   {
+    "label": "_GATE",
+    "kind": "variable",
+    "detail": "internal cable"
+   },
+   {
+    "label": "_RANDOM",
+    "kind": "variable",
+    "detail": "internal cable"
+   }
+  ],
+  "registers": [
+   {
+    "label": "B1.1",
+    "kind": "constant",
+    "detail": "register · input · gate"
+   },
+   {
+    "label": "B1.2",
+    "kind": "constant",
+    "detail": "register · input · gate"
+   },
+   {
+    "label": "B1.3",
+    "kind": "constant",
+    "detail": "register · input · gate"
+   },
+   {
+    "label": "B1.4",
+    "kind": "constant",
+    "detail": "register · input · gate"
+   },
+   {
+    "label": "B1.5",
+    "kind": "constant",
+    "detail": "register · input · gate"
+   },
+   {
+    "label": "B1.6",
+    "kind": "constant",
+    "detail": "register · input · gate"
+   },
+   {
+    "label": "B1.7",
+    "kind": "constant",
+    "detail": "register · input · gate"
+   },
+   {
+    "label": "B1.8",
+    "kind": "constant",
+    "detail": "register · input · gate"
+   },
+   {
+    "label": "G1",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G10",
+    "kind": "constant",
+    "detail": "register · output · gate"
+   },
+   {
+    "label": "G11",
+    "kind": "constant",
+    "detail": "register · output · gate"
+   },
+   {
+    "label": "G12",
+    "kind": "constant",
+    "detail": "register · output · gate"
+   },
+   {
+    "label": "G2",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G2.1",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G2.2",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G2.3",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G2.4",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G2.5",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G2.6",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G2.7",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G2.8",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G3",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G3.1",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G3.2",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G3.3",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G3.4",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G3.5",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G3.6",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G3.7",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G3.8",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G4",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G4.1",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G4.2",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G4.3",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G4.4",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G4.5",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G4.6",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G4.7",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G4.8",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G5",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G6",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G7",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G8",
+    "kind": "constant",
+    "detail": "register · inout · gate"
+   },
+   {
+    "label": "G9",
+    "kind": "constant",
+    "detail": "register · output · gate"
+   },
+   {
+    "label": "I1",
+    "kind": "constant",
+    "detail": "register · input · cv"
+   },
+   {
+    "label": "I2",
+    "kind": "constant",
+    "detail": "register · input · cv"
+   },
+   {
+    "label": "I3",
+    "kind": "constant",
+    "detail": "register · input · cv"
+   },
+   {
+    "label": "I4",
+    "kind": "constant",
+    "detail": "register · input · cv"
+   },
+   {
+    "label": "I5",
+    "kind": "constant",
+    "detail": "register · input · cv"
+   },
+   {
+    "label": "I6",
+    "kind": "constant",
+    "detail": "register · input · cv"
+   },
+   {
+    "label": "I7",
+    "kind": "constant",
+    "detail": "register · input · cv"
+   },
+   {
+    "label": "I8",
+    "kind": "constant",
+    "detail": "register · input · cv"
+   },
+   {
+    "label": "L1.1",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "L1.2",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "L1.3",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "L1.4",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "L1.5",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "L1.6",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "L1.7",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "L1.8",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "N1",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "N2",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "N3",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "N4",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "N5",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "N6",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "N7",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "N8",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "O1",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "O2",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "O3",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "O4",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "O5",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "O6",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "O7",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "O8",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "P1.1",
+    "kind": "constant",
+    "detail": "register · input · fraction"
+   },
+   {
+    "label": "P1.2",
+    "kind": "constant",
+    "detail": "register · input · fraction"
+   },
+   {
+    "label": "R1",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R10",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R11",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R12",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R13",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R14",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R15",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R16",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R17",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R18",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R19",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R2",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R20",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R21",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R22",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R23",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R24",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R25",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R26",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R27",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R28",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R29",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R3",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R30",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R31",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R32",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R33",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R34",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R35",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R36",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R37",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R38",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R39",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R4",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R40",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R41",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R42",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R43",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R44",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R45",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R46",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R47",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R48",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R49",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R5",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R50",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R51",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R52",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R53",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R54",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R55",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R56",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R6",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R7",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R8",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "R9",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   },
+   {
+    "label": "X1",
+    "kind": "constant",
+    "detail": "register · output · cv"
+   }
+  ]
+ },
+ "cableColors": {
+  "_CLOCK": "#5ae2b2",
+  "_GATE": "#68e25a",
+  "_RANDOM": "#5ac2e2",
+  "_ENV_LEAD": "#e2d25a",
+  "_ENV_BASS": "#5ac7e2",
+  "_NOTE": "#e25a7c",
+  "__pluck_1_beats": "#5ae281",
+  "__pluck_1_GATE": "#a05ae2",
+  "__pluck_1_NOTE": "#5ae28c",
+  "__pluck_2_GATE": "#dde25a",
+  "__pluck_2_NOTE": "#d25ae2",
+  "_MATH1": "#b0e25a"
+ },
+ "messages": {
+  "built": "Built dist/duet.ini",
+  "writing": "Writing to DROID...",
+  "syncing": "Syncing...",
+  "ejecting": "Ejecting...",
+  "written": "✅ Patch written and verified on DROID; card ejected safely. Insert it into DROID and press Load (or return the X7 USB switch to center).",
+  "writeButton": "Write to DROID"
+ }
+}

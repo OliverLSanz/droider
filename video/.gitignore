@@ -1,0 +1,4 @@
+node_modules/
+out/
+# Rendered from src/score.ts by `npm run audio`.
+public/soundtrack.wav
