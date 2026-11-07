@@ -1,0 +1,25 @@
+# A megacircuit is your own reusable circuit.
+# This file defines [randomnote]: a random note in C minor on every clock.
+
+[input]
+    # a new note on each clock
+    clock
+    # how far the melody can jump (1V = one octave)
+    range = 2V
+
+[output]
+    # the note, 1 V/oct
+    pitch
+
+[random]
+    clock   = clock
+    maximum = range
+    output  = _VOLTAGE
+
+[minifonion]
+    input   = _VOLTAGE
+    degree  = 7       # natural minor
+    select1 = on
+    select3 = on
+    select5 = on
+    output  = pitch

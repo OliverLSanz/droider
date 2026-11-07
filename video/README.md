@@ -24,7 +24,7 @@ npm run web               # site/assets/video/tour.mp4 + tour-poster.webp, docs/
   from the score, with no samples, normalised to -14 LUFS. It is git-ignored. The music
   is what `examples/melody.ini` patches: a square-LFO clock, a 16-step Euclidean rhythm,
   random notes snapped by `[minifonion]` to the chord tones of C natural minor, and a
-  `[contour]` pluck; the bass voice of `examples/duet.droider` joins in the `.droider`
+  `[contour]` pluck; the bass voice of `video/examples/duet.droider` joins in the `.droider`
   scene.
 - `src/stories.ts` holds every state that is typed on screen.
 - `src/generated/patch.json` is everything the video shows that comes from the

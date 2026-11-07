@@ -1,0 +1,30 @@
+# Use your megacircuit in any .droider patch,
+# just like a built-in circuit.
+[p2b8]
+
+[lfo]
+    hz     = 4
+    square = _CLOCK
+
+[euklid]
+    clock  = _CLOCK
+    length = 16
+    beats  = 5
+    output = _RHYTHM
+
+# Two melodies from the same megacircuit
+[randomnote]
+    clock = _RHYTHM
+    pitch = O1
+
+# this one moves on every clock, within one octave
+[randomnote]
+    clock = _CLOCK
+    range = 1V
+    pitch = O2
+
+# Pot 1 morphs from one melody to the other:
+# arithmetic plain DROID can't do
+[copy]
+    input  = (O1 - O2) * P1.1 + O2
+    output = O3

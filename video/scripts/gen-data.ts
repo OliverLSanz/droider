@@ -29,8 +29,8 @@ const { colorForCable } = require(join(repo, "out/cables.js"));
 const data = DroidData.load([repo]);
 const read = (p: string) => readFileSync(join(repo, p), "utf8").replace(/\r\n/g, "\n");
 const melody = read("examples/melody.ini");
-const duet = read("examples/duet.droider");
-const pluckText = read("examples/blueprints/pluck.blueprint");
+const duet = read("video/examples/duet.droider");
+const pluckText = read("video/examples/blueprints/pluck.blueprint");
 const pluck = parseBlueprint(pluckText, "pluck");
 const blueprints = new Map([["pluck", pluck]]);
 
