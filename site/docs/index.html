@@ -41,52 +41,50 @@
         <label class="sr-only" for="docs-search">Search the guide</label>
         <input id="docs-search" class="docs-search" type="search" placeholder="Search the guide…" autocomplete="off" />
         <div class="docs-group">
-          <span class="goal">I've never used VS Code</span>
+          <span class="goal">Getting started</span>
           <a href="#what-is-droider">What Droider is</a>
-          <a href="#what-is-vscode">What VS Code is</a>
           <a href="#install-vscode">Install VS Code</a>
           <a href="#install-droider">Install Droider</a>
-          <a href="#vscode-basics">VS Code in five minutes</a>
+          <a href="#open-patches">Open your patches</a>
         </div>
         <div class="docs-group">
-          <span class="goal">I want to write a patch</span>
-          <a href="#open-patches">Open your patches</a>
-          <a href="#first-patch">Your first patch, step by step</a>
+          <span class="goal">Using the editor</span>
           <a href="#autocomplete">Write faster with autocomplete</a>
           <a href="#hover">Look things up without the manual</a>
           <a href="#colours">Read the colours</a>
-        </div>
-        <div class="docs-group">
-          <span class="goal">My patch doesn't work</span>
           <a href="#errors">Find and fix errors</a>
-          <a href="#error-list">What each error means</a>
-        </div>
-        <div class="docs-group">
-          <span class="goal">I want to understand a patch</span>
           <a href="#labels">Label your jacks and controls</a>
-          <a href="#hardware-view">See your rack</a>
-          <a href="#circuit-graph">Follow the signal in the graph</a>
+          <a href="#hardware-view">The hardware view</a>
+          <a href="#circuit-graph">The circuit graph</a>
         </div>
         <div class="docs-group">
-          <span class="goal">I want it on my DROID</span>
+          <span class="goal">Megacircuits and .droider</span>
+          <a href="#file-types">.ini, .droider and .blueprint</a>
+          <a href="#megacircuits">Create a megacircuit</a>
+          <a href="#use-megacircuit">Use a megacircuit</a>
+          <a href="#arithmetic">Free arithmetic</a>
+          <a href="#build">Build to a plain .ini</a>
+        </div>
+        <div class="docs-group">
+          <span class="goal">Loading the DROID</span>
           <a href="#write-card">Write the patch to the SD card</a>
           <a href="#several-patches">Several patches on one card</a>
         </div>
         <div class="docs-group">
-          <span class="goal">I want bigger patches</span>
-          <a href="#file-types">.ini, .droider and .blueprint</a>
-          <a href="#arithmetic">Free arithmetic</a>
-          <a href="#megacircuits">Create a megacircuit</a>
-          <a href="#use-megacircuit">Use a megacircuit</a>
-          <a href="#build">Build to a plain .ini</a>
-        </div>
-        <div class="docs-group">
           <span class="goal">Reference</span>
-          <a href="#cheatsheet">DROID language cheat sheet</a>
           <a href="#commands">Commands and buttons</a>
+          <a href="#error-list">What each error means</a>
           <a href="#cli">Command-line linter</a>
           <a href="#customise">Customise colours</a>
           <a href="#troubleshooting">Troubleshooting</a>
+        </div>
+        <div class="docs-group">
+          <span class="goal">Background: VS Code and DROID</span>
+          <a href="#background">New to VS Code or DROID?</a>
+          <a href="#what-is-vscode">What VS Code is</a>
+          <a href="#vscode-basics">VS Code in five minutes</a>
+          <a href="#first-patch">Your first patch, step by step</a>
+          <a href="#cheatsheet">DROID language cheat sheet</a>
         </div>
         <p class="no-results">Nothing found. Try another word.</p>
       </aside>
@@ -100,16 +98,16 @@
         <div class="docs-hero">
           <span class="kicker">The Droider guide</span>
           <h1>Write DROID patches in VS Code, step by step.</h1>
-          <p>Start wherever you are. Each section on the left answers one question. If you've never used a code editor, follow the guide from the top: it takes about ten minutes.</p>
+          <p>Everything Droider adds to VS Code and to the DROID language, one question per section. New to VS Code, or to writing DROID patches? The basics are at the end, under <a href="#background">Background</a>.</p>
           <div class="paths">
-            <a class="path" href="#install-vscode"><b>I'm new to VS Code →</b><span>Install everything and learn the basics.</span></a>
-            <a class="path" href="#first-patch"><b>Show me a first patch →</b><span>Write, check and load a melody, line by line.</span></a>
+            <a class="path" href="#install-vscode"><b>Get set up →</b><span>Install VS Code and Droider, and open your patches.</span></a>
+            <a class="path" href="#megacircuits"><b>Build a megacircuit →</b><span>Your own reusable circuits, and free arithmetic.</span></a>
             <a class="path" href="#errors"><b>My DROID blinks an error →</b><span>Find the line and what it means.</span></a>
-            <a class="path" href="#megacircuits"><b>I want megacircuits →</b><span>Reusable sub-patches and free arithmetic.</span></a>
+            <a class="path" href="#first-patch"><b>New to DROID patches →</b><span>Write, check and load a first melody, line by line.</span></a>
           </div>
         </div>
 
-        <!-- ============ NEW TO VS CODE ============ -->
+        <!-- ============ GETTING STARTED ============ -->
         <article class="doc" id="what-is-droider">
           <span class="chapter">Getting started</span>
           <h2>What Droider is</h2>
@@ -119,34 +117,22 @@
             doesn't exist, you only find out when the module blinks an error.
           </p>
           <p>
-            <strong>Droider</strong> is an extension for <strong>VS Code</strong>. It teaches VS Code the DROID language: every circuit,
-            parameter, register and controller from the official manual. With it, VS Code:
+            <strong>Droider</strong> is an extension for <strong>VS Code</strong> that does two things. First, it teaches VS Code the
+            DROID language: every circuit, parameter, register and controller from the official manual. With it, VS Code:
           </p>
           <ul>
             <li>checks your patch <strong>as you type</strong>, with the same rules the DROID master uses;</li>
             <li>suggests circuits, parameters, jacks and cables, and shows their documentation;</li>
             <li>colours inputs, outputs and each cable differently, so a patch is easy to read;</li>
             <li>draws your rack and a graph of the patch;</li>
-            <li>writes the patch to the SD card and ejects it safely;</li>
-            <li>adds an optional <code>.droider</code> syntax with reusable <strong>megacircuits</strong> and free arithmetic.</li>
+            <li>writes the patch to the SD card and ejects it safely.</li>
           </ul>
-          <p>It is free, open source, works offline and doesn't need an account.</p>
-        </article>
-
-        <article class="doc" id="what-is-vscode">
-          <h2>What VS Code is</h2>
           <p>
-            <strong>Visual Studio Code</strong> (VS Code) is a free text editor from Microsoft for Windows, macOS and Linux.
-            Programmers use it to write code, but it works well for any text that follows rules, like a DROID patch.
+            Second, it extends the language. In <code>.droider</code> files you can build your own reusable circuits, called
+            <a href="#megacircuits"><strong>megacircuits</strong></a>, and write <a href="#arithmetic">free arithmetic</a> on any
+            input. Droider compiles them into a plain patch that runs on any DROID.
           </p>
-          <p>Some things that make it a good home for patches:</p>
-          <ul>
-            <li><strong>Extensions</strong> add support for new languages. Droider is one of them.</li>
-            <li>You open a <strong>folder</strong> and see all its files in a sidebar, so all your patches are one click away.</li>
-            <li>Errors are underlined in red and listed in a <strong>Problems</strong> panel, like a spell checker.</li>
-            <li>Undo history, search and replace across files, split views, and automatic saving if you want it.</li>
-          </ul>
-          <div class="callout tip"><p><b>Don't worry about the rest.</b> VS Code has many features for programmers. You don't need any of them to write patches: this guide covers everything you need.</p></div>
+          <p>It is free, open source, works offline and doesn't need an account.</p>
         </article>
 
         <article class="doc" id="install-vscode">
@@ -182,6 +168,7 @@
             </div>
           </div>
           <p>The first time VS Code opens it shows a <em>Welcome</em> page. You can close it with the <strong>×</strong> on its tab.</p>
+          <div class="callout tip"><p><b>Never used VS Code?</b> <a href="#vscode-basics">VS Code in five minutes</a> covers the few parts you need for patching.</p></div>
         </article>
 
         <article class="doc" id="install-droider">
@@ -194,6 +181,415 @@
           <p>That's it. There's nothing to configure: Droider switches on as soon as you open a <code>.ini</code>, <code>.droider</code> or <code>.blueprint</code> file.</p>
           <div class="callout"><p><b>Other ways to install.</b> Click <a href="https://marketplace.visualstudio.com/items?itemName=oliverlsanz.droider">Install on the Marketplace page</a>, which opens VS Code for you. In Cursor, VSCodium and other editors based on VS Code, download the <code>.vsix</code> file from the <a href="https://github.com/OliverLSanz/droider/releases/latest">latest release</a>. Then, in the Extensions view, open the <strong>…</strong> menu and choose <strong>Install from VSIX…</strong>.</p></div>
           <p>Droider updates itself when a new version comes out, like every VS Code extension.</p>
+        </article>
+
+        <article class="doc" id="open-patches">
+          <h2>Open your patches</h2>
+          <p>Keep your patches together in one folder on your computer, for example <code>Documents/DROID Patches</code>. Then:</p>
+          <ol class="steps">
+            <li>Choose <strong>File → Open Folder…</strong> and select that folder. If VS Code asks <em>Do you trust the authors of the files in this folder?</em>, click <strong>Yes, I trust the authors</strong>. Droider only runs in trusted folders.</li>
+            <li>Your patches appear in the Explorer. Click one to open it.</li>
+            <li>Check the bottom-right corner of the status bar: it should say <strong>DROID Patch</strong>. That means Droider is checking the file.</li>
+          </ol>
+          <div class="callout tip"><p><b>Why a folder and not a single file?</b> Droider finds your megacircuits (<code>.blueprint</code> files) anywhere in the open folder, and builds <code>.droider</code> patches into a <code>dist</code> folder inside it.</p></div>
+          <p>You can also edit a patch straight on the SD card: open the card itself as the folder. But it's safer to keep the originals on your computer and let Droider <a href="#write-card">write the card</a> for you.</p>
+          <p>Want examples? Download <a href="https://github.com/OliverLSanz/droider/tree/main/examples">the example patches</a> used in this guide. Never written a DROID patch? Follow <a href="#first-patch">Your first patch, step by step</a>.</p>
+        </article>
+
+        <!-- ============ USING THE EDITOR ============ -->
+        <article class="doc" id="autocomplete">
+          <span class="chapter">Using the editor</span>
+          <h2>Write faster with autocomplete</h2>
+          <p>Suggestions appear by themselves as you type. Use the arrow keys to choose and <kbd>Enter</kbd> or <kbd>Tab</kbd> to accept. Press <kbd>Ctrl</kbd>+<kbd>Space</kbd> to bring them back.</p>
+          <div class="table-wrap">
+            <table>
+              <tr><th>Where you type</th><th>What Droider suggests</th></tr>
+              <tr><td><code>[</code> at the start of a line</td><td>Every circuit, every controller (at the top of the patch) and your megacircuits (in <code>.droider</code> files).</td></tr>
+              <tr><td>An empty line inside a circuit</td><td>That circuit's parameters, with their type and abbreviation. Ones you've already used are left out.</td></tr>
+              <tr><td>After <code>=</code></td><td>Registers your hardware actually has: <code>I1</code>…<code>I8</code>, <code>O1</code>…<code>O8</code>, gates, LEDs, and the pots and buttons of the controllers you declared.</td></tr>
+              <tr><td><kbd>_</kbd> after <code>=</code></td><td>The internal cables already in the patch.</td></tr>
+              <tr><td>Inside a <code># LABELS</code> section</td><td>The registers that belong in that section.</td></tr>
+            </table>
+          </div>
+          <figure><div class="window"><img src="../assets/screens/crop-write.webp" width="1500" height="735" alt="Suggestions for the parameters of the slew circuit" loading="lazy" /></div><figcaption>Parameters of <code>[slew]</code>, with their kind (input or output) and abbreviation.</figcaption></figure>
+          <p>Pressing <kbd>Enter</kbd> after a circuit header indents the next line and shows the parameters. Pressing <kbd>Enter</kbd> after a parameter keeps the same indentation. When you've finished a circuit, press <kbd>Enter</kbd> twice: the first suggestion on an empty line is <strong>↵ end circuit</strong>, which leaves a blank line and starts the next line at the left edge, ready for the next circuit.</p>
+          <div class="callout"><p><b>Short names.</b> Every DROID parameter has an abbreviation (<code>clock</code> → <code>c</code>). Droider accepts both and shows the abbreviation in suggestions and hovers. Long names are easier to read; short ones save space in big patches.</p></div>
+        </article>
+
+        <article class="doc" id="hover">
+          <h2>Look things up without the manual</h2>
+          <p>Rest the mouse pointer on a word to see its documentation:</p>
+          <ul>
+            <li><strong>A circuit header</strong> like <code>[minifonion]</code>: what the circuit does.</li>
+            <li><strong>A parameter</strong>: whether it's an input or output, its type, default value, range and description.</li>
+            <li><strong>A register</strong> like <code>P1.2</code> or <code>G3</code>: what that jack or control is.</li>
+            <li><strong>A cable</strong>: how many times it is used.</li>
+            <li><strong>A megacircuit</strong>: its description and ports, from the comments in its <code>.blueprint</code>.</li>
+          </ul>
+          <figure><div class="window"><img src="../assets/screens/crop-hover.webp" width="1730" height="1040" alt="Hover documentation of the minifonion circuit" loading="lazy" /></div></figure>
+          <p>The documentation is adapted from the official DROID manual (blue-7), with the author's permission.</p>
+        </article>
+
+        <article class="doc" id="colours">
+          <h2>Read the colours</h2>
+          <p>Droider colours each part of a patch by what it does, not only by how it looks:</p>
+          <div class="code" data-nocopy><div class="code-title"><span>colours</span></div><pre data-droid># comments are green
+[lfo]                  # circuit names, in yellow brackets
+    hz     = P1.1      # inputs blue, registers teal
+    square = _CLOCK    # outputs magenta, each cable its own colour
+    bipolar = on       # on and off in blue</pre></div>
+          <ul>
+            <li><strong>Inputs</strong> are blue and <strong>outputs</strong> are magenta. You can tell at once which lines feed a circuit and which send something out.</li>
+            <li><strong>Registers</strong> (jacks, pots, buttons, LEDs) are teal.</li>
+            <li>Each <strong>internal cable</strong> gets its own colour, always the same for the same name. Follow <code>_CLOCK</code> by its colour through the whole patch.</li>
+            <li>The content of a circuit Droider doesn't know is shown in grey, because it can't be checked.</li>
+          </ul>
+          <p>You can change these colours: see <a href="#customise">Customise colours</a>.</p>
+        </article>
+
+        <article class="doc" id="errors">
+          <h2>Find and fix errors</h2>
+          <p>Droider runs the same checks as the DROID master when it loads a patch, every time you type. Problems appear in three places:</p>
+          <ol class="steps">
+            <li><strong>A wavy underline</strong> under the mistake: red for errors, yellow for warnings. Rest the mouse on it to read the message.</li>
+            <li><strong>The status bar</strong> counts errors and warnings in the bottom-left corner.</li>
+            <li><strong>The Problems panel</strong> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> / <kbd>⌘</kbd>+<kbd>⇧</kbd>+<kbd>M</kbd>) lists them all. Click one to jump to its line.</li>
+          </ol>
+          <figure><div class="window"><img src="../assets/screens/crop-errors.webp" width="1500" height="810" alt="A misspelled cable underlined and two errors in the Problems panel" loading="lazy" /></div><figcaption>A typo in a cable name, and an output that doesn't exist.</figcaption></figure>
+          <p><strong>Errors</strong> would stop the DROID from loading the patch: fix them all. <strong>Warnings</strong> point at things that work but probably aren't what you meant, like a label that's too long to display. Every message is explained in <a href="#error-list">What each error means</a>.</p>
+          <div class="callout"><p><b>Already got a blinking DROID?</b> The module writes <code>DROIDERR.TXT</code> to the card with the line number. Open the same patch in VS Code: Droider shows the problem on that line, with an explanation.</p></div>
+        </article>
+
+        <article class="doc" id="labels">
+          <h2>Label your jacks and controls</h2>
+          <p>
+            A <strong>label legend</strong> is a block of comments at the top of a patch that says what each jack and control does.
+            The DROID ignores it (it's just comments), but the DROID Forge reads it, and so does Droider:
+            the labels appear in the <a href="#hardware-view">hardware view</a> and the <a href="#circuit-graph">circuit graph</a>.
+          </p>
+          <div class="code"><div class="code-title"><span>melody.ini</span></div><pre data-droid># LABELS: master=16
+# INPUTS:
+#  I1: [RESET] Restart the rhythm
+# OUTPUTS:
+#  O1: [PITCH] Melody, 1 V/oct
+#  O3: [ENV] Plucky envelope
+# GATES ON MODULE 1:
+#  G1: [CLK] Clock out
+# CONTROLLER 1:
+#  P1.1: [RATE] Clock speed
+#  B1.1: [OCT] Hold for one octave up</pre></div>
+          <ul>
+            <li>Each entry is <code>register: [SHORT] long description</code>. Both parts are optional.</li>
+            <li>Sections are <code># INPUTS:</code>, <code># OUTPUTS:</code>, <code># GATES ON MODULE n:</code>, <code># GATES ON X7:</code> and <code># CONTROLLER n:</code> (n is the controller's position in the chain).</li>
+            <li>Droider suggests the right registers in each section and warns about registers that don't exist, are in the wrong section, or have a short label longer than five characters.</li>
+          </ul>
+        </article>
+
+        <article class="doc" id="hardware-view">
+          <h2>The hardware view</h2>
+          <p>Click the <strong>circuit board</strong> icon at the top right of the editor, or run <strong>DROID: Show Hardware View</strong> from the Command Palette. A panel opens next to your patch with:</p>
+          <ul>
+            <li>the master (MASTER or MASTER18), any G8 and X7 expanders, and every controller you declared, in order;</li>
+            <li>the short labels from your legend on each jack, pot and button.</li>
+          </ul>
+          <figure><div class="window" style="background:#1b1b1b;padding:22px;display:grid;place-items:center"><img src="../assets/screens/hardware-view.webp" width="620" height="1020" alt="The hardware view with labelled jacks and controls" loading="lazy" style="max-height:480px;width:auto" /></div></figure>
+          <p>The view follows the patch you're editing and updates as you type. It's a quick way to check what each knob does before a performance.</p>
+        </article>
+
+        <article class="doc" id="circuit-graph">
+          <h2>The circuit graph</h2>
+          <p>Click the <strong>hierarchy</strong> icon at the top right of the editor, or run <strong>DROID: Show Circuit Graph</strong>. Every circuit becomes a box and every cable a wire, laid out from left to right in the direction the signal flows.</p>
+          <figure><div class="window"><img src="../assets/screens/graph-view.webp" width="1800" height="1054" alt="Circuit graph of the melody patch" loading="lazy" /></div></figure>
+          <ul>
+            <li>Jacks and controls are the round nodes on the edges. Untick <strong>Hardware I/O</strong> to hide them.</li>
+            <li>Attenuation and offset on an input (<code>× 8</code>, <code>+ 1</code>) are shown under it; fixed values appear as small tags.</li>
+            <li><strong>Click</strong> a box to jump to that circuit in the patch. <strong>Drag</strong> boxes to rearrange them, drag the background to pan, and pinch or scroll to zoom.</li>
+            <li><strong>Re-layout</strong> tidies everything again; <strong>Fit</strong> zooms to show the whole patch.</li>
+            <li>In <code>.droider</code> patches, megacircuits are a single box. Open a <code>.blueprint</code> and show its graph to see its inside: its inputs and outputs are drawn as jacks.</li>
+          </ul>
+        </article>
+
+        <!-- ============ MEGACIRCUITS AND .DROIDER ============ -->
+        <article class="doc" id="file-types">
+          <span class="chapter">Megacircuits and .droider</span>
+          <h2>.ini, .droider and .blueprint</h2>
+          <p>Droider understands three kinds of file. You choose the kind with the file's extension:</p>
+          <div class="table-wrap">
+            <table>
+              <tr><th>File</th><th>What it is</th><th>Runs on the DROID?</th></tr>
+              <tr><td><code>.ini</code></td><td>A plain DROID patch, exactly what the module reads. No extra syntax.</td><td>Yes, as is.</td></tr>
+              <tr><td><code>.droider</code></td><td>A DROID patch that may also use <a href="#use-megacircuit">megacircuits</a> and <a href="#arithmetic">free arithmetic</a>.</td><td>After building it to <code>.ini</code>, which Droider does for you.</td></tr>
+              <tr><td><code>.blueprint</code></td><td>The definition of one <a href="#megacircuits">megacircuit</a>: a reusable piece of patch with named inputs and outputs.</td><td>No, it's used inside <code>.droider</code> patches.</td></tr>
+            </table>
+          </div>
+          <p>Any <code>.ini</code> patch is also a valid <code>.droider</code> patch: rename <code>droid.ini</code> to <code>my-patch.droider</code> and start using the extras.</p>
+        </article>
+
+        <article class="doc" id="megacircuits">
+          <h2>Create a megacircuit</h2>
+          <p>
+            A <strong>megacircuit</strong> is your own reusable circuit: a few circuits wired together, with named inputs and outputs, that you
+            can then use in any patch like a built-in one. You define it once in a <code>.blueprint</code> file, and the file's name becomes
+            the circuit's name: <code>randomnote.blueprint</code> defines <code>[randomnote]</code>.
+          </p>
+          <p>Let's make one that plays a random note in C minor on every clock, so you can add a melody to any patch with four lines.</p>
+          <ol class="steps">
+            <li>Create a file anywhere in your open folder, for example <code>blueprints/randomnote.blueprint</code>.</li>
+            <li>
+              Describe it in a comment at the top. Droider shows that comment when you hover the megacircuit.
+              <div class="code"><div class="code-title"><span>blueprints/randomnote.blueprint</span></div><pre data-droid># A megacircuit is your own reusable circuit.
+# This file defines [randomnote]: a random note in C minor on every clock.</pre></div>
+            </li>
+            <li>
+              List its <strong>inputs</strong> and <strong>outputs</strong>. A comment just above a port documents it. An input with <code>= value</code> has a default and is optional; one without it must always be wired.
+              <div class="code"><div class="code-title"><span>blueprints/randomnote.blueprint (continued)</span></div><pre data-droid>[input]
+    # a new note on each clock
+    clock
+    # how far the melody can jump (1V = one octave)
+    range = 2V
+
+[output]
+    # the note, 1 V/oct
+    pitch</pre></div>
+            </li>
+            <li>
+              Write the body with ordinary circuits. Refer to the ports by their bare names (<code>clock</code>, <code>range</code>, <code>pitch</code>), and use <code>_cables</code> for the wiring inside:
+              <div class="code"><div class="code-title"><span>blueprints/randomnote.blueprint (continued)</span></div><pre data-droid># a random voltage on every clock…
+[random]
+    clock   = clock
+    maximum = range
+    output  = _VOLTAGE
+
+# …snapped to the notes of C minor
+[minifonion]
+    input   = _VOLTAGE
+    degree  = 7       # natural minor
+    select1 = on
+    select3 = on
+    select5 = on
+    output  = pitch</pre></div>
+            </li>
+          </ol>
+          <div class="callout tip"><p><b>Where blueprints go.</b> Anywhere inside the folder you opened in VS Code, in any subfolder; a <code>blueprints/</code> folder keeps them tidy. Droider finds them all by itself. Give each one a different file name, since the file name is the circuit's name.</p></div>
+          <p>Droider checks the blueprint like any patch, and also warns about inputs you never use. Cables inside a blueprint are private: every copy of the megacircuit gets its own, so two copies never interfere. A blueprint can also use other megacircuits, as deep as you like.</p>
+        </article>
+
+        <article class="doc" id="use-megacircuit">
+          <h2>Use a megacircuit</h2>
+          <p>In any <code>.droider</code> patch in the same folder, the megacircuit works like a built-in circuit: it autocompletes after <kbd>[</kbd>, shows its documentation on hover and is checked. Here it gives a patch two melodies:</p>
+          <div class="code"><div class="code-title"><span>melodies.droider</span></div><pre data-droid data-mega="randomnote:pitch"># Use your megacircuit in any .droider patch,
+# just like a built-in circuit.
+[p2b8]
+
+[lfo]
+    hz     = 4
+    square = _CLOCK
+
+[euklid]
+    clock  = _CLOCK
+    length = 16
+    beats  = 5
+    output = _RHYTHM
+
+# Two melodies from the same megacircuit
+[randomnote]
+    clock = _RHYTHM
+    pitch = O1
+
+# this one moves on every clock, within one octave
+[randomnote]
+    clock = _CLOCK
+    range = 1V
+    pitch = O2</pre></div>
+          <p>The first copy leaves out <code>range</code>, so it uses the default <code>2V</code>. The second one sets it.</p>
+          <figure><div class="window"><img src="../assets/screens/hover-megacircuit.webp" width="1800" height="1125" alt="Hovering [randomnote] shows its description, its inputs with defaults and its outputs" loading="lazy" /></div><figcaption>Hover a megacircuit to see its description and ports.</figcaption></figure>
+          <p>The complete files are in <a href="https://github.com/OliverLSanz/droider/tree/main/examples">examples/</a>: <code>melodies.droider</code> and <code>blueprints/randomnote.blueprint</code>.</p>
+        </article>
+
+        <article class="doc" id="arithmetic">
+          <h2>Free arithmetic</h2>
+          <p>
+            On the DROID, an input can only do <code>A * B + C</code>: one multiplication, then one addition. In a <code>.droider</code> file
+            you can write any expression with <code>+</code>, <code>-</code>, <code>*</code> and parentheses, on any input.
+            For example, a pot that morphs between two melodies:
+          </p>
+          <div class="code"><div class="code-title"><span>melodies.droider</span></div><pre data-droid># Pot 1 morphs from O2 (left) to O1 (right)
+[copy]
+    input  = (O1 - O2) * P1.1 + O2
+    output = O3</pre></div>
+          <p>When the patch is built, Droider splits the expression into as few <code>[copy]</code> circuits as possible, each one a valid <code>A * B + C</code>:</p>
+          <div class="code" data-nocopy><div class="code-title"><span>dist/melodies.ini</span></div><pre data-droid>[copy]
+    input = O1 - O2
+    output = _MATH1
+[copy]
+    input  = _MATH1 * P1.1 + O2
+    output = O3</pre></div>
+          <p>The cables it creates are called <code>_MATH1</code>, <code>_MATH2</code>…, so you can tell them from yours. In the circuit graph the whole expression is shown as one formula.</p>
+        </article>
+
+        <article class="doc" id="build">
+          <h2>Build to a plain .ini</h2>
+          <p>The DROID only reads plain patches, so a <code>.droider</code> file is <strong>built</strong> into one. You rarely need to do it by hand: <a href="#write-card">Write to DROID</a> builds automatically. To see the result:</p>
+          <ol class="steps">
+            <li>Open the <code>.droider</code> file.</li>
+            <li>Click the <strong>package</strong> icon at the top right of the editor, or <strong>Build to dist</strong> in the status bar (shown when no card is inserted), or run <strong>DROID: Build .droider to dist/*.ini</strong>.</li>
+            <li>Droider writes <code>dist/&lt;name&gt;.ini</code> in your folder and tells you if the result has errors.</li>
+          </ol>
+          <figure><div class="window"><img src="../assets/screens/build.webp" width="1800" height="1125" alt="melodies.droider next to the built dist/melodies.ini, where each megacircuit is expanded" loading="lazy" /></div><figcaption>The built patch: each megacircuit is replaced by its circuits, with comments marking where each copy starts.</figcaption></figure>
+          <p>During the build, private cables are renamed for each copy: <code>_VOLTAGE</code> in the first <code>[randomnote]</code> becomes <code>__randomnote_1_VOLTAGE</code>, and in the second one <code>__randomnote_2_VOLTAGE</code>. Arithmetic is split into <code>[copy]</code> circuits. If a line ends up longer than the DROID's 63 characters, cable names are shortened, and comments in the output list the short names. The built patch is checked again before it can be written to a card.</p>
+        </article>
+
+        <!-- ============ LOADING THE DROID ============ -->
+        <article class="doc" id="write-card">
+          <span class="chapter">Loading the DROID</span>
+          <h2>Write the patch to the SD card</h2>
+          <ol class="steps">
+            <li>Take the micro SD card out of your DROID master and insert it in your computer (with a card reader if needed). If you use an X7 with USB, switch it to USB mode instead.</li>
+            <li>Open your patch. A <strong>Write to DROID</strong> button appears on the right of the status bar. Droider recognises a card that has a <code>droid.ini</code> on it or is named <code>DROID</code>.</li>
+            <li>
+              Click <strong>Write to DROID</strong>. Droider:
+              <ul>
+                <li>saves the patch, and builds it first if it's a <code>.droider</code> file;</li>
+                <li>refuses to write if the patch has errors, so a broken patch never reaches the module;</li>
+                <li>writes it as <code>droid.ini</code> at the root of the card, reads it back to verify it, and ejects the card.</li>
+              </ul>
+            </li>
+            <li>When you see <em>“Patch written and verified… card ejected safely”</em>, put the card back in the master and press <strong>Load</strong> (or return the X7 USB switch to the centre).</li>
+          </ol>
+          <figure><div class="window"><img src="../assets/screens/card-toast.webp" width="930" height="96" alt="Notification: Patch written and verified on DROID; card ejected safely." loading="lazy" /></div></figure>
+          <div class="callout warn"><p><b>It replaces droid.ini.</b> Writing overwrites the <code>droid.ini</code> on the card. Keep your patches on your computer (as in <a href="#open-patches">Open your patches</a>) so nothing is lost.</p></div>
+          <p>The button works on macOS, Windows and Linux (cards mounted under <code>/media</code> or <code>/mnt</code>). You can also run <strong>DROID: Write Patch to DROID Card and Eject</strong> from the Command Palette.</p>
+        </article>
+
+        <article class="doc" id="several-patches">
+          <h2>Several patches on one card</h2>
+          <p>
+            A DROID card can hold alternative patches named <code>droidXY.ini</code>, where <code>X</code> is a controller and <code>Y</code> a button.
+            For example, hold button 4 of the first controller while pressing Load to load <code>droid14.ini</code>.
+          </p>
+          <ul>
+            <li>Droider's button always writes <code>droid.ini</code>. For alternative patches, write the file to the card yourself (for a <code>.droider</code> patch, copy the built file from <code>dist/</code>).</li>
+            <li>Every alternative patch needs its own controller declarations at the top, or the buttons won't work to switch patches.</li>
+          </ul>
+        </article>
+
+        <!-- ============ REFERENCE ============ -->
+        <article class="doc" id="commands">
+          <span class="chapter">Reference</span>
+          <h2>Commands and buttons</h2>
+          <div class="table-wrap">
+            <table>
+              <tr><th>Command (Command Palette)</th><th>Button</th><th>What it does</th></tr>
+              <tr><td>DROID: Show Hardware View</td><td>Circuit-board icon, top right of the editor</td><td>Draws your rack with its labels.</td></tr>
+              <tr><td>DROID: Show Circuit Graph</td><td>Hierarchy icon, top right of the editor</td><td>Shows the patch as a graph.</td></tr>
+              <tr><td>DROID: Build .droider to dist/*.ini</td><td>Package icon; <em>Build to dist</em> in the status bar</td><td>Builds a <code>.droider</code> patch into <code>dist/</code>.</td></tr>
+              <tr><td>DROID: Write Patch to DROID Card and Eject</td><td><em>Write to DROID</em> in the status bar</td><td>Builds if needed, checks, writes <code>droid.ini</code>, verifies and ejects.</td></tr>
+            </table>
+          </div>
+        </article>
+
+        <article class="doc" id="error-list">
+          <h2>What each error means</h2>
+          <div class="table-wrap">
+            <table>
+              <tr><th>Message</th><th>What's wrong and how to fix it</th></tr>
+              <tr><td>unknown circuit: [lfoo]</td><td>No circuit has that name. Check the spelling; <kbd>Ctrl</kbd>+<kbd>Space</kbd> after <code>[</code> lists them all.</td></tr>
+              <tr><td>unknown parameter 'speed' in [lfo]</td><td>That circuit has no such parameter. Hover the header or press <kbd>Ctrl</kbd>+<kbd>Space</kbd> on an empty line to see the valid ones.</td></tr>
+              <tr><td>unknown register: O9</td><td>That jack or control doesn't exist (the master has <code>O1</code>–<code>O8</code>), or its controller isn't declared at the top.</td></tr>
+              <tr><td>input-only register 'P1.1' used as an output</td><td>You can't write to a pot, button, switch or input jack. Use an output, an LED (<code>L1.1</code>) or a cable instead.</td></tr>
+              <tr><td>internal cable '_X' has no input (nothing reads from it)</td><td>Something writes the cable but nothing uses it. Connect it to an input, or remove it.</td></tr>
+              <tr><td>internal cable '_X' has no output (nothing writes to it)</td><td>Something reads the cable but no circuit writes it. Often a typo in the name.</td></tr>
+              <tr><td>internal cable '_X' used as an output more than once</td><td>Two circuits write the same cable. Each cable can have only one source; use two cables and a <code>[mixer]</code> or <code>[copy]</code>.</td></tr>
+              <tr><td>math expression '…' is beyond DROID's native A * B + C</td><td>DROID inputs allow one multiplication and one addition, in that order. Split the calculation, or use a <code>.droider</code> file, which allows <a href="#arithmetic">any arithmetic</a>.</td></tr>
+              <tr><td>math expressions are only allowed on inputs</td><td>Outputs must go to one register or cable, with no arithmetic.</td></tr>
+              <tr><td>line too long: … characters</td><td>The DROID accepts at most 63 characters per line, not counting comments and indentation. Shorten cable names or use abbreviations.</td></tr>
+              <tr><td>missing value after '=' for parameter '…'</td><td>The line has no value. Add one or delete the line.</td></tr>
+              <tr><td>megacircuit [x] is not allowed in .ini files</td><td>Megacircuits only work in <code>.droider</code> files. Rename the file, then <a href="#build">build it</a>.</td></tr>
+              <tr><td>megacircuit [x] is missing input 'y'</td><td>That input of the megacircuit has no default value, so you must wire it.</td></tr>
+              <tr><td>label is 7 characters (recommended ≤5)</td><td>A warning: the Forge shows only about five characters of a short label.</td></tr>
+            </table>
+          </div>
+        </article>
+
+        <article class="doc" id="cli">
+          <h2>Command-line linter</h2>
+          <p>The same checks are available in a terminal, for scripts, continuous integration or AI assistants. You need <a href="https://nodejs.org/">Node.js</a>:</p>
+          <div class="code"><div class="code-title"><span>terminal</span></div><pre>git clone https://github.com/OliverLSanz/droider.git
+cd droider
+npm install
+npm run compile
+node out/cli.js path/to/patch.ini          # human-readable
+node out/cli.js --json path/to/patch.ini   # JSON output</pre></div>
+          <p>The exit code is <code>0</code> when there are no errors, <code>1</code> when there is at least one, and <code>2</code> for a wrong command or unreadable file. Warnings don't fail. Megacircuits are read from every <code>.blueprint</code> under the current folder.</p>
+        </article>
+
+        <article class="doc" id="customise">
+          <h2>Customise colours</h2>
+          <p>Open <strong>Preferences: Open User Settings (JSON)</strong> from the Command Palette and add your own colours:</p>
+          <div class="code"><div class="code-title"><span>settings.json</span></div><pre>"editor.semanticTokenColorCustomizations": {
+  "enabled": true,
+  "rules": {
+    "droidInput": "#4FC1FF",
+    "droidOutput": "#C586C0",
+    "droidRegister": "#4EC9B0",
+    "droidBoolean": "#569CD6",
+    "droidUnverified": "#808080"
+  }
+}</pre></div>
+          <p>Droider works with any VS Code colour theme, light or dark. Cable colours are chosen automatically from each cable's name.</p>
+        </article>
+
+        <article class="doc" id="troubleshooting">
+          <h2>Troubleshooting</h2>
+          <h3>Nothing is coloured or checked</h3>
+          <ul>
+            <li>Look at the language in the status bar. If it doesn't say <em>DROID Patch</em>, click it and choose <strong>DROID Patch</strong>.</li>
+            <li>If a banner says <em>Restricted Mode</em>, the folder isn't trusted. Click <strong>Manage</strong> and trust it: extensions don't run in restricted mode.</li>
+          </ul>
+          <h3>My other .ini files are treated as DROID patches</h3>
+          <p>Droider handles every <code>.ini</code> file. For a non-DROID <code>.ini</code>, click the language in the status bar and choose <strong>Ini</strong>. Or keep your DROID patches in their own folder.</p>
+          <h3>The Write to DROID button doesn't appear</h3>
+          <ul>
+            <li>The patch must be the active editor, and must be a <code>.ini</code> or <code>.droider</code> file.</li>
+            <li>The card must have a <code>droid.ini</code> at its root or be named <code>DROID</code>. For a brand-new card, name it DROID when you format it (FAT32), or copy any <code>droid.ini</code> onto it once.</li>
+          </ul>
+          <h3>It says my megacircuit is an unknown circuit</h3>
+          <ul>
+            <li>Megacircuits only work in <code>.droider</code> files, not <code>.ini</code>.</li>
+            <li>The <code>.blueprint</code> must be inside the folder you opened in VS Code (in any subfolder).</li>
+          </ul>
+          <h3>Something else?</h3>
+          <p><a href="https://github.com/OliverLSanz/droider/issues">Open an issue on GitHub</a> with the patch (or the smallest part of it that shows the problem).</p>
+        </article>
+
+        <!-- ============ BACKGROUND ============ -->
+        <article class="doc" id="background">
+          <span class="chapter">Background</span>
+          <h2>New to VS Code or DROID patches?</h2>
+          <p>
+            The sections above are about Droider itself. The ones below cover the basics around it: the parts of VS Code you
+            need, and how a DROID patch is written. If you already patch your DROID in text, you can skip them.
+          </p>
+          <p>
+            The DROID language belongs to its maker, Der Mann mit der Maschine, and the official DROID manual is its complete
+            reference. What follows is a short, practical introduction, with Droider helping you along the way.
+          </p>
+        </article>
+
+        <article class="doc" id="what-is-vscode">
+          <h2>What VS Code is</h2>
+          <p>
+            <strong>Visual Studio Code</strong> (VS Code) is a free text editor from Microsoft for Windows, macOS and Linux.
+            Programmers use it to write code, but it works well for any text that follows rules, like a DROID patch.
+          </p>
+          <p>Some things that make it a good home for patches:</p>
+          <ul>
+            <li><strong>Extensions</strong> add support for new languages. Droider is one of them.</li>
+            <li>You open a <strong>folder</strong> and see all its files in a sidebar, so all your patches are one click away.</li>
+            <li>Errors are underlined in red and listed in a <strong>Problems</strong> panel, like a spell checker.</li>
+            <li>Undo history, search and replace across files, split views, and automatic saving if you want it.</li>
+          </ul>
+          <div class="callout tip"><p><b>Don't worry about the rest.</b> VS Code has many features for programmers. You don't need any of them to write patches: this guide covers everything you need.</p></div>
         </article>
 
         <article class="doc" id="vscode-basics">
@@ -217,21 +613,6 @@
             <li><kbd>Ctrl</kbd>+<kbd>Space</kbd> shows suggestions at the cursor at any time.</li>
             <li><kbd>Ctrl</kbd>+<kbd>F</kbd> / <kbd>⌘</kbd>+<kbd>F</kbd> finds text; <kbd>Ctrl</kbd>+<kbd>P</kbd> / <kbd>⌘</kbd>+<kbd>P</kbd> opens a file by name.</li>
           </ul>
-        </article>
-
-        <!-- ============ WRITE A PATCH ============ -->
-        <article class="doc" id="open-patches">
-          <span class="chapter">Writing patches</span>
-          <h2>Open your patches</h2>
-          <p>Keep your patches together in one folder on your computer, for example <code>Documents/DROID Patches</code>. Then:</p>
-          <ol class="steps">
-            <li>Choose <strong>File → Open Folder…</strong> and select that folder. If VS Code asks <em>Do you trust the authors of the files in this folder?</em>, click <strong>Yes, I trust the authors</strong>. Droider only runs in trusted folders.</li>
-            <li>Your patches appear in the Explorer. Click one to open it.</li>
-            <li>Check the bottom-right corner of the status bar: it should say <strong>DROID Patch</strong>. That means Droider is checking the file.</li>
-          </ol>
-          <div class="callout tip"><p><b>Why a folder and not a single file?</b> Droider finds your megacircuits (<code>.blueprint</code> files) anywhere in the open folder, and builds <code>.droider</code> patches into a <code>dist</code> folder inside it.</p></div>
-          <p>You can also edit a patch straight on the SD card: open the card itself as the folder. But it's safer to keep the originals on your computer and let Droider <a href="#write-card">write the card</a> for you.</p>
-          <p>Want examples? Download <a href="https://github.com/OliverLSanz/droider/tree/main/examples">the example patches</a> used in this guide.</p>
         </article>
 
         <article class="doc" id="first-patch">
@@ -299,312 +680,9 @@
           <p>Patch <code>O1</code> to a VCO's 1 V/oct input, <code>O3</code> to a VCA, and turn <code>P1.1</code> and <code>P1.2</code>. The complete patch, with a label legend, is <a href="https://github.com/OliverLSanz/droider/blob/main/examples/melody.ini">examples/melody.ini</a>.</p>
         </article>
 
-        <article class="doc" id="autocomplete">
-          <h2>Write faster with autocomplete</h2>
-          <p>Suggestions appear by themselves as you type. Use the arrow keys to choose and <kbd>Enter</kbd> or <kbd>Tab</kbd> to accept. Press <kbd>Ctrl</kbd>+<kbd>Space</kbd> to bring them back.</p>
-          <div class="table-wrap">
-            <table>
-              <tr><th>Where you type</th><th>What Droider suggests</th></tr>
-              <tr><td><code>[</code> at the start of a line</td><td>Every circuit, every controller (at the top of the patch) and your megacircuits (in <code>.droider</code> files).</td></tr>
-              <tr><td>An empty line inside a circuit</td><td>That circuit's parameters, with their type and abbreviation. Ones you've already used are left out.</td></tr>
-              <tr><td>After <code>=</code></td><td>Registers your hardware actually has: <code>I1</code>…<code>I8</code>, <code>O1</code>…<code>O8</code>, gates, LEDs, and the pots and buttons of the controllers you declared.</td></tr>
-              <tr><td><kbd>_</kbd> after <code>=</code></td><td>The internal cables already in the patch.</td></tr>
-              <tr><td>Inside a <code># LABELS</code> section</td><td>The registers that belong in that section.</td></tr>
-            </table>
-          </div>
-          <figure><div class="window"><img src="../assets/screens/crop-write.webp" width="1500" height="735" alt="Suggestions for the parameters of the slew circuit" loading="lazy" /></div><figcaption>Parameters of <code>[slew]</code>, with their kind (input or output) and abbreviation.</figcaption></figure>
-          <p>Pressing <kbd>Enter</kbd> after a circuit header indents the next line and shows the parameters. Pressing <kbd>Enter</kbd> after a parameter keeps the same indentation. When you've finished a circuit, press <kbd>Enter</kbd> twice: the first suggestion on an empty line is <strong>↵ end circuit</strong>, which leaves a blank line and starts the next line at the left edge, ready for the next circuit.</p>
-          <div class="callout"><p><b>Short names.</b> Every DROID parameter has an abbreviation (<code>clock</code> → <code>c</code>). Droider accepts both and shows the abbreviation in suggestions and hovers. Long names are easier to read; short ones save space in big patches.</p></div>
-        </article>
-
-        <article class="doc" id="hover">
-          <h2>Look things up without the manual</h2>
-          <p>Rest the mouse pointer on a word to see its documentation:</p>
-          <ul>
-            <li><strong>A circuit header</strong> like <code>[minifonion]</code>: what the circuit does.</li>
-            <li><strong>A parameter</strong>: whether it's an input or output, its type, default value, range and description.</li>
-            <li><strong>A register</strong> like <code>P1.2</code> or <code>G3</code>: what that jack or control is.</li>
-            <li><strong>A cable</strong>: how many times it is used.</li>
-            <li><strong>A megacircuit</strong>: its description and ports, from the comments in its <code>.blueprint</code>.</li>
-          </ul>
-          <figure><div class="window"><img src="../assets/screens/crop-hover.webp" width="1730" height="1040" alt="Hover documentation of the minifonion circuit" loading="lazy" /></div></figure>
-          <p>The documentation is adapted from the official DROID manual (blue-7), with the author's permission.</p>
-        </article>
-
-        <article class="doc" id="colours">
-          <h2>Read the colours</h2>
-          <p>Droider colours each part of a patch by what it does, not only by how it looks:</p>
-          <div class="code" data-nocopy><div class="code-title"><span>colours</span></div><pre data-droid># comments are green
-[lfo]                  # circuit names, in yellow brackets
-    hz     = P1.1      # inputs blue, registers teal
-    square = _CLOCK    # outputs magenta, each cable its own colour
-    bipolar = on       # on and off in blue</pre></div>
-          <ul>
-            <li><strong>Inputs</strong> are blue and <strong>outputs</strong> are magenta. You can tell at once which lines feed a circuit and which send something out.</li>
-            <li><strong>Registers</strong> (jacks, pots, buttons, LEDs) are teal.</li>
-            <li>Each <strong>internal cable</strong> gets its own colour, always the same for the same name. Follow <code>_CLOCK</code> by its colour through the whole patch.</li>
-            <li>The content of a circuit Droider doesn't know is shown in grey, because it can't be checked.</li>
-          </ul>
-          <p>You can change these colours: see <a href="#customise">Customise colours</a>.</p>
-        </article>
-
-        <!-- ============ ERRORS ============ -->
-        <article class="doc" id="errors">
-          <span class="chapter">Fixing problems</span>
-          <h2>Find and fix errors</h2>
-          <p>Droider runs the same checks as the DROID master when it loads a patch, every time you type. Problems appear in three places:</p>
-          <ol class="steps">
-            <li><strong>A wavy underline</strong> under the mistake: red for errors, yellow for warnings. Rest the mouse on it to read the message.</li>
-            <li><strong>The status bar</strong> counts errors and warnings in the bottom-left corner.</li>
-            <li><strong>The Problems panel</strong> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> / <kbd>⌘</kbd>+<kbd>⇧</kbd>+<kbd>M</kbd>) lists them all. Click one to jump to its line.</li>
-          </ol>
-          <figure><div class="window"><img src="../assets/screens/crop-errors.webp" width="1500" height="810" alt="A misspelled cable underlined and two errors in the Problems panel" loading="lazy" /></div><figcaption>A typo in a cable name, and an output that doesn't exist.</figcaption></figure>
-          <p><strong>Errors</strong> would stop the DROID from loading the patch: fix them all. <strong>Warnings</strong> point at things that work but probably aren't what you meant, like a label that's too long to display.</p>
-          <div class="callout"><p><b>Already got a blinking DROID?</b> The module writes <code>DROIDERR.TXT</code> to the card with the line number. Open the same patch in VS Code: Droider shows the problem on that line, with an explanation.</p></div>
-        </article>
-
-        <article class="doc" id="error-list">
-          <h2>What each error means</h2>
-          <div class="table-wrap">
-            <table>
-              <tr><th>Message</th><th>What's wrong and how to fix it</th></tr>
-              <tr><td>unknown circuit: [lfoo]</td><td>No circuit has that name. Check the spelling; <kbd>Ctrl</kbd>+<kbd>Space</kbd> after <code>[</code> lists them all.</td></tr>
-              <tr><td>unknown parameter 'speed' in [lfo]</td><td>That circuit has no such parameter. Hover the header or press <kbd>Ctrl</kbd>+<kbd>Space</kbd> on an empty line to see the valid ones.</td></tr>
-              <tr><td>unknown register: O9</td><td>That jack or control doesn't exist (the master has <code>O1</code>–<code>O8</code>), or its controller isn't declared at the top.</td></tr>
-              <tr><td>input-only register 'P1.1' used as an output</td><td>You can't write to a pot, button, switch or input jack. Use an output, an LED (<code>L1.1</code>) or a cable instead.</td></tr>
-              <tr><td>internal cable '_X' has no input (nothing reads from it)</td><td>Something writes the cable but nothing uses it. Connect it to an input, or remove it.</td></tr>
-              <tr><td>internal cable '_X' has no output (nothing writes to it)</td><td>Something reads the cable but no circuit writes it. Often a typo in the name.</td></tr>
-              <tr><td>internal cable '_X' used as an output more than once</td><td>Two circuits write the same cable. Each cable can have only one source; use two cables and a <code>[mixer]</code> or <code>[copy]</code>.</td></tr>
-              <tr><td>math expression '…' is beyond DROID's native A * B + C</td><td>DROID inputs allow one multiplication and one addition, in that order. Split the calculation, or use a <code>.droider</code> file, which allows <a href="#arithmetic">any arithmetic</a>.</td></tr>
-              <tr><td>math expressions are only allowed on inputs</td><td>Outputs must go to one register or cable, with no arithmetic.</td></tr>
-              <tr><td>line too long: … characters</td><td>The DROID accepts at most 63 characters per line, not counting comments and indentation. Shorten cable names or use abbreviations.</td></tr>
-              <tr><td>missing value after '=' for parameter '…'</td><td>The line has no value. Add one or delete the line.</td></tr>
-              <tr><td>megacircuit [x] is not allowed in .ini files</td><td>Megacircuits only work in <code>.droider</code> files. Rename the file, then <a href="#build">build it</a>.</td></tr>
-              <tr><td>megacircuit [x] is missing input 'y'</td><td>That input of the megacircuit has no default value, so you must wire it.</td></tr>
-              <tr><td>label is 7 characters (recommended ≤5)</td><td>A warning: the Forge shows only about five characters of a short label.</td></tr>
-            </table>
-          </div>
-        </article>
-
-        <!-- ============ UNDERSTAND ============ -->
-        <article class="doc" id="labels">
-          <span class="chapter">Understanding a patch</span>
-          <h2>Label your jacks and controls</h2>
-          <p>
-            A <strong>label legend</strong> is a block of comments at the top of a patch that says what each jack and control does.
-            The DROID ignores it (it's just comments), but the DROID Forge reads it, and so does Droider:
-            the labels appear in the <a href="#hardware-view">hardware view</a> and the <a href="#circuit-graph">circuit graph</a>.
-          </p>
-          <div class="code"><div class="code-title"><span>melody.ini</span></div><pre data-droid># LABELS: master=16
-# INPUTS:
-#  I1: [RESET] Restart the rhythm
-# OUTPUTS:
-#  O1: [PITCH] Melody, 1 V/oct
-#  O3: [ENV] Plucky envelope
-# GATES ON MODULE 1:
-#  G1: [CLK] Clock out
-# CONTROLLER 1:
-#  P1.1: [RATE] Clock speed
-#  B1.1: [OCT] Hold for one octave up</pre></div>
-          <ul>
-            <li>Each entry is <code>register: [SHORT] long description</code>. Both parts are optional.</li>
-            <li>Sections are <code># INPUTS:</code>, <code># OUTPUTS:</code>, <code># GATES ON MODULE n:</code>, <code># GATES ON X7:</code> and <code># CONTROLLER n:</code> (n is the controller's position in the chain).</li>
-            <li>Droider suggests the right registers in each section and warns about registers that don't exist, are in the wrong section, or have a short label longer than five characters.</li>
-          </ul>
-        </article>
-
-        <article class="doc" id="hardware-view">
-          <h2>See your rack</h2>
-          <p>Click the <strong>circuit board</strong> icon at the top right of the editor, or run <strong>DROID: Show Hardware View</strong> from the Command Palette. A panel opens next to your patch with:</p>
-          <ul>
-            <li>the master (MASTER or MASTER18), any G8 and X7 expanders, and every controller you declared, in order;</li>
-            <li>the short labels from your legend on each jack, pot and button.</li>
-          </ul>
-          <figure><div class="window" style="background:#1b1b1b;padding:22px;display:grid;place-items:center"><img src="../assets/screens/hardware-view.webp" width="620" height="1020" alt="The hardware view with labelled jacks and controls" loading="lazy" style="max-height:480px;width:auto" /></div></figure>
-          <p>The view follows the patch you're editing and updates as you type. It's a quick way to check what each knob does before a performance.</p>
-        </article>
-
-        <article class="doc" id="circuit-graph">
-          <h2>Follow the signal in the graph</h2>
-          <p>Click the <strong>hierarchy</strong> icon at the top right of the editor, or run <strong>DROID: Show Circuit Graph</strong>. Every circuit becomes a box and every cable a wire, laid out from left to right in the direction the signal flows.</p>
-          <figure><div class="window"><img src="../assets/screens/graph-view.webp" width="1800" height="1054" alt="Circuit graph of the melody patch" loading="lazy" /></div></figure>
-          <ul>
-            <li>Jacks and controls are the round nodes on the edges. Untick <strong>Hardware I/O</strong> to hide them.</li>
-            <li>Attenuation and offset on an input (<code>× 8</code>, <code>+ 1</code>) are shown under it; fixed values appear as small tags.</li>
-            <li><strong>Click</strong> a box to jump to that circuit in the patch. <strong>Drag</strong> boxes to rearrange them, drag the background to pan, and pinch or scroll to zoom.</li>
-            <li><strong>Re-layout</strong> tidies everything again; <strong>Fit</strong> zooms to show the whole patch.</li>
-            <li>In <code>.droider</code> patches, megacircuits are a single box. Open a <code>.blueprint</code> and show its graph to see its inside: its inputs and outputs are drawn as jacks.</li>
-          </ul>
-        </article>
-
-        <!-- ============ CARD ============ -->
-        <article class="doc" id="write-card">
-          <span class="chapter">Loading the DROID</span>
-          <h2>Write the patch to the SD card</h2>
-          <ol class="steps">
-            <li>Take the micro SD card out of your DROID master and insert it in your computer (with a card reader if needed). If you use an X7 with USB, switch it to USB mode instead.</li>
-            <li>Open your patch. A <strong>Write to DROID</strong> button appears on the right of the status bar. Droider recognises a card that has a <code>droid.ini</code> on it or is named <code>DROID</code>.</li>
-            <li>
-              Click <strong>Write to DROID</strong>. Droider:
-              <ul>
-                <li>saves the patch, and builds it first if it's a <code>.droider</code> file;</li>
-                <li>refuses to write if the patch has errors, so a broken patch never reaches the module;</li>
-                <li>writes it as <code>droid.ini</code> at the root of the card, reads it back to verify it, and ejects the card.</li>
-              </ul>
-            </li>
-            <li>When you see <em>“Patch written and verified… card ejected safely”</em>, put the card back in the master and press <strong>Load</strong> (or return the X7 USB switch to the centre).</li>
-          </ol>
-          <figure><div class="window"><img src="../assets/screens/card-toast.webp" width="930" height="96" alt="Notification: Patch written and verified on DROID; card ejected safely." loading="lazy" /></div></figure>
-          <div class="callout warn"><p><b>It replaces droid.ini.</b> Writing overwrites the <code>droid.ini</code> on the card. Keep your patches on your computer (as in <a href="#open-patches">Open your patches</a>) so nothing is lost.</p></div>
-          <p>The button works on macOS, Windows and Linux (cards mounted under <code>/media</code> or <code>/mnt</code>). You can also run <strong>DROID: Write Patch to DROID Card and Eject</strong> from the Command Palette.</p>
-        </article>
-
-        <article class="doc" id="several-patches">
-          <h2>Several patches on one card</h2>
-          <p>
-            A DROID card can hold alternative patches named <code>droidXY.ini</code>, where <code>X</code> is a controller and <code>Y</code> a button.
-            For example, hold button 4 of the first controller while pressing Load to load <code>droid14.ini</code>.
-          </p>
-          <ul>
-            <li>Droider's button always writes <code>droid.ini</code>. For alternative patches, write the file to the card yourself (for a <code>.droider</code> patch, copy the built file from <code>dist/</code>).</li>
-            <li>Every alternative patch needs its own controller declarations at the top, or the buttons won't work to switch patches.</li>
-          </ul>
-        </article>
-
-        <!-- ============ DROIDER ============ -->
-        <article class="doc" id="file-types">
-          <span class="chapter">Going further</span>
-          <h2>.ini, .droider and .blueprint</h2>
-          <p>Droider understands three kinds of file. You choose the kind with the file's extension:</p>
-          <div class="table-wrap">
-            <table>
-              <tr><th>File</th><th>What it is</th><th>Runs on the DROID?</th></tr>
-              <tr><td><code>.ini</code></td><td>A plain DROID patch, exactly what the module reads. No extra syntax.</td><td>Yes, as is.</td></tr>
-              <tr><td><code>.droider</code></td><td>A DROID patch that may also use <a href="#use-megacircuit">megacircuits</a> and <a href="#arithmetic">free arithmetic</a>.</td><td>After building it to <code>.ini</code>, which Droider does for you.</td></tr>
-              <tr><td><code>.blueprint</code></td><td>The definition of one <a href="#megacircuits">megacircuit</a>: a reusable piece of patch with named inputs and outputs.</td><td>No, it's used inside <code>.droider</code> patches.</td></tr>
-            </table>
-          </div>
-          <p>Any <code>.ini</code> patch is also a valid <code>.droider</code> patch: rename <code>droid.ini</code> to <code>my-patch.droider</code> and start using the extras.</p>
-        </article>
-
-        <article class="doc" id="arithmetic">
-          <h2>Free arithmetic</h2>
-          <p>
-            On the DROID, an input can only do <code>A * B + C</code>: one multiplication, then one addition. In a <code>.droider</code> file
-            you can write any expression with <code>+</code>, <code>-</code>, <code>*</code> and parentheses, on any input.
-            For example, a pot that morphs between two melodies:
-          </p>
-          <div class="code"><div class="code-title"><span>melodies.droider</span></div><pre data-droid># Pot 1 morphs from O2 (left) to O1 (right)
-[copy]
-    input  = (O1 - O2) * P1.1 + O2
-    output = O3</pre></div>
-          <p>When the patch is built, Droider splits the expression into as few <code>[copy]</code> circuits as possible, each one a valid <code>A * B + C</code>:</p>
-          <div class="code" data-nocopy><div class="code-title"><span>dist/melodies.ini</span></div><pre data-droid>[copy]
-    input = O1 - O2
-    output = _MATH1
-[copy]
-    input  = _MATH1 * P1.1 + O2
-    output = O3</pre></div>
-          <p>The cables it creates are called <code>_MATH1</code>, <code>_MATH2</code>…, so you can tell them from yours. In the circuit graph the whole expression is shown as one formula.</p>
-        </article>
-
-        <article class="doc" id="megacircuits">
-          <h2>Create a megacircuit</h2>
-          <p>
-            A <strong>megacircuit</strong> is your own reusable circuit: a few circuits wired together, with named inputs and outputs, that you
-            can then use in any patch like a built-in one. You define it once in a <code>.blueprint</code> file, and the file's name becomes
-            the circuit's name: <code>randomnote.blueprint</code> defines <code>[randomnote]</code>.
-          </p>
-          <p>Let's make one that plays a random note in C minor on every clock, so you can add a melody to any patch with four lines.</p>
-          <ol class="steps">
-            <li>Create a file anywhere in your open folder, for example <code>blueprints/randomnote.blueprint</code>.</li>
-            <li>
-              Describe it in a comment at the top. Droider shows that comment when you hover the megacircuit.
-              <div class="code"><div class="code-title"><span>blueprints/randomnote.blueprint</span></div><pre data-droid># A megacircuit is your own reusable circuit.
-# This file defines [randomnote]: a random note in C minor on every clock.</pre></div>
-            </li>
-            <li>
-              List its <strong>inputs</strong> and <strong>outputs</strong>. A comment just above a port documents it. An input with <code>= value</code> has a default and is optional; one without it must always be wired.
-              <div class="code"><div class="code-title"><span>blueprints/randomnote.blueprint (continued)</span></div><pre data-droid>[input]
-    # a new note on each clock
-    clock
-    # how far the melody can jump (1V = one octave)
-    range = 2V
-
-[output]
-    # the note, 1 V/oct
-    pitch</pre></div>
-            </li>
-            <li>
-              Write the body with ordinary circuits. Refer to the ports by their bare names (<code>clock</code>, <code>range</code>, <code>pitch</code>), and use <code>_cables</code> for the wiring inside:
-              <div class="code"><div class="code-title"><span>blueprints/randomnote.blueprint (continued)</span></div><pre data-droid># a random voltage on every clock…
-[random]
-    clock   = clock
-    maximum = range
-    output  = _VOLTAGE
-
-# …snapped to the notes of C minor
-[minifonion]
-    input   = _VOLTAGE
-    degree  = 7       # natural minor
-    select1 = on
-    select3 = on
-    select5 = on
-    output  = pitch</pre></div>
-            </li>
-          </ol>
-          <p>Droider checks the blueprint like any patch, and also warns about inputs you never use. Cables inside a blueprint are private: every copy of the megacircuit gets its own, so two copies never interfere. A blueprint can also use other megacircuits, as deep as you like.</p>
-        </article>
-
-        <article class="doc" id="use-megacircuit">
-          <h2>Use a megacircuit</h2>
-          <p>In any <code>.droider</code> patch in the same folder, the megacircuit works like a built-in circuit: it autocompletes after <kbd>[</kbd>, shows its documentation on hover and is checked. Here it gives a patch two melodies:</p>
-          <div class="code"><div class="code-title"><span>melodies.droider</span></div><pre data-droid data-mega="randomnote:pitch"># Use your megacircuit in any .droider patch,
-# just like a built-in circuit.
-[p2b8]
-
-[lfo]
-    hz     = 4
-    square = _CLOCK
-
-[euklid]
-    clock  = _CLOCK
-    length = 16
-    beats  = 5
-    output = _RHYTHM
-
-# Two melodies from the same megacircuit
-[randomnote]
-    clock = _RHYTHM
-    pitch = O1
-
-# this one moves on every clock, within one octave
-[randomnote]
-    clock = _CLOCK
-    range = 1V
-    pitch = O2</pre></div>
-          <p>The first copy leaves out <code>range</code>, so it uses the default <code>2V</code>. The second one sets it.</p>
-          <figure><div class="window"><img src="../assets/screens/hover-megacircuit.webp" width="1800" height="1125" alt="Hovering [randomnote] shows its description, its inputs with defaults and its outputs" loading="lazy" /></div><figcaption>Hover a megacircuit to see its description and ports.</figcaption></figure>
-          <p>The complete files are in <a href="https://github.com/OliverLSanz/droider/tree/main/examples">examples/</a>: <code>melodies.droider</code> and <code>blueprints/randomnote.blueprint</code>.</p>
-        </article>
-
-        <article class="doc" id="build">
-          <h2>Build to a plain .ini</h2>
-          <p>The DROID only reads plain patches, so a <code>.droider</code> file is <strong>built</strong> into one. You rarely need to do it by hand: <a href="#write-card">Write to DROID</a> builds automatically. To see the result:</p>
-          <ol class="steps">
-            <li>Open the <code>.droider</code> file.</li>
-            <li>Click the <strong>package</strong> icon at the top right of the editor, or <strong>Build to dist</strong> in the status bar (shown when no card is inserted), or run <strong>DROID: Build .droider to dist/*.ini</strong>.</li>
-            <li>Droider writes <code>dist/&lt;name&gt;.ini</code> in your folder and tells you if the result has errors.</li>
-          </ol>
-          <figure><div class="window"><img src="../assets/screens/build.webp" width="1800" height="1125" alt="melodies.droider next to the built dist/melodies.ini, where each megacircuit is expanded" loading="lazy" /></div><figcaption>The built patch: each megacircuit is replaced by its circuits, with comments marking where each copy starts.</figcaption></figure>
-          <p>During the build, private cables are renamed for each copy: <code>_VOLTAGE</code> in the first <code>[randomnote]</code> becomes <code>__randomnote_1_VOLTAGE</code>, and in the second one <code>__randomnote_2_VOLTAGE</code>. Arithmetic is split into <code>[copy]</code> circuits. If a line ends up longer than the DROID's 63 characters, cable names are shortened, and comments in the output list the short names. The built patch is checked again before it can be written to a card.</p>
-        </article>
-
-        <!-- ============ REFERENCE ============ -->
         <article class="doc" id="cheatsheet">
-          <span class="chapter">Reference</span>
           <h2>DROID language cheat sheet</h2>
-          <p>A summary of the patch language. For every circuit, hover it in VS Code or see the official manual.</p>
+          <p>A summary of the DROID patch language. The official DROID manual is the complete reference; for any circuit, hover it in VS Code.</p>
           <div class="table-wrap">
             <table>
               <tr><th>Thing</th><th>Looks like</th><th>Notes</th></tr>
@@ -618,76 +696,12 @@
               <tr><td>LEDs</td><td><code>R1</code>…<code>R16</code></td><td>The master's LED matrix; <code>0.2</code> cyan … <code>0.8</code> red … <code>1.2</code> blue.</td></tr>
               <tr><td>Cable</td><td><code>_CLOCK</code></td><td>One circuit writes it, any number read it.</td></tr>
               <tr><td>Numbers</td><td><code>0.5</code>, <code>-1</code>, <code>2V</code>, <code>45%</code></td><td><code>V</code> divides by 10 (volts), <code>%</code> by 100. Write <code>0.5</code>, not <code>.5</code>.</td></tr>
-              <tr><td>Gates</td><td><code>on</code>, <code>off</code></td><td>Same as <code>1</code> and <code>0</code>.</td></tr>
+              <tr><td>On / off</td><td><code>on</code>, <code>off</code></td><td>Same as <code>1</code> and <code>0</code>.</td></tr>
               <tr><td>Text</td><td><code>"Voice 1"</code></td><td>For displays. No double quotes inside.</td></tr>
               <tr><td>Input maths</td><td><code>I1 * P1.1 + 0.2</code></td><td>One <code>*</code> then one <code>+</code>. Also <code>-P1.1</code>, <code>I1 - I2</code>, <code>I1 / 12</code>.</td></tr>
               <tr><td>Arrays</td><td><code>output1</code>, <code>output2</code></td><td><code>output</code> is the same as <code>output1</code>.</td></tr>
             </table>
           </div>
-        </article>
-
-        <article class="doc" id="commands">
-          <h2>Commands and buttons</h2>
-          <div class="table-wrap">
-            <table>
-              <tr><th>Command (Command Palette)</th><th>Button</th><th>What it does</th></tr>
-              <tr><td>DROID: Show Hardware View</td><td>Circuit-board icon, top right of the editor</td><td>Draws your rack with its labels.</td></tr>
-              <tr><td>DROID: Show Circuit Graph</td><td>Hierarchy icon, top right of the editor</td><td>Shows the patch as a graph.</td></tr>
-              <tr><td>DROID: Build .droider to dist/*.ini</td><td>Package icon; <em>Build to dist</em> in the status bar</td><td>Builds a <code>.droider</code> patch into <code>dist/</code>.</td></tr>
-              <tr><td>DROID: Write Patch to DROID Card and Eject</td><td><em>Write to DROID</em> in the status bar</td><td>Builds if needed, checks, writes <code>droid.ini</code>, verifies and ejects.</td></tr>
-            </table>
-          </div>
-        </article>
-
-        <article class="doc" id="cli">
-          <h2>Command-line linter</h2>
-          <p>The same checks are available in a terminal, for scripts, continuous integration or AI assistants. You need <a href="https://nodejs.org/">Node.js</a>:</p>
-          <div class="code"><div class="code-title"><span>terminal</span></div><pre>git clone https://github.com/OliverLSanz/droider.git
-cd droider
-npm install
-npm run compile
-node out/cli.js path/to/patch.ini          # human-readable
-node out/cli.js --json path/to/patch.ini   # JSON output</pre></div>
-          <p>The exit code is <code>0</code> when there are no errors, <code>1</code> when there is at least one, and <code>2</code> for a wrong command or unreadable file. Warnings don't fail. Megacircuits are read from every <code>.blueprint</code> under the current folder.</p>
-        </article>
-
-        <article class="doc" id="customise">
-          <h2>Customise colours</h2>
-          <p>Open <strong>Preferences: Open User Settings (JSON)</strong> from the Command Palette and add your own colours:</p>
-          <div class="code"><div class="code-title"><span>settings.json</span></div><pre>"editor.semanticTokenColorCustomizations": {
-  "enabled": true,
-  "rules": {
-    "droidInput": "#4FC1FF",
-    "droidOutput": "#C586C0",
-    "droidRegister": "#4EC9B0",
-    "droidBoolean": "#569CD6",
-    "droidUnverified": "#808080"
-  }
-}</pre></div>
-          <p>Droider works with any VS Code colour theme, light or dark. Cable colours are chosen automatically from each cable's name.</p>
-        </article>
-
-        <article class="doc" id="troubleshooting">
-          <h2>Troubleshooting</h2>
-          <h3>Nothing is coloured or checked</h3>
-          <ul>
-            <li>Look at the language in the status bar. If it doesn't say <em>DROID Patch</em>, click it and choose <strong>DROID Patch</strong>.</li>
-            <li>If a banner says <em>Restricted Mode</em>, the folder isn't trusted. Click <strong>Manage</strong> and trust it: extensions don't run in restricted mode.</li>
-          </ul>
-          <h3>My other .ini files are treated as DROID patches</h3>
-          <p>Droider handles every <code>.ini</code> file. For a non-DROID <code>.ini</code>, click the language in the status bar and choose <strong>Ini</strong>. Or keep your DROID patches in their own folder.</p>
-          <h3>The Write to DROID button doesn't appear</h3>
-          <ul>
-            <li>The patch must be the active editor, and must be a <code>.ini</code> or <code>.droider</code> file.</li>
-            <li>The card must have a <code>droid.ini</code> at its root or be named <code>DROID</code>. For a brand-new card, name it DROID when you format it (FAT32), or copy any <code>droid.ini</code> onto it once.</li>
-          </ul>
-          <h3>It says my megacircuit is an unknown circuit</h3>
-          <ul>
-            <li>Megacircuits only work in <code>.droider</code> files, not <code>.ini</code>.</li>
-            <li>The <code>.blueprint</code> must be inside the folder you opened in VS Code (in any subfolder).</li>
-          </ul>
-          <h3>Something else?</h3>
-          <p><a href="https://github.com/OliverLSanz/droider/issues">Open an issue on GitHub</a> with the patch (or the smallest part of it that shows the problem).</p>
         </article>
 
         <p style="color: var(--dim); font-size: 14px; margin-top: 60px">

@@ -6,8 +6,8 @@
 
 <p align="center">
   <b>DROID patches without the guesswork.</b><br>
-  A free VS Code extension for DROID Eurorack patches: live error checking,
-  autocompletion, hover docs, rainbow cables, hardware and circuit-graph views, megacircuits and one-click SD-card upload.
+  A free VS Code extension for DROID Eurorack patches: build your own reusable megacircuits, with live error
+  checking, autocompletion, hover docs, rainbow cables, hardware and circuit-graph views and one-click SD-card upload.
 </p>
 
 <p align="center">
@@ -27,6 +27,9 @@
 
 ## Features
 
+- **Megacircuits.** Build your own reusable circuits in `.blueprint` files and use them in any `.droider` patch like
+  built-in ones, with **free arithmetic** on any input. Droider compiles it all into a plain `droid.ini` that runs on
+  any DROID.
 - **Live error checking.** The checks the DROID master runs when it loads a patch, run as you type: unknown circuits,
   parameters and registers, cables with no source or no reader, outputs written twice, inputs used as outputs,
   `A * B + C` violations and lines over 63 characters.
@@ -40,8 +43,6 @@
 - **Circuit graph.** The patch as an interactive signal-flow graph. Click a node to jump to its line.
 - **Write to DROID.** Insert the SD card and click the status-bar button: the patch is checked, written, verified and
   the card ejected safely. Works on macOS, Windows and Linux.
-- **`.droider` patches.** Reusable **megacircuits** (`.blueprint` files) and **free arithmetic** on any input,
-  compiled into a plain `droid.ini`.
 
 Free, open source, works offline, no account.
 
