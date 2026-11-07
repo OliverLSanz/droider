@@ -491,111 +491,101 @@
           <h2>Free arithmetic</h2>
           <p>
             On the DROID, an input can only do <code>A * B + C</code>: one multiplication, then one addition. In a <code>.droider</code> file
-            you can write any expression with <code>+</code>, <code>-</code>, <code>*</code> and parentheses, on any input:
+            you can write any expression with <code>+</code>, <code>-</code>, <code>*</code> and parentheses, on any input.
+            For example, a pot that morphs between two melodies:
           </p>
-          <div class="code"><div class="code-title"><span>duet.droider</span></div><pre data-droid>[copy]
-    input  = (_ENV_LEAD - _ENV_BASS) * P1.2 + _ENV_BASS
-    output = O5</pre></div>
+          <div class="code"><div class="code-title"><span>melodies.droider</span></div><pre data-droid># Pot 1 morphs from O2 (left) to O1 (right)
+[copy]
+    input  = (O1 - O2) * P1.1 + O2
+    output = O3</pre></div>
           <p>When the patch is built, Droider splits the expression into as few <code>[copy]</code> circuits as possible, each one a valid <code>A * B + C</code>:</p>
-          <div class="code" data-nocopy><div class="code-title"><span>dist/duet.ini</span></div><pre data-droid>[copy]
-    input = _ENV_LEAD - _ENV_BASS
+          <div class="code" data-nocopy><div class="code-title"><span>dist/melodies.ini</span></div><pre data-droid>[copy]
+    input = O1 - O2
     output = _MATH1
 [copy]
-    input  = _MATH1 * P1.2 + _ENV_BASS
-    output = O5</pre></div>
+    input  = _MATH1 * P1.1 + O2
+    output = O3</pre></div>
           <p>The cables it creates are called <code>_MATH1</code>, <code>_MATH2</code>…, so you can tell them from yours. In the circuit graph the whole expression is shown as one formula.</p>
         </article>
 
         <article class="doc" id="megacircuits">
           <h2>Create a megacircuit</h2>
           <p>
-            A <strong>megacircuit</strong> is a piece of patch you can reuse like a circuit. You define it once in a <code>.blueprint</code> file,
-            and the file's name becomes the circuit's name: <code>pluck.blueprint</code> defines <code>[pluck]</code>.
+            A <strong>megacircuit</strong> is your own reusable circuit: a few circuits wired together, with named inputs and outputs, that you
+            can then use in any patch like a built-in one. You define it once in a <code>.blueprint</code> file, and the file's name becomes
+            the circuit's name: <code>randomnote.blueprint</code> defines <code>[randomnote]</code>.
           </p>
+          <p>Let's make one that plays a random note in C minor on every clock, so you can add a melody to any patch with four lines.</p>
           <ol class="steps">
-            <li>Create a file anywhere in your open folder, for example <code>blueprints/pluck.blueprint</code>.</li>
+            <li>Create a file anywhere in your open folder, for example <code>blueprints/randomnote.blueprint</code>.</li>
             <li>
-              Describe it in a comment at the top, then list its <strong>inputs</strong> and <strong>outputs</strong>. A comment just above a port documents it. An input with <code>= value</code> has a default and is optional; one without it must be wired.
-              <div class="code"><div class="code-title"><span>blueprints/pluck.blueprint</span></div><pre data-droid># A plucky voice: Euclidean gates, a random note snapped
-# to C minor and a short decay envelope.
-
-[input]
-    # the clock to follow
-    clock
-    # how many of the 16 steps play
-    beats = 5
-    # envelope decay time
-    decay = 0.25
-
-[output]
-    # melody, 1 V/oct
-    pitch
-    # one gate per note
-    gate
-    # the plucky envelope
-    env</pre></div>
+              Describe it in a comment at the top. Droider shows that comment when you hover the megacircuit.
+              <div class="code"><div class="code-title"><span>blueprints/randomnote.blueprint</span></div><pre data-droid># A megacircuit is your own reusable circuit.
+# This file defines [randomnote]: a random note in C minor on every clock.</pre></div>
             </li>
             <li>
-              Write the body with ordinary circuits. Refer to the ports by their bare names (<code>clock</code>, <code>pitch</code>), and use <code>_cables</code> for internal wiring:
-              <div class="code"><div class="code-title"><span>blueprints/pluck.blueprint (continued)</span></div><pre data-droid>[euklid]
-    clock  = clock
-    length = 16
-    beats  = beats
-    output = _GATE
+              List its <strong>inputs</strong> and <strong>outputs</strong>. A comment just above a port documents it. An input with <code>= value</code> has a default and is optional; one without it must always be wired.
+              <div class="code"><div class="code-title"><span>blueprints/randomnote.blueprint (continued)</span></div><pre data-droid>[input]
+    # a new note on each clock
+    clock
+    # how far the melody can jump (1V = one octave)
+    range = 2V
 
+[output]
+    # the note, 1 V/oct
+    pitch</pre></div>
+            </li>
+            <li>
+              Write the body with ordinary circuits. Refer to the ports by their bare names (<code>clock</code>, <code>range</code>, <code>pitch</code>), and use <code>_cables</code> for the wiring inside:
+              <div class="code"><div class="code-title"><span>blueprints/randomnote.blueprint (continued)</span></div><pre data-droid># a random voltage on every clock…
 [random]
-    clock   = _GATE
-    maximum = 2V
-    output  = _NOTE
+    clock   = clock
+    maximum = range
+    output  = _VOLTAGE
 
+# …snapped to the notes of C minor
 [minifonion]
-    input   = _NOTE
-    degree  = 7
+    input   = _VOLTAGE
+    degree  = 7       # natural minor
     select1 = on
     select3 = on
     select5 = on
-    output  = pitch
-
-[contour]
-    trigger = _GATE
-    attack  = 0.01
-    decay   = decay
-    sustain = 0
-    output  = env
-
-[copy]
-    input  = _GATE
-    output = gate</pre></div>
+    output  = pitch</pre></div>
             </li>
           </ol>
-          <p>Droider checks the blueprint like any patch, and also warns about inputs you never use. Cables inside a blueprint are private: two copies of the megacircuit never share them. A blueprint can use other megacircuits too, as deep as you like.</p>
+          <p>Droider checks the blueprint like any patch, and also warns about inputs you never use. Cables inside a blueprint are private: every copy of the megacircuit gets its own, so two copies never interfere. A blueprint can also use other megacircuits, as deep as you like.</p>
         </article>
 
         <article class="doc" id="use-megacircuit">
           <h2>Use a megacircuit</h2>
-          <p>In any <code>.droider</code> patch in the same folder, the megacircuit works like a built-in circuit: it autocompletes, shows its documentation on hover and is checked.</p>
-          <div class="code"><div class="code-title"><span>duet.droider</span></div><pre data-droid data-mega="pluck:pitch,gate,env">[p2b8]
+          <p>In any <code>.droider</code> patch in the same folder, the megacircuit works like a built-in circuit: it autocompletes after <kbd>[</kbd>, shows its documentation on hover and is checked. Here it gives a patch two melodies:</p>
+          <div class="code"><div class="code-title"><span>melodies.droider</span></div><pre data-droid data-mega="randomnote:pitch"># Use your megacircuit in any .droider patch,
+# just like a built-in circuit.
+[p2b8]
 
 [lfo]
-    hz     = P1.1 * 8 + 1
+    hz     = 4
     square = _CLOCK
 
-[pluck]
-    clock = _CLOCK
-    beats = P1.2 * 10 + 3
-    pitch = O1
-    gate  = O2
-    env   = _ENV_LEAD
+[euklid]
+    clock  = _CLOCK
+    length = 16
+    beats  = 5
+    output = _RHYTHM
 
-# a second, slower voice: decay overrides its default
-[pluck]
+# Two melodies from the same megacircuit
+[randomnote]
+    clock = _RHYTHM
+    pitch = O1
+
+# this one moves on every clock, within one octave
+[randomnote]
     clock = _CLOCK
-    beats = 3
-    decay = 0.8
-    pitch = O3
-    gate  = O4
-    env   = _ENV_BASS</pre></div>
-          <figure><div class="window"><img src="../assets/screens/hover-megacircuit.webp" width="1800" height="1125" alt="Hovering a megacircuit shows its description, inputs with defaults and outputs" loading="lazy" /></div><figcaption>Hover a megacircuit to see its description and ports.</figcaption></figure>
+    range = 1V
+    pitch = O2</pre></div>
+          <p>The first copy leaves out <code>range</code>, so it uses the default <code>2V</code>. The second one sets it.</p>
+          <figure><div class="window"><img src="../assets/screens/hover-megacircuit.webp" width="1800" height="1125" alt="Hovering [randomnote] shows its description, its inputs with defaults and its outputs" loading="lazy" /></div><figcaption>Hover a megacircuit to see its description and ports.</figcaption></figure>
+          <p>The complete files are in <a href="https://github.com/OliverLSanz/droider/tree/main/examples">examples/</a>: <code>melodies.droider</code> and <code>blueprints/randomnote.blueprint</code>.</p>
         </article>
 
         <article class="doc" id="build">
@@ -606,8 +596,8 @@
             <li>Click the <strong>package</strong> icon at the top right of the editor, or <strong>Build to dist</strong> in the status bar (shown when no card is inserted), or run <strong>DROID: Build .droider to dist/*.ini</strong>.</li>
             <li>Droider writes <code>dist/&lt;name&gt;.ini</code> in your folder and tells you if the result has errors.</li>
           </ol>
-          <figure><div class="window"><img src="../assets/screens/build.webp" width="1800" height="1125" alt="duet.droider next to the built dist/duet.ini, where each megacircuit is expanded" loading="lazy" /></div><figcaption>The built patch: each megacircuit is replaced by its circuits, with comments marking where each copy starts.</figcaption></figure>
-          <p>During the build, private cables are renamed for each copy (<code>_GATE</code> in the second <code>[pluck]</code> becomes <code>__pluck_2_GATE</code>). Arithmetic is split into <code>[copy]</code> circuits. If a line ends up longer than the DROID's 63 characters, cable names are shortened, and comments in the output list the short names. The built patch is checked again before it can be written to a card.</p>
+          <figure><div class="window"><img src="../assets/screens/build.webp" width="1800" height="1125" alt="melodies.droider next to the built dist/melodies.ini, where each megacircuit is expanded" loading="lazy" /></div><figcaption>The built patch: each megacircuit is replaced by its circuits, with comments marking where each copy starts.</figcaption></figure>
+          <p>During the build, private cables are renamed for each copy: <code>_VOLTAGE</code> in the first <code>[randomnote]</code> becomes <code>__randomnote_1_VOLTAGE</code>, and in the second one <code>__randomnote_2_VOLTAGE</code>. Arithmetic is split into <code>[copy]</code> circuits. If a line ends up longer than the DROID's 63 characters, cable names are shortened, and comments in the output list the short names. The built patch is checked again before it can be written to a card.</p>
         </article>
 
         <!-- ============ REFERENCE ============ -->

@@ -28,7 +28,7 @@
   }
   function span(cls, text) { return '<span class="' + cls + '">' + esc(text) + "</span>"; }
 
-  // Ports of megacircuits used on the page: data-mega="pluck:pitch,gate,env;mix2:out"
+  // Ports of megacircuits used on the page: data-mega="randomnote:pitch;mix2:out"
   function parseMega(attr) {
     var map = {};
     (attr || "").split(";").forEach(function (part) {

@@ -63,39 +63,47 @@ writing your first patch. For Cursor, VSCodium and other VS Code-based editors, 
 
 ## A taste of `.droider`
 
-A megacircuit is a piece of patch you define once and reuse like any circuit:
+A megacircuit is your own reusable circuit: define it once in a `.blueprint` file, then use it in any `.droider`
+patch like a built-in circuit.
 
 ```ini
-# blueprints/pluck.blueprint — a plucky voice
+# blueprints/randomnote.blueprint
+# A megacircuit is your own reusable circuit.
+# This file defines [randomnote]: a random note in C minor on every clock.
 [input]
     clock
-    beats = 5          # inputs with a default are optional
-    decay = 0.25
+    range = 2V         # inputs with a default are optional
 [output]
     pitch
-    gate
-    env
 
-[euklid]
-    clock  = clock
-    length = 16
-    beats  = beats
-    output = _GATE     # private: each copy gets its own cable
-# ...
+[random]
+    clock   = clock
+    maximum = range
+    output  = _VOLTAGE # private: each copy gets its own cable
+
+[minifonion]
+    input   = _VOLTAGE
+    degree  = 7        # natural minor
+    select1 = on
+    select3 = on
+    select5 = on
+    output  = pitch
 ```
 
 ```ini
-# duet.droider
-[pluck]
-    clock = _CLOCK
-    beats = P1.2 * 10 + 3
+# melodies.droider: use your megacircuit like any other circuit
+[randomnote]
+    clock = _RHYTHM
     pitch = O1
-    gate  = O2
-    env   = _ENV_LEAD
 
-[copy]  # any arithmetic, not just A * B + C
-    input  = (_ENV_LEAD - _ENV_BASS) * P1.2 + _ENV_BASS
-    output = O5
+[randomnote]
+    clock = _CLOCK
+    range = 1V
+    pitch = O2
+
+[copy]  # any arithmetic, not just A * B + C: pot 1 morphs between the melodies
+    input  = (O1 - O2) * P1.1 + O2
+    output = O3
 ```
 
 Droider expands megacircuits, splits the arithmetic into native `[copy]` circuits and checks the resulting plain `.ini`
