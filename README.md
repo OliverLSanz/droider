@@ -5,7 +5,7 @@
 <h1 align="center">Droider</h1>
 
 <p align="center">
-  <b>DROID patches without the guesswork.</b><br>
+  <b>Write DROID patches in VS Code.</b><br>
   A free VS Code extension for DROID Eurorack patches: build your own reusable megacircuits, with live error
   checking, autocompletion, hover docs, rainbow cables, hardware and circuit-graph views and one-click SD-card upload.
 </p>
